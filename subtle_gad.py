@@ -58,7 +58,9 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 			dir_plot = None,
 			usage_gpu = '0',
 			process_highcon = True,
-			skip_coreg = False):	
+			skip_coreg = False,
+			gpu_memory = 0.8,
+			batch_size = 4):	
 
 	'''
 	logger
@@ -116,7 +118,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 				filepath_nifti_high, filepath_nifti_pre, filepath_nifti_high_coreg),
 				  t_coreg_finish - t_coreg)   
 		else:
-			filepath_nifti_high_coreg = dir_highcon
+			filepath_nifti_high_coreg = filepath_nifti_high
 
 	my_logger.log_event("finishing cor-registration")
 
@@ -171,7 +173,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	# timing
 	t_scale_finish = datetime.datetime.now()
 	print('scales adjusted', t_scale_finish - t_scale_start)
-	my_logger.log_event("finishing scaling differet seriesload data")
+	my_logger.log_event("finishing scaling differet series")
 
 	'''
 	clean up unused variables
@@ -180,7 +182,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	del data_high
 	del data_low_adjust
 	del data_high_adjust
-	my_logger.log_event("finishing scaling differet seriesload data")
+	my_logger.log_event("finishing scaling differet series, unused var deleted")
 
 	''' 
 	setup models
@@ -196,9 +198,9 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	num_conv_per_pooling = 3
 	# related to training
 	validation_split = 0.1
-	batch_size = 4
+	batch_size = batch_size#4
 	# default settings
-	keras_memory = 0.9
+	keras_memory = gpu_memory#0.9
 	keras_backend = 'tf'
 	with_batch_norm = True
 	y_range = [-1,1]
