@@ -58,3 +58,8 @@ user	1m49.144s
 sys	0m25.716s
 
 ** On Alienware laptop with GTX1070:
+Coregistration takes 45sec x 2
+Prediction takes 32sec (almost the same as 1080TI)
+Exporting DICOMS takes 12sec
+Total Real time 3min55sec
+
