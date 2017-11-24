@@ -37,7 +37,11 @@ enhance_gad(dir_precon = arg_dict['precon'],
 			dir_output = outputfolder,
 			usage_gpu = '0',
 			process_highcon = True,
-			skip_coreg = False)
+			skip_coreg = False,
+			# batch_size = 4,
+			# gpu_memory = 0.8,
+			)
+			
 
 ''' notify job is done '''
 cmd = "/usr/local/bin/notify_dispatcher.py " + outputfolder                
