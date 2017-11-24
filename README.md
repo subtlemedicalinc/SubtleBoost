@@ -8,14 +8,29 @@ time python subtle_main.py lowcon "../data/data_lowcon/lowcon_0006/011/" precon 
 * Dependencies:
 
 sudo apt install python-pip 
+
 sudo apt install cmake
-pip install --upgrade tensorflow 
+
+install CUDA 8.0 and cudnn 6.0 if need GPU support
+
+install tensorflow  (pip install --upgrade tensorflow )
+https://www.tensorflow.org/install/install_linux#InstallingNativePip
+
+install SimpleElastic (uninstall SimpleITK if needed)
+https://simpleelastix.readthedocs.io/GettingStarted.html#compiling-on-linux
+
 pip install keras
+
 pip install dicom2nifti
+
 pip install matplotlib
+
 pip install scikit-image
-pip install simpleITK
+
 pip install h5py
+
+
+
 
 * Speed
 
