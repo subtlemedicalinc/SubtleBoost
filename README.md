@@ -2,9 +2,11 @@
 Gadolinium Contrast Enhancement using Deep Learning
 
 * Usage:
+
 time python subtle_main.py lowcon "../data/data_lowcon/lowcon_0006/011/" precon "../data/data_lowcon/lowcon_0006/007/" highcon "../data/data_lowcon/lowcon_0006/014/" "../data/data_lowcon/lowcon_0006/011_enhanced/"
 
 * Dependencies:
+
 sudo apt install python-pip 
 sudo apt install cmake
 pip install --upgrade tensorflow 
@@ -16,7 +18,9 @@ pip install simpleITK
 pip install h5py
 
 * Speed
+
 ** On Longo (GTX1080TI):
+
 enhaog@longo:~/project_lowcon/scripts$ time python subtle_main.py lowcon "../data/data_lowcon/lowcon_0006/011/" precon "../data/data_lowcon/lowcon_0006/007/" highcon "../data/data_lowcon/lowcon_0006/014/" "../data/data_lowcon/lowcon_0006/011_enhanced/"
 Subtle Log: event converting dicom to nifti: time 0:00:43.625750, 
 Subtle Log: event finishing cor-registration: time 0:00:43.625786, 
