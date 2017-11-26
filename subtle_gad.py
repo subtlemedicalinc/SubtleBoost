@@ -245,7 +245,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	scale_data = 0.5
 	scale_baseline = 1.0
 	# checkpoints
-	filename_checkpoint = '../ckpt/model_with_generator_1120.ckpt'
+	filename_checkpoint = '../ckpt/model_from_avg5_1122.ckpt'
 	# related to model
 	num_poolings = 3
 	num_conv_per_pooling = 3
