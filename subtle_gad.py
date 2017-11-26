@@ -54,6 +54,11 @@ import dicom
 import nibabel as nib
 import dicom2nifti
 
+# dilation
+from scipy.ndimage.filters import minimum_filter
+from scipy.ndimage import binary_dilation
+
+
 '''
 cafndl
 '''
@@ -214,7 +219,9 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	data_low_adjust = data_low * best_scale_low
 	data_high_adjust = data_high * best_scale_high
 	contrast_low_adjust = data_low_adjust - data_pre
+	contrast_low_adjust = np.maximum(0.0, contrast_low_adjust)	
 	contrast_high_adjust = data_high_adjust - data_pre	
+	contrast_high_adjust = np.maximum(0.0, contrast_high_adjust)
 	
 	# timing
 	t_scale_finish = datetime.datetime.now()
@@ -288,10 +295,12 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	for i in xrange(nz_25d_half,nz-nz_25d_half):
 		# get low contrast enhance
 		im_lowcon = contrast_low_adjust[:,:,(i-nz_25d_half):(i+nz_25d_half+1)]
+		im_lowcon = np.maximum(im_lowcon, 0.0)
 		# get pre contrast
 		im_pre = data_pre[:,:,(i-nz_25d_half):(i+nz_25d_half+1)]    
 		# post contrast enhance, scaled
 		# im_highcon = contrast_high_adjust[:,:,i:(i+1)]*scale_contrast_high_vs_low   
+		# im_highcon = np.maximum(im_highcon, 0.0)
 
 		# concat
 		im_input = np.concatenate([im_lowcon, im_pre], axis=-1)
@@ -310,7 +319,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	t_predict_start = datetime.datetime.now()
 	try:
 		contrast_low_residual = model.predict(data_input, batch_size = batch_size, verbose = 1)
-		mix_avg = 0.1
+		mix_avg = 0.0
 	except:
 		print('error in prediction, will use avg results')
 		contrast_low_residual = data_input[:,:,:,2:3]
@@ -321,16 +330,35 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 
 
 	'''
-	post-proceesing
+	post-proceesing#1, compute average and mix with 
 	'''
-	contrast_low_avg2 = contrast_low_adjust * 1.0
+	contrast_low_avg2 = contrast_low_adjust * scale_baseline
 	contrast_low_avg2[:,:,nz_25d_half:(nz-nz_25d_half)] = np.squeeze(contrast_low_avg.transpose([1,2,0,3])) * 1.0
 	contrast_low_enhanced_from_avg = contrast_low_avg2 * scale_baseline
-	# if use new model from avg contrast: 
-	contrast_low_enhanced = contrast_low_adjust * scale_baseline
+	# add residual to average to get enhanced from averaged denoising
+	contrast_low_enhanced = contrast_low_enhanced_from_avg  #contrast_low_adjust * scale_baseline
 	contrast_low_enhanced[:,:,nz_25d_half:(nz-nz_25d_half)] += np.squeeze(contrast_low_residual.transpose([1,2,0,3]))
 	contrast_low_enhanced = contrast_low_enhanced * (1-mix_avg) + contrast_low_enhanced_from_avg * mix_avg
 	my_logger.log_event("finishing mixing contrast predictions")
+
+
+	'''
+	post-processing#2, mask out outliers and noises
+	'''
+	# parameter
+	min_filter_size = 3
+	threshold_clamp_contrast = 0.1
+	iterations_dilation = 5	
+	# clamp
+	contrast_low_enhanced = np.maximum(0, contrast_low_enhanced - threshold_clamp_contrast)
+	# dilation
+	for i in xrange(contrast_low_enhanced.shape[-1]):
+		shrinked_contrast = minimum_filter(contrast_low_enhanced[:,:,i], min_filter_size)
+		dilated_mask = shrinked_contrast>0
+		for i_dilation in xrange(iterations_dilation):
+			dilated_mask = binary_dilation(dilated_mask) * (contrast_low_enhanced[:,:,i]>0)
+		contrast_low_enhanced[:,:,i] = dilated_mask * contrast_low_enhanced[:,:,i]
+	my_logger.log_event("finishing masking contrast predictions")	
 
 	'''
 	visualization
@@ -363,10 +391,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	scale contrast
 	'''
 	threshold_percentile = 0.1
-	threshold_percentile_value_low = 0.5
-	threshold_percentile_value_high = 4.0
 	threshold_percentile_value_output = [6.0, 7.0]
-	threshold_clamp_contrast = 0.01
 	percentile_use = 95
 	percentile_high_adjust = np.percentile(contrast_high_adjust[:,:,(nz/4):(nz*3/4)][contrast_high_adjust[:,:,(nz/4):(nz*3/4)]>threshold_percentile].flatten(), 
 										   percentile_use)
@@ -375,15 +400,18 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	percentile_low_enhanced = np.percentile(contrast_low_enhanced[:,:,(nz/4):(nz*3/4)][contrast_low_enhanced[:,:,(nz/4):(nz*3/4)]>threshold_percentile].flatten(), 
 										   percentile_use)
 	print('percentile:', percentile_low_adjust, percentile_high_adjust, percentile_low_enhanced)
-	# print  # goal is to change the percentail to 5
-	# print np.percentile(contrast_low_adjust[contrast_high_adjust>0.001].flatten(), 95)
 	# low dose should be around 0.5-2, high dose should be around 4-10, target 5
+	# threshold_percentile_value_low = 0.5
+	# threshold_percentile_value_high = 4.0
 	# assert(percentile_low_adjust>threshold_percentile_value_low)
 	# assert(percentile_high_adjust>threshold_percentile_value_high)
-	contrast_low_adjust[contrast_low_adjust < threshold_clamp_contrast] = 0.0
 	percentile_high_adjust = max(threshold_percentile_value_output[1], 
-								min(threshold_percentile_value_output[0], percentile_high_adjust))
-	data_low_enhanced = contrast_low_adjust * percentile_high_adjust / percentile_low_enhanced + data_pre
+								min(threshold_percentile_value_output[0], 
+									percentile_high_adjust))
+
+	# add scaled contrast to pre-contrast image
+	data_low_enhanced = contrast_low_enhanced * percentile_high_adjust / percentile_low_enhanced
+	data_low_enhanced += data_pre
 	data_low_enhanced = np.maximum(0.0, data_low_enhanced)
 	my_logger.log_event("finishing rescaling predicted contrasts")
 
