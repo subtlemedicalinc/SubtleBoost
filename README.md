@@ -82,3 +82,20 @@ Prediction takes 32sec (almost the same as 1080TI)
 Exporting DICOMS takes 12sec
 Total Real time 3min55sec
 
+
+** On AWS G2.8x large, with 1 K520 GPU and 32 CPU cores:
+
+Subtle Log: event finishing scaling differet series: time 0:00:04.416214, 
+Subtle Log: event finishing scaling differet series, unused var deleted: time 0:00:04.417671, 
+load model from ../ckpt/model_with_generator_1120.ckpt taking 0:00:00.556731
+Subtle Log: event finishing model initialization: time 0:00:06.419155, 
+Subtle Log: event finishing preparing data for predicting: time 0:00:08.839432, 
+96/96 [==============================] - 23s     
+predict for data size (96, 512, 512, 10), time 0:00:23.371478
+Subtle Log: event finishing predicting data: time 0:00:32.211079, 
+Subtle Log: event finishing mixing contrast predictions: time 0:00:32.988892, 
+Subtle Log: event finishing masking contrast predictions: time 0:00:36.120677, 
+Subtle Log: event finishing rescaling predicted contrasts: time 0:00:36.677689, 
+export 100 files using 0:00:04.325799
+Subtle Log: event finishing exporting dicom files: time 0:00:41.003951, 
+
