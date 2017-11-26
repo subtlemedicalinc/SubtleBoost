@@ -332,7 +332,7 @@ def enhance_gad(dir_precon = '../data/data_lowcon/lowcon_0006/007/',
 	'''
 	post-proceesing#1, compute average and mix with 
 	'''
-	contrast_low_avg2 = contrast_low_adjust * scale_baseline
+	contrast_low_avg2 = contrast_low_adjust * 0.0
 	contrast_low_avg2[:,:,nz_25d_half:(nz-nz_25d_half)] = np.squeeze(contrast_low_avg.transpose([1,2,0,3])) * 1.0
 	contrast_low_enhanced_from_avg = contrast_low_avg2 * scale_baseline
 	# add residual to average to get enhanced from averaged denoising
