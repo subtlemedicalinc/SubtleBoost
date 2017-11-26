@@ -35,16 +35,14 @@ def psnr(im_gt, im_pred):
 
 
 import scipy.io as sio
-kernel_hfen = sio.loadmat('/data/enhaog/data_QSM/subj2/hfen.mat')
-kernel_hfen = np.squeeze(kernel_hfen['hfen'][:,:,7])
 from scipy.signal import convolve2d as imfilter
 
 #get error metrics, for psnr, ssimr, rmse, score_ismrm
 def getErrorMetrics(im_pred, im_gt, mask = None):
 	# filter
-	im_pred2 = imfilter(im_pred, kernel_hfen)
-	im_gt2 = imfilter(im_gt, kernel_hfen)
-
+	im_pred2 = im_pred
+	im_gt2 = im_gt
+	
 	# flatten array
 	im_pred = np.array(im_pred).astype(np.float).flatten()
 	im_gt = np.array(im_gt).astype(np.float).flatten()
