@@ -1,3 +1,6 @@
 *.swp
 __pycache__/
 .ipynb_checkpoints/
+TransformParameters*.txt
+sync-down.sh
+sync-up.sh
