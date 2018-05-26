@@ -1,7 +1,7 @@
 '''
 subtle_preprocess.py
 
-Pre-processing for contrast synthesis
+Pre-processing utilities for contrast synthesis
 Mask, intensity normalization, and image co-registration
 
 @author: Jon Tamir (jon@subtlemedical.com)

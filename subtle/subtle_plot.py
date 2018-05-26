@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
-import myshow
+import subtle.myshow as myshow
 
 def imshow3(ims, axis=0, cmap='gray'):
     n = ims.shape[axis]
