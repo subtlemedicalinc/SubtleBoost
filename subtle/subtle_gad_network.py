@@ -11,8 +11,8 @@ Created on 2018/05/25
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate
+import keras.callbacks
 from keras.layers.merge import add as keras_add
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras.optimizers import Adam
 from keras.losses import mean_absolute_error, mean_squared_error
 from keras import backend as K
@@ -26,7 +26,7 @@ def clear_keras_memory():
     ks.backend.clear_session()
 
 # use part of memory
-def setKerasMemory(limit=0.3):
+def set_keras_memory(limit=0.9):
     from tensorflow import ConfigProto as tf_ConfigProto
     from tensorflow import Session as tf_Session
     from keras.backend.tensorflow_backend import set_session
@@ -38,12 +38,12 @@ def setKerasMemory(limit=0.3):
 class DeepEncoderDecoder2D:
     def __init__(self,
             num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, 
-            num_channel_first=32, optimizer_fun=Adam, y=np.array([-1, 1]),
+            num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
             lr_init=None, loss_function=mean_absolute_error,
             #metrics_monitor=[PSNRLoss, mean_absolute_error, mean_squared_error],
             metrics_monitor=[mean_absolute_error, mean_squared_error],
             num_poolings=3, num_conv_per_pooling=3,
-            with_bn=False, verbose=True):
+            batch_norm=True, verbose=True, checkpoint_file=None):
 
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -51,13 +51,13 @@ class DeepEncoderDecoder2D:
         self.img_cols = img_cols
         self.num_channel_first = num_channel_first
         self.optimizer_fun = optimizer_fun
-        self.y = y
+        self.final_activation = final_activation
         self.lr_init = lr_init
         self.loss_function = loss_function
         self.metrics_monitor = metrics_monitor
         self.num_poolings = num_poolings
         self.num_conv_per_pooling = num_conv_per_pooling
-        self.with_bn = with_bn
+        self.batch_norm = batch_norm
         self.verbose = verbose
 
         self.model = None # to be assigned by _build_model()
@@ -69,7 +69,7 @@ class DeepEncoderDecoder2D:
     def _build_model(self):
 
         # batch norm
-        if self.with_bn:
+        if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
         else:
             lambda_bn = lambda x: x
@@ -159,17 +159,7 @@ class DeepEncoderDecoder2D:
 
         conv_decoder = conv_decoders[-1]
 
-        if np.max(np.abs(self.y)) <= 1:
-            if np.min(np.array(self.y)) < 0:
-                #tanh -1~+1
-                conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation="tanh")(conv_decoder)
-                print('use tanh activation')
-            else:
-                conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation='sigmoid')(conv_decoder)    
-                print('use sigmoid activation')
-        else:
-            conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation='linear')(conv_decoder)    
-            print('use linear activation')
+        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(conv_decoder)    
 
         if self.verbose:
             print(conv_output)
