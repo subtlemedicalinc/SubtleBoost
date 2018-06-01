@@ -112,3 +112,39 @@ def dicom_header(dicom_dir):
     hdr = dicom.read_file(lstDCM[0])
         
     return hdr, lstDCM, fileOut
+
+def load_npy_files(data_dir):
+
+    ''' Load npy files in a given directory
+    For a given directory, load the npy files that are
+    housed in the folder and return as a list of numpy arrays
+
+    Parameters:
+    -----------
+    data_dir : string
+        name of directory to crawl through
+
+    Returns:
+    --------
+    img_array : float
+        list of all the npy files
+    '''
+        
+    # build the file list for npy files
+    npy_list = []
+    for dir_name, subdir_list, file_list in os.walk(data_dir):
+        for filename in file_list:
+            if '.npy' in filename.lower():
+                npy_list.append(os.path.join(dir_name, filename))
+    
+    # sort the list
+    npy_list.sort()
+    
+    out = []
+    
+    # loop through the npy list
+    
+    for filename in npy_list:
+        out.append(np.load(filename))
+        
+    return out
