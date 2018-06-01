@@ -59,12 +59,29 @@ class DeepEncoderDecoder2D:
         self.num_conv_per_pooling = num_conv_per_pooling
         self.batch_norm = batch_norm
         self.verbose = verbose
+        self.checkpoint_file = checkpoint_file
 
         self.model = None # to be assigned by _build_model()
         self._build_model()
 
     #def get_model(self):
         #return self.model
+
+    def callback_checkpoint(self, filename=None):
+        
+        if filename is not None:
+            self.checkpoint_file = filename
+        
+        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=True)
+
+    def load_weights(self, filename=None):
+        if filename is not None:
+            self.checkpoint_file = filename
+        try:
+            print('loading weights from', self.checkpoint_file)
+            self.model.load_weights(self.checkpoint_file)
+        except:
+            print('failed to load weights. training from scratch')
 
     def _build_model(self):
 
