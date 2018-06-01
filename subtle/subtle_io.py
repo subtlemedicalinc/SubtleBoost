@@ -113,7 +113,7 @@ def dicom_header(dicom_dir):
         
     return hdr, lstDCM, fileOut
 
-def load_npy_files(data_dir):
+def load_npy_files(data_dir, max_data_sets=np.inf):
 
     ''' Load npy files in a given directory
     For a given directory, load the npy files that are
@@ -134,7 +134,7 @@ def load_npy_files(data_dir):
     npy_list = []
     for dir_name, subdir_list, file_list in os.walk(data_dir):
         for filename in file_list:
-            if '.npy' in filename.lower():
+            if '.npy' in filename.lower() and len(npy_list) < max_data_sets:
                 npy_list.append(os.path.join(dir_name, filename))
     
     # sort the list
