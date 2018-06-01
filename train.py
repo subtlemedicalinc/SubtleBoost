@@ -43,6 +43,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
     parser.add_argument('--validation_split', action='store', dest='val_split', type=float, help='ratio of validation data', default=.1)
     parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='RNG seed', default=723)
+    parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
+    parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
 
 
     args = parser.parse_args()
@@ -56,6 +58,12 @@ if __name__ == '__main__':
     checkpoint_file = args.checkpoint_file
     val_split = args.val_split
     random_seed = args.random_seed
+    log_dir = args.log_dir
+
+    if args.max_data_sets is None:
+        max_data_sets = np.inf
+    else:
+        max_data_sets = args.max_data_sets
 
     assert data_dir is not None, 'must specify data directory'
 
@@ -75,7 +83,7 @@ if __name__ == '__main__':
     # volumes containing zero, low, and full contrast.
     # the number of slices may differ but the image dimensions
     # should be the same
-    data_list = suio.load_npy_files(data_dir)
+    data_list = suio.load_npy_files(data_dir, max_data_sets=max_data_sets)
 
     if verbose:
         toc = time.time()
@@ -86,31 +94,31 @@ if __name__ == '__main__':
     #FIXME: check that image sizes are the same
     _, nx, ny, _ = data_list[1].shape
 
-    print('image sizes:', data_list[0].shape)
-    print('nx, ny = ', nx, ny)
-
     # shuffle data and assemble into X and Y
     random.shuffle(data_list)
 
     X = np.concatenate([dl[:,:,:,:2] for dl in data_list], axis=0)
     Y = np.concatenate([dl[:,:,:,-1] for dl in data_list], axis=0)[:,:,:,None]
 
-    print('X, Y sizes = ', X.shape, Y.shape)
+    if verbose:
+        print('X, Y sizes = ', X.shape, Y.shape)
 
+    sugn.clear_keras_memory()
     sugn.set_keras_memory(keras_memory)
 
     m = sugn.DeepEncoderDecoder2D(
             num_channel_input=2, num_channel_output=1,
             img_rows=nx, img_cols=ny,
             num_channel_first=32,
-            verbose=verbose, checkpoint_file=checkpoint_file)
+            verbose=verbose, checkpoint_file=checkpoint_file, log_dir=log_dir)
 
     m.load_weights()
     cb_checkpoint = m.callback_checkpoint()
+    cb_tensorboard = m.callback_tensorbaord()
 
     print('training...')
     tic = time.time()
-    history = m.model.fit(X, Y, batch_size=batch_size, epochs=num_epochs, validation_split=val_split, callbacks=[cb_checkpoint])
+    history = m.model.fit(X, Y, batch_size=batch_size, epochs=num_epochs, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard])
     toc = time.time()
     print('done training ({:.0f} sec)'.format(toc - tic))
 
