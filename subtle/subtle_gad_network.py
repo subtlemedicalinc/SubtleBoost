@@ -44,7 +44,7 @@ class DeepEncoderDecoder2D:
             #metrics_monitor=[PSNRLoss, mean_absolute_error, mean_squared_error],
             metrics_monitor=[mean_absolute_error, mean_squared_error],
             num_poolings=3, num_conv_per_pooling=3,
-            batch_norm=True, verbose=True, checkpoint_file=None):
+            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None):
 
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -61,6 +61,7 @@ class DeepEncoderDecoder2D:
         self.batch_norm = batch_norm
         self.verbose = verbose
         self.checkpoint_file = checkpoint_file
+        self.log_dir = log_dir
 
         self.model = None # to be assigned by _build_model()
         self._build_model()
@@ -74,6 +75,13 @@ class DeepEncoderDecoder2D:
             self.checkpoint_file = filename
         
         return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=True)
+
+    def callback_tensorbaord(self, log_dir=None):
+
+        if log_dir is not None:
+            self.log_dir = log_dir
+        
+        return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
 
     def load_weights(self, filename=None):
         if filename is not None:
