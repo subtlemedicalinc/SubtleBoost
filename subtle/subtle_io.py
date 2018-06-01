@@ -15,6 +15,45 @@ import numpy as np
 import os
 import dicom as pydicom
 
+
+def get_dicom_dirs(base_dir):
+
+    ''' Get list of 'pre', 'low' and 'full' contrast dicom dirs
+    For a given base directory, get the subdirectories that
+    match the zero/low/post contrast series
+    Parameters:
+    -----------
+    base_dir : string
+        name of directory to crawl through
+    Returns:
+    --------
+    dir_list : list
+        list of dicom dirs in order of (zero, low, full)
+    '''
+
+    # get list of directories
+    dirs = os.listdir(base_dir)
+    dirs_split = np.array([d.split('_') for d in dirs])
+    dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
+
+    dir_list = []
+
+    for d in dirs_sorted:
+        if 'ax' in d.lower():
+            if 'mprage' in d or 'bravo' in d.lower():
+                dir_list.append(os.path.join(base_dir, d))
+        if len(dir_list) == 3:
+            break
+
+    #dir_dict = {
+            #'pre': dir_list[0],
+            #'low': dir_list[1],
+            #'full': dir_list[2].
+            #}
+
+    return dir_list
+
+
 def dicom_files(dicom_dir, normalize = False):
     
     ''' Load dicom files in a given folder
