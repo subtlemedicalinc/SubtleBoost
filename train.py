@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=.8)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
     parser.add_argument('--validation_split', action='store', dest='val_split', type=float, help='ratio of validation data', default=.1)
+    parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='RNG seed', default=723)
 
 
     args = parser.parse_args()
@@ -54,12 +55,16 @@ if __name__ == '__main__':
     keras_memory = args.keras_memory
     checkpoint_file = args.checkpoint_file
     val_split = args.val_split
+    random_seed = args.random_seed
+
+    assert data_dir is not None, 'must specify data directory'
 
     if gpu_device is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = usage_gpu
 
-    assert data_dir is not None, 'must specify data directory'
+    random.seed(random_seed)
+    np.random.seed(random_seed)
 
     # load data
     if verbose:
