@@ -9,21 +9,22 @@ Created on 2018/05/25
 '''
 
 import tensorflow as tf
-from keras.models import Model
+import keras.models
 from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate
 import keras.callbacks
 from keras.layers.merge import add as keras_add
 from keras.optimizers import Adam
 from keras.losses import mean_absolute_error, mean_squared_error
-from keras import backend as K
-#from cafndl_metrics import PSNRLoss
 
 import numpy as np
+
+import os
+import time
 
 
 # clean up
 def clear_keras_memory():
-    ks.backend.clear_session()
+    keras.backend.clear_session()
 
 # use part of memory
 def set_keras_memory(limit=0.9):
@@ -182,7 +183,7 @@ class DeepEncoderDecoder2D:
             print(conv_output)
         
         # model
-        model = Model(inputs=inputs, outputs=conv_output)
+        model = keras.models.Model(inputs=inputs, outputs=conv_output)
 
         if self.verbose:
             print(model)
