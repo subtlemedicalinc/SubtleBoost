@@ -145,6 +145,8 @@ def load_npy_files(data_dir):
     # loop through the npy list
     
     for filename in npy_list:
-        out.append(np.load(filename))
+        # transpose into format expected by Keras
+        # [ns, nx, ny, 3]
+        out.append(np.transpose(np.load(filename), (0, 2, 3, 1)))
         
     return out
