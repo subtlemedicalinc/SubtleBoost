@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_zero', action='store', dest='path_zero', type=str, help='path to zero dose dicom dir', default=None)
     parser.add_argument('--path_low', action='store', dest='path_low', type=str, help='path to low dose dicom dir', default=None)
     parser.add_argument('--path_full', action='store', dest='path_full', type=str, help='path to full dose dicom dir', default=None)
+    parser.add_argument('--path_base', action='store', dest='path_base', type=str, help='path to base dicom directory containing subdirs', default=None)
     parser.add_argument('--output', action='store', dest='out_file', type=str, help='output to npy file', default='out.npy')
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
@@ -49,6 +50,7 @@ if __name__ == '__main__':
     path_zero = args.path_zero
     path_low = args.path_low
     path_full = args.path_full
+    path_base = args.path_base
     out_file = args.out_file
     
     verbose = args.verbose
@@ -59,10 +61,29 @@ if __name__ == '__main__':
     mask_threshold = args.mask_threshold
     transform_type = args.transform_type
 
-    assert path_zero is not None and path_low is not None and path_full is not None, 'must specify path to zero/low/full dose data sets'
+    if path_zero is not None and path_low is not None and path_full is not None:
+        use_indiv_path = True
+    else:
+        use_indiv_path = False
+
+    if path_base is not None:
+        use_base_path = True
+        assert not use_indiv_path, 'cannot specify both base path and individual paths'
+    else:
+        use_base_path = False
+
+    assert use_base_path or use_indiv_path, 'must specify base path or individual paths'
 
     assert discard_start_percent >= 0 and discard_start_percent < 1
     assert discard_end_percent >= 0 and discard_end_percent < 1
+
+
+    if use_base_path:
+        path_zero, path_low, path_full = suio.get_dicom_dirs(path_base)
+        if verbose:
+            print('path_zero = {}'.format(path_zero))
+            print('path_low = {}'.format(path_low))
+            print('path_full = {}'.format(path_full))
 
     ims_zero, hdr_zero = suio.dicom_files(path_zero)
     ims_low, hdr_low = suio.dicom_files(path_low)
