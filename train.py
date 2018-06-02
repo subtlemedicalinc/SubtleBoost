@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='RNG seed', default=723)
     parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
+    parser.add_argument('--predict', action='store', dest='predict_file', type=str, help='perform prediction and write to file', default=None)
 
 
     args = parser.parse_args()
@@ -59,6 +60,7 @@ if __name__ == '__main__':
     val_split = args.val_split
     random_seed = args.random_seed
     log_dir = args.log_dir
+    predict_file = args.predict_file
 
     if args.max_data_sets is None:
         max_data_sets = np.inf
@@ -116,9 +118,19 @@ if __name__ == '__main__':
     cb_checkpoint = m.callback_checkpoint()
     cb_tensorboard = m.callback_tensorbaord()
 
-    print('training...')
-    tic = time.time()
-    history = m.model.fit(X, Y, batch_size=batch_size, epochs=num_epochs, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard])
-    toc = time.time()
-    print('done training ({:.0f} sec)'.format(toc - tic))
+    if predict_file is not None:
+
+        tic = time.time()
+        print('predicting...')
+        Y_prediction = m.model.predict(X, batch_size=batch_size, verbose=verbose)
+        toc = time.time()
+        print('done with predicting ({:.0f} sec)'.format(toc - tic))
+        np.save(predict_file, Y_prediction)
+    else:
+
+        print('training...')
+        tic = time.time()
+        history = m.model.fit(X, Y, batch_size=batch_size, epochs=num_epochs, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard])
+        toc = time.time()
+        print('done training ({:.0f} sec)'.format(toc - tic))
 
