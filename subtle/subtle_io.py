@@ -152,23 +152,22 @@ def dicom_header(dicom_dir):
         
     return hdr, lstDCM, fileOut
 
-def load_npy_files(data_dir, max_data_sets=np.inf):
 
-    ''' Load npy files in a given directory
-    For a given directory, load the npy files that are
-    housed in the folder and return as a list of numpy arrays
+def get_npy_files(data_dir, max_data_sets=np.inf):
+    ''' Get list of npy files in a given directory
 
     Parameters:
     -----------
     data_dir : string
         name of directory to crawl through
+    max_data_sets : int
+        maximum number of data sets to load
 
     Returns:
     --------
-    img_array : float
-        list of all the npy files
+    npy_list : list
+        list of npy files
     '''
-        
     # build the file list for npy files
     npy_list = []
     for dir_name, subdir_list, file_list in os.walk(data_dir):
@@ -178,6 +177,49 @@ def load_npy_files(data_dir, max_data_sets=np.inf):
     
     # sort the list
     npy_list.sort()
+
+    return npy_list
+
+def load_npy_file(npy_file):
+
+    ''' Load single npy file and transpose
+
+    Parameters:
+    -----------
+    npy_file : string
+        name of npy file
+
+    Returns:
+    --------
+    out : numpy array
+        numpy array transposed for network format
+    '''
+
+    return np.transpose(np.load(npy_file), (0, 2, 3, 1))
+
+def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
+
+    ''' Load npy files in a given directory
+    For a given directory, load the npy files that are
+    housed in the folder and return as a list of numpy arrays
+
+    Parameters:
+    -----------
+    data_dir : string
+        name of directory to crawl through
+    npy_list : list
+        list of npy files. If None, then compute it
+    max_data_sets : int
+        maximum number of data sets to load
+
+    Returns:
+    --------
+    out : list
+        list containing all the np arrays
+    '''
+        
+    if npy_list is None:
+        npy_list = get_npy_files(data_dir, max_data_sets=max_data_sets)
     
     out = []
     
@@ -186,6 +228,7 @@ def load_npy_files(data_dir, max_data_sets=np.inf):
     for filename in npy_list:
         # transpose into format expected by Keras
         # [ns, nx, ny, 3]
-        out.append(np.transpose(np.load(filename), (0, 2, 3, 1)))
+        out.append(load_npy_file(filename))
         
     return out
+
