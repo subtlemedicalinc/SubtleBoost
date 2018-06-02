@@ -46,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
     parser.add_argument('--predict', action='store', dest='predict_file', type=str, help='perform prediction and write to file', default=None)
+    parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
 
 
     args = parser.parse_args()
@@ -61,6 +62,13 @@ if __name__ == '__main__':
     random_seed = args.random_seed
     log_dir = args.log_dir
     predict_file = args.predict_file
+    residual_mode = args.residual_mode
+
+    if log_dir is not None:
+        try:
+            os.path.mkdir(log_dir)
+        except:
+            pass
 
     if args.max_data_sets is None:
         max_data_sets = np.inf
@@ -85,25 +93,14 @@ if __name__ == '__main__':
     # volumes containing zero, low, and full contrast.
     # the number of slices may differ but the image dimensions
     # should be the same
-    data_list = suio.load_npy_files(data_dir, max_data_sets=max_data_sets)
 
-    if verbose:
-        toc = time.time()
-        print('done loading {} files ({:.2f} s)'.format(len(data_list), toc - tic))
+    npy_list = suio.get_npy_files(data_dir, max_data_sets=max_data_sets)
+    random.shuffle(npy_list)
 
-
-    # get image dimensions
+    # load initial file to get dimensions
+    data = suio.load_npy_file(npy_list[0])
     #FIXME: check that image sizes are the same
-    _, nx, ny, _ = data_list[1].shape
-
-    # shuffle data and assemble into X and Y
-    random.shuffle(data_list)
-
-    X = np.concatenate([dl[:,:,:,:2] for dl in data_list], axis=0)
-    Y = np.concatenate([dl[:,:,:,-1] for dl in data_list], axis=0)[:,:,:,None]
-
-    if verbose:
-        print('X, Y sizes = ', X.shape, Y.shape)
+    _, nx, ny, _ = data.shape
 
     sugn.clear_keras_memory()
     sugn.set_keras_memory(keras_memory)
@@ -115,8 +112,6 @@ if __name__ == '__main__':
             verbose=verbose, checkpoint_file=checkpoint_file, log_dir=log_dir)
 
     m.load_weights()
-    cb_checkpoint = m.callback_checkpoint()
-    cb_tensorboard = m.callback_tensorbaord()
 
     if predict_file is not None:
 
@@ -129,8 +124,40 @@ if __name__ == '__main__':
     else:
 
         print('training...')
-        tic = time.time()
-        history = m.model.fit(X, Y, batch_size=batch_size, epochs=num_epochs, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard])
-        toc = time.time()
-        print('done training ({:.0f} sec)'.format(toc - tic))
 
+        if verbose:
+            print('epoch\tfile')
+
+        for epoch in range(num_epochs):
+
+            for npy_file in npy_list:
+
+                if verbose:
+                    print('{}\t{}'.format(epoch, npy_file))
+
+                # load single volume
+                data = suio.load_npy_file(npy_file)
+                _ridx = np.random.permutation(data.shape[0])
+
+                X = data[_ridx,:,:,:2]
+                Y = data[_ridx,:,:,-1][:,:,:,None]
+
+                #X = np.concatenate([dl[:,:,:,:2] for dl in data_list], axis=0)
+                #Y = np.concatenate([dl[:,:,:,-1] for dl in data_list], axis=0)[:,:,:,None]
+
+                if verbose:
+                    print('X, Y sizes = ', X.shape, Y.shape)
+
+                if residual_mode:
+                    if verbose:
+                        print('residual mode. train on (zero, low - zero, full - zero)')
+                    X[:,:,:,1] -= X[:,:,:,0]
+                    Y -= X[:,:,:,0][:,:,:,None]
+
+
+                cb_checkpoint = m.callback_checkpoint()
+                cb_tensorboard = m.callback_tensorbaord()
+
+                history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+                toc = time.time()
+        print('done training ({:.0f} sec)'.format(toc - tic))
