@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--num_epochs', action='store', dest='num_epochs', type=int, help='number of epochs to run', default=10)
     parser.add_argument('--batch_size', action='store', dest='batch_size', type=int, help='batch size', default=8)
-    parser.add_argument('--gpu', action='store', dest='gpu_device', type=int, help='set GPU', default=None)
+    parser.add_argument('--gpu', action='store', dest='gpu_device', type=str, help='set GPU', default=None)
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=.8)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
     parser.add_argument('--validation_split', action='store', dest='val_split', type=float, help='ratio of validation data', default=.1)
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     if gpu_device is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = usage_gpu
+        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_device
 
     random.seed(random_seed)
     np.random.seed(random_seed)
