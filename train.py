@@ -47,6 +47,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
     parser.add_argument('--predict', action='store', dest='predict_file', type=str, help='perform prediction and write to file', default=None)
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
+    parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
+    parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
 
 
     args = parser.parse_args()
@@ -63,6 +65,8 @@ if __name__ == '__main__':
     log_dir = args.log_dir
     predict_file = args.predict_file
     residual_mode = args.residual_mode
+    lr_init = args.lr_init
+    batch_norm = args.batch_norm
 
     if log_dir is not None:
         try:
@@ -109,6 +113,8 @@ if __name__ == '__main__':
             num_channel_input=2, num_channel_output=1,
             img_rows=nx, img_cols=ny,
             num_channel_first=32,
+            lr_init=lr_init,
+            batch_norm=batch_norm,
             verbose=verbose, checkpoint_file=checkpoint_file, log_dir=log_dir)
 
     m.load_weights()
