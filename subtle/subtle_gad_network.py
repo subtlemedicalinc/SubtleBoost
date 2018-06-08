@@ -16,6 +16,7 @@ from keras.layers.merge import add as keras_add
 from keras.optimizers import Adam
 from keras.losses import mean_absolute_error, mean_squared_error
 
+from warnings import warn
 import numpy as np
 
 import os
@@ -89,8 +90,9 @@ class DeepEncoderDecoder2D:
         try:
             print('loading weights from', self.checkpoint_file)
             self.model.load_weights(self.checkpoint_file)
-        except:
-            print('failed to load weights. training from scratch')
+        except Exception as e:
+            warn('failed to load weights. training from scratch')
+            warn(str(e))
 
     def _build_model(self):
 

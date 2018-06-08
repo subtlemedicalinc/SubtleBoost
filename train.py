@@ -16,6 +16,7 @@ import os
 import datetime
 import time
 import random
+from warnings import warn
 import argparse
 
 import numpy as np
@@ -70,8 +71,10 @@ if __name__ == '__main__':
 
     if log_dir is not None:
         try:
-            os.path.mkdir(log_dir)
-        except:
+            os.mkdir(log_dir)
+        except Exception as e:
+            warn(str(e))
+            pass
             pass
 
     if args.max_data_sets is None:
