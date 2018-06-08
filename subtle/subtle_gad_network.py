@@ -75,7 +75,7 @@ class DeepEncoderDecoder2D:
         if filename is not None:
             self.checkpoint_file = filename
         
-        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=True)
+        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=False)
 
     def callback_tensorbaord(self, log_dir=None):
 
