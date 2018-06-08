@@ -13,7 +13,10 @@ Created on 2018/05/18
 import sys
 import numpy as np
 import os
-import dicom as pydicom
+try:
+    import dicom as pydicom
+except:
+    import pydicom
 
 
 def get_dicom_dirs(base_dir):
