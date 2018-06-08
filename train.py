@@ -172,6 +172,10 @@ if __name__ == '__main__':
         if verbose:
             print('epoch\tfile')
 
+        cb_checkpoint = m.callback_checkpoint()
+        cb_tensorboard = m.callback_tensorbaord()
+
+
         for epoch in range(num_epochs):
 
             for npy_file in npy_list:
@@ -199,9 +203,7 @@ if __name__ == '__main__':
                     Y -= X[:,:,:,0][:,:,:,None]
 
 
-                cb_checkpoint = m.callback_checkpoint()
-                cb_tensorboard = m.callback_tensorbaord()
-
                 history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
                 toc = time.time()
+        toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
