@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='RNG seed', default=723)
     parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
-    parser.add_argument('--predict', action='store', dest='predict_file', type=str, help='perform prediction and write to file', default=None)
+    parser.add_argument('--predict', action='store', dest='predict_dir', type=str, help='perform prediction and write to directory', default=None)
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
     parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     val_split = args.val_split
     random_seed = args.random_seed
     log_dir = args.log_dir
-    predict_file = args.predict_file
+    predict_dir = args.predict_dir
     residual_mode = args.residual_mode
     lr_init = args.lr_init
     batch_norm = args.batch_norm
@@ -75,6 +75,12 @@ if __name__ == '__main__':
         except Exception as e:
             warn(str(e))
             pass
+
+    if predict_dir is not None:
+        try:
+            os.mkdir(predict_dir)
+        except Exception as e:
+            warn(str(e))
             pass
 
     if args.max_data_sets is None:
@@ -122,14 +128,43 @@ if __name__ == '__main__':
 
     m.load_weights()
 
-    if predict_file is not None:
+    tic = time.time()
+    if predict_dir is not None:
 
-        tic = time.time()
         print('predicting...')
-        Y_prediction = m.model.predict(X, batch_size=batch_size, verbose=verbose)
+
+        for npy_file in npy_list:
+
+            if verbose:
+                print('{}:'.format(npy_file))
+
+            # load single volume
+            data = suio.load_npy_file(npy_file)
+
+            X = data[:,:,:,:2]
+            #Y = data[:,:,:,-1][:,:,:,None]
+
+            if verbose:
+                print('X size = ', X.shape)
+
+            if residual_mode:
+                if verbose:
+                    print('residual mode. train on (zero, low - zero, full - zero)')
+                X[:,:,:,1] -= X[:,:,:,0]
+
+            Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=batch_size, verbose=verbose)
+
+            npy_base = os.path.basename(npy_file)
+            npy_file_predict = '{}/{}_predict.npy'.format(predict_dir, os.path.splitext(npy_base)[0])
+
+            if verbose:
+                print('output: {}'.format(npy_file_predict))
+
+            np.save(npy_file_predict, Y_prediction)
+
         toc = time.time()
-        print('done with predicting ({:.0f} sec)'.format(toc - tic))
-        np.save(predict_file, Y_prediction)
+        print('done predicting ({:.0f} sec)'.format(toc - tic))
+
     else:
 
         print('training...')
