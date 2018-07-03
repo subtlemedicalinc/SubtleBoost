@@ -10,14 +10,17 @@ Created on 2018/05/18
 '''
 
 import sys
-
+import warnings
 import time
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 
-sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
-import SimpleITK as sitk
+try:
+    sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
+    import SimpleITK as sitk
+except:
+    warnings.warn('SimpleITK not found!')
     
     
 def mask_im(im, threshold=.08):
@@ -31,7 +34,49 @@ def mask_im(im, threshold=.08):
     # fill holes in mask
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
     return mask   
-    
+
+
+def normalize_im(im, axis=None, fun=np.mean):
+    '''
+    Image normalization
+    Normalizes an image along the axis dimensions using the function fun
+    '''
+    im[im < 0] = 0
+
+    if type(axis) == int:
+        axis = (axis,)
+
+    if axis is None:
+        return im / fun(im.ravel())
+    else:
+        sc = fun(im, axis=axis)
+        for i in axis:
+            sc = np.expand_dims(sc, axis=i)
+        return im / sc
+
+
+def scale_im_enhao(im_fixed, im_moving, levels=np.linspace(.8,1.2,30), fun=lambda x: np.mean(np.abs(x[np.abs(x)>0.1].ravel())), max_iter=1):
+    '''
+    Image intensity scaling based on Enhao's approach
+    Returns the scale factor that adjusts im_moving to the scale of im_fixed according to fun
+    '''
+    best_scale = levels.mean()
+    best_cost = np.inf
+
+    for index_iter in range(max_iter):
+        for level in levels:
+            im_moving_sc = im_moving * level
+            im_diff = im_moving_sc - im_fixed
+            diff_cost = fun(im_diff)
+            if diff_cost < best_cost:
+                best_scale = level
+                best_cost = diff_cost
+        delta_scale = levels[1] - levels[0]
+        levels = np.linspace(best_scale - delta_scale, best_scale + delta_scale, len(levels))
+
+    return best_scale  
+
+
 def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, verbose=True):
     '''
     Image intensity normalization using SimpleITK
