@@ -12,6 +12,11 @@ Created on 2018/05/25
 
 
 import sys
+
+print('------')
+print(' '.join(sys.argv))
+print('------\n\n\n')
+
 import os
 import datetime
 import time
@@ -26,6 +31,7 @@ import keras.callbacks
 import subtle.subtle_gad_network as sugn
 import subtle.subtle_io as suio
 import subtle.subtle_preprocess as sup
+
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'train SubtleGrad network on pre-processed data'
