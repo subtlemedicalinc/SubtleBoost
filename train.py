@@ -237,10 +237,10 @@ if __name__ == '__main__':
 
         for epoch in range(num_epochs):
 
-            for npy_file in npy_list:
+            for i_npy, npy_file in enumerate(npy_list):
 
                 if verbose:
-                    print('{}\t{}'.format(epoch, npy_file))
+                    print('{0}/{1}\t{2}/{3}\t{4}'.format(epoch, num_epochs, i_npy, len(npy_list), npy_file))
 
                 # load single volume
                 data = suio.load_npy_file(npy_file)
@@ -273,7 +273,10 @@ if __name__ == '__main__':
                 if val_split > 0:
                     history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
                 else:
-                    history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_data=(X_val, Y_val), callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+                    if i_npy % 10 == 0:
+                        history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_data=(X_val, Y_val), callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+                    else:
+                        history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
                 toc = time.time()
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
