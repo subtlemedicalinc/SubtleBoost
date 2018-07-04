@@ -202,6 +202,32 @@ if __name__ == '__main__':
 
         print('training...')
 
+        if val_split == 0. and len(npy_list) > 1:
+            npy_list_val = npy_list[0]
+            if verbose:
+                print('using {} for validation'.format(npy_list_val))
+
+            npy_list = npy_list[1:]
+
+            data_val = suio.load_npy_file(npy_list_val)
+            if normalize:
+                data_val = normalize_data(data_val, verbose)
+                if verbose:
+                    print('mean of data:', np.mean(data, axis=(0,1,2)))
+
+            X_val = data_val[:,:,:,:2]
+            Y_val = data_val[:,:,:,-1][:,:,:,None]
+
+            if residual_mode:
+                if verbose:
+                    print('residual mode. train on (zero, low - zero, full - zero)')
+                X_val[:,:,:,1] -= X_val[:,:,:,0]
+                X_val[:,:,:,1] = np.maximum(0., X_val[:,:,:,1])
+                Y_val -= X_val[:,:,:,0][:,:,:,None]
+                Y_val = np.maximum(0., Y_val)
+
+
+
         if verbose:
             print('epoch\tfile')
 
@@ -244,7 +270,10 @@ if __name__ == '__main__':
                     Y = np.maximum(0., Y)
 
 
-                history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+                if val_split > 0:
+                    history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+                else:
+                    history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_data=(X_val, Y_val), callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
                 toc = time.time()
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
