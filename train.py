@@ -84,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
     parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
     parser.add_argument('--dont_normalize', action='store_false', dest='normalize', help='turn off data normalization')
+    parser.add_argument('--data_per_fit', action='store', dest='data_per_fit', type=int, help='number of data sets per call to fit', default=1)
 
 
     args = parser.parse_args()
@@ -103,6 +104,7 @@ if __name__ == '__main__':
     lr_init = args.lr_init
     batch_norm = args.batch_norm
     normalize = args.normalize
+    data_per_fit = args.data_per_fit
 
     if log_dir is not None:
         try:
@@ -243,26 +245,38 @@ if __name__ == '__main__':
 
         for epoch in range(num_epochs):
 
-            for i_npy, npy_file in enumerate(npy_list):
+            _npy_list = list(npy_list)
+
+            i_npy = 0
+            while len(_npy_list) > 0:
+
+                i_npy += 1
+
+                npy_files = _npy_list[:data_per_fit]
+                del _npy_list[:data_per_fit]
+
+
 
                 if verbose:
-                    print('{0}/{1}\t{2}/{3}\t{4}'.format(epoch, num_epochs, i_npy, len(npy_list), npy_file))
+                    print('{0}/{1}\t{2}/{3}\t{4}'.format(epoch, num_epochs, i_npy, int(np.ceil(len(npy_list) / data_per_fit)), npy_files))
 
-                # load single volume
-                data = suio.load_npy_file(npy_file)
+                # load volumes
+                # each element of the data_list contains 3 sets of 3D
+                # volumes containing zero, low, and full contrast.
+                # the number of slices may differ but the image dimensions
+                # should be the same
+                data_list = suio.load_npy_files('', npy_files)
 
                 if normalize:
-                    data = normalize_data(data, verbose)
+                    data_list = [normalize_data(d, verbose) for d in data_list]
                     if verbose:
-                        print('mean of data:', np.mean(data, axis=(0,1,2)))
+                        print('mean of data:', [np.mean(d, axis=(0,1,2)) for d in data_list])
 
+                data = np.concatenate(data_list, axis=0)
                 _ridx = np.random.permutation(data.shape[0])
 
                 X = data[_ridx,:,:,:2]
                 Y = data[_ridx,:,:,-1][:,:,:,None]
-
-                #X = np.concatenate([dl[:,:,:,:2] for dl in data_list], axis=0)
-                #Y = np.concatenate([dl[:,:,:,-1] for dl in data_list], axis=0)[:,:,:,None]
 
                 if verbose:
                     print('X, Y sizes = ', X.shape, Y.shape)
