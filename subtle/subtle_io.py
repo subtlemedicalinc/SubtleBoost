@@ -17,6 +17,10 @@ try:
     import dicom as pydicom
 except:
     import pydicom
+try:
+    import keras
+except:
+    pass
 
 
 def get_dicom_dirs(base_dir):
@@ -235,3 +239,78 @@ def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
         
     return out
 
+class DataGenerator(keras.utils.Sequence):
+    'Generates data for Keras'
+
+    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=True, normalize=True, residual_mode=True):
+
+        'Initialization'
+        self.npy_list = npy_list
+        self.batch_size = batch_size
+        self.num_channel_input = num_channel_input
+        self.num_channel_output = num_channel_output
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.shuffle = shuffle
+        self.verbose = verbose
+        self.normalize = normalize
+        self.residual_mode = residual_mode
+
+        self.on_epoch_end()
+
+    def __len__(self):
+        'Denotes the number of batches per epoch'
+        return int(np.floor(len(self.npy_list) / self.batch_size))
+
+    def __getitem__(self, index):
+        'Generate one batch of data'
+        # Generate indexes of the batch
+        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+
+        # Find list of IDs
+        _npy_list = [self.npy_list[k] for k in indexes]
+
+        # Generate data
+        X, Y = self.__data_generation(_npy_list)
+
+        return X, Y
+
+    def on_epoch_end(self):
+        'Updates indexes after each epoch'
+        self.indexes = np.arange(len(self.npy_list))
+        if self.shuffle == True:
+            np.random.shuffle(self.indexes)
+
+    def __data_generation(self, npy_files):
+        'Generates data containing batch_size samples' 
+
+        # load volumes
+        # each element of the data_list contains 3 sets of 3D
+        # volumes containing zero, low, and full contrast.
+        # the number of slices may differ but the image dimensions
+        # should be the same
+        data_list = load_npy_files('', npy_files)
+
+        if self.normalize:
+            data_list = [normalize_data(d, self.verbose) for d in data_list]
+            if self.verbose:
+                print('mean of data:', [np.mean(d, axis=(0,1,2)) for d in data_list])
+
+        data = np.concatenate(data_list, axis=0)
+        _ridx = np.random.permutation(data.shape[0])
+
+        X = data[_ridx,:,:,:2]
+        Y = data[_ridx,:,:,-1][:,:,:,None]
+
+        if self.verbose:
+            print('X, Y sizes = ', X.shape, Y.shape)
+
+        if self.residual_mode:
+            if self.verbose:
+                print('residual mode. train on (zero, low - zero, full - zero)')
+            X[:,:,:,1] -= X[:,:,:,0]
+            #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
+            Y -= X[:,:,:,0][:,:,:,None]
+            #Y = np.maximum(0., Y)
+
+        return X, Y

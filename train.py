@@ -191,7 +191,7 @@ if __name__ == '__main__':
                 if verbose:
                     print('residual mode. train on (zero, low - zero, full - zero)')
                 X[:,:,:,1] -= X[:,:,:,0]
-                X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
+                #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
 
             Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=batch_size, verbose=verbose)
 
@@ -230,9 +230,9 @@ if __name__ == '__main__':
                 if verbose:
                     print('residual mode. train on (zero, low - zero, full - zero)')
                 X_val[:,:,:,1] -= X_val[:,:,:,0]
-                X_val[:,:,:,1] = np.maximum(0., X_val[:,:,:,1])
+                #X_val[:,:,:,1] = np.maximum(0., X_val[:,:,:,1])
                 Y_val -= X_val[:,:,:,0][:,:,:,None]
-                Y_val = np.maximum(0., Y_val)
+                #Y_val = np.maximum(0., Y_val)
 
 
 
@@ -285,9 +285,9 @@ if __name__ == '__main__':
                     if verbose:
                         print('residual mode. train on (zero, low - zero, full - zero)')
                     X[:,:,:,1] -= X[:,:,:,0]
-                    X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
+                    #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
                     Y -= X[:,:,:,0][:,:,:,None]
-                    Y = np.maximum(0., Y)
+                    #Y = np.maximum(0., Y)
 
 
                 if val_split > 0:
