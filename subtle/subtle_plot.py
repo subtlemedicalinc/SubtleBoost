@@ -10,12 +10,16 @@ Created on 2018/05/18
 '''
 
 import sys
+import warnings
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
-import SimpleITK as sitk
+try:
+    sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
+    import SimpleITK as sitk
+except:
+    warnings.warn('SimpleITK not found!')
 import subtle.myshow as myshow
 
 def imshow3(ims, axis=0, cmap='gray'):
