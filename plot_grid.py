@@ -22,7 +22,6 @@ def imshowtile(x, cmap='gray'):
 verbose = True
 
 data = suio.load_npy_file(npy_file)
-data = train.normalize_data(data, verbose)
 
 X0 = data[idx,:,:,0]
 X1 = data[idx,:,:,1]

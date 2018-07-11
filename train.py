@@ -39,31 +39,6 @@ description_str = 'train SubtleGrad network on pre-processed data'
 # FIXME: add time stamps, logging
 # FIXME: data augmentation
 
-def normalize_data(data, verbose=False):
-    ntic = time.time()
-    if verbose:
-        print('normalizing data')
-    data = sup.normalize_im(data, axis=(0,1,2)) # normalize each contrast separately
-    ntoc = time.time()
-    if verbose:
-        print('done ({:.2f}s)'.format(ntoc - ntic))
-
-    if verbose:
-        print('scaling data')
-    ntic = time.time()
-    nz = data.shape[0]
-    idx_scale = range(nz//2 - 5, nz//2 + 5)
-    scale_low = sup.scale_im_enhao(data[idx_scale, :, :, 0], data[idx_scale, :, :, 1])
-    scale_full = sup.scale_im_enhao(data[idx_scale, :, :, 0], data[idx_scale, :, :, 2])
-    ntoc = time.time()
-    if verbose:
-        print('scale low:', scale_low)
-        print('scale full:', scale_full)
-        print('done scaling data ({:.2f} s)'.format(ntoc - ntic))
-    data[:,:,:,1] /= scale_low
-    data[:,:,:,2] /= scale_full
-
-    return data
 
 if __name__ == '__main__':
 
@@ -83,7 +58,6 @@ if __name__ == '__main__':
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
     parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
-    parser.add_argument('--dont_normalize', action='store_false', dest='normalize', help='turn off data normalization')
     parser.add_argument('--data_per_fit', action='store', dest='data_per_fit', type=int, help='number of data sets per call to fit', default=1)
 
 
@@ -103,7 +77,6 @@ if __name__ == '__main__':
     residual_mode = args.residual_mode
     lr_init = args.lr_init
     batch_norm = args.batch_norm
-    normalize = args.normalize
     data_per_fit = args.data_per_fit
 
     if log_dir is not None:
@@ -178,8 +151,6 @@ if __name__ == '__main__':
             # load single volume
             data = suio.load_npy_file(npy_file)
 
-            if normalize:
-                data = normalize_data(data, verbose)
 
             X = data[:,:,:,:2]
             #Y = data[:,:,:,-1][:,:,:,None]
@@ -218,10 +189,6 @@ if __name__ == '__main__':
             npy_list = npy_list[1:]
 
             data_val = suio.load_npy_file(npy_list_val)
-            if normalize:
-                data_val = normalize_data(data_val, verbose)
-                if verbose:
-                    print('mean of data:', np.mean(data, axis=(0,1,2)))
 
             X_val = data_val[:,:,:,:2]
             Y_val = data_val[:,:,:,-1][:,:,:,None]
@@ -267,10 +234,6 @@ if __name__ == '__main__':
                 # should be the same
                 data_list = suio.load_npy_files('', npy_files)
 
-                if normalize:
-                    data_list = [normalize_data(d, verbose) for d in data_list]
-                    if verbose:
-                        print('mean of data:', [np.mean(d, axis=(0,1,2)) for d in data_list])
 
                 data = np.concatenate(data_list, axis=0)
                 _ridx = np.random.permutation(data.shape[0])
@@ -285,9 +248,7 @@ if __name__ == '__main__':
                     if verbose:
                         print('residual mode. train on (zero, low - zero, full - zero)')
                     X[:,:,:,1] -= X[:,:,:,0]
-                    #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
                     Y -= X[:,:,:,0][:,:,:,None]
-                    #Y = np.maximum(0., Y)
 
 
                 if val_split > 0:
