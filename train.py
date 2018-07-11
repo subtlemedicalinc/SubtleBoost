@@ -202,62 +202,19 @@ if __name__ == '__main__':
                 #Y_val = np.maximum(0., Y_val)
 
 
-
-        if verbose:
-            print('epoch\tfile')
-
         cb_checkpoint = m.callback_checkpoint()
         cb_tensorboard = m.callback_tensorbaord()
 
 
-        for epoch in range(num_epochs):
+        training_generator = suio.DataGenerator(npy_list=npy_list,
+                batch_size=batch_size,
+                num_channel_input=2, num_channel_output=1,
+                img_rows=nx, img_cols=ny,
+                shuffle=False,
+                verbose=verbose, 
+                residual_mode=residual_mode)
 
-            _npy_list = list(npy_list)
+        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=6, epochs=num_epochs, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
 
-            i_npy = 0
-            while len(_npy_list) > 0:
-
-                i_npy += 1
-
-                npy_files = _npy_list[:data_per_fit]
-                del _npy_list[:data_per_fit]
-
-
-
-                if verbose:
-                    print('{0}/{1}\t{2}/{3}\t{4}'.format(epoch, num_epochs, i_npy, int(np.ceil(len(npy_list) / data_per_fit)), npy_files))
-
-                # load volumes
-                # each element of the data_list contains 3 sets of 3D
-                # volumes containing zero, low, and full contrast.
-                # the number of slices may differ but the image dimensions
-                # should be the same
-                data_list = suio.load_npy_files('', npy_files)
-
-
-                data = np.concatenate(data_list, axis=0)
-                _ridx = np.random.permutation(data.shape[0])
-
-                X = data[_ridx,:,:,:2]
-                Y = data[_ridx,:,:,-1][:,:,:,None]
-
-                if verbose:
-                    print('X, Y sizes = ', X.shape, Y.shape)
-
-                if residual_mode:
-                    if verbose:
-                        print('residual mode. train on (zero, low - zero, full - zero)')
-                    X[:,:,:,1] -= X[:,:,:,0]
-                    Y -= X[:,:,:,0][:,:,:,None]
-
-
-                if val_split > 0:
-                    history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_split=val_split, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
-                else:
-                    if i_npy % 10 == 0:
-                        history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, validation_data=(X_val, Y_val), callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
-                    else:
-                        history = m.model.fit(X, Y, batch_size=batch_size, epochs=1, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
-                toc = time.time()
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))

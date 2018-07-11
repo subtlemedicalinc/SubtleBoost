@@ -22,6 +22,8 @@ try:
 except:
     pass
 
+import subtle.subtle_preprocess as sup
+
 
 def get_dicom_dirs(base_dir):
 
@@ -239,10 +241,14 @@ def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
         
     return out
 
+def get_num_slices(npy_file, axis=0):
+    f = np.load(npy_file, mmap_mode='r')
+    return f.shape[axis]
+
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=True, normalize=True, residual_mode=True):
+    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=True, residual_mode=True):
 
         'Initialization'
         self.npy_list = npy_list
@@ -253,25 +259,50 @@ class DataGenerator(keras.utils.Sequence):
         self.img_cols = img_cols
         self.shuffle = shuffle
         self.verbose = verbose
-        self.normalize = normalize
         self.residual_mode = residual_mode
+        self.current_slice = 0
+
+        self.num_slices_per_file = np.array([get_num_slices(npy_file) for npy_file in npy_list])
+        self.cumsum_slices = np.cumsum(self.num_slices_per_file)
+        self.num_slices = np.sum(self.num_slices_per_file)
 
         self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.npy_list) / self.batch_size))
+        return int(np.floor(self.num_slices / self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
         # Generate indexes of the batch
-        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
 
-        # Find list of IDs
-        _npy_list = [self.npy_list[k] for k in indexes]
+        # figure out which file to start reading from
+        file_1_idx = np.argmax(self.current_slice < self.cumsum_slices)
+        print('File:', self.npy_list[file_1_idx], 'num slices:', self.num_slices_per_file[file_1_idx]) 
+
+        start_idx = self.num_slices_per_file[file_1_idx] - self.cumsum_slices[file_1_idx] + self.current_slice
+
+        print('current slice:', self.current_slice, 'start_idx:', start_idx)
+
+        # figure out if we need to read slices from the next adjacent file
+        remaining_slices = self.num_slices_per_file[file_1_idx] - start_idx
+        print('total slices in file: ', self.num_slices_per_file[file_1_idx])
+        print('remaining slices:', remaining_slices)
+        if remaining_slices < self.batch_size:
+            file_2_idx = file_1_idx + 1
+            npy_dict = {
+                    self.npy_list[file_1_idx]: np.arange(start_idx, remaining_slices),
+                    self.npy_list[file_2_idx]: np.arange(0, self.batch_size - remaining_slices)
+                    }
+        else:
+            npy_dict = {self.npy_list[file_1_idx]: np.arange(start_idx, start_idx + self.batch_size)}
+
+        print('list of slices:', npy_dict)
 
         # Generate data
-        X, Y = self.__data_generation(_npy_list)
+        X, Y = self.__data_generation(npy_dict)
+
+        self.current_slice = self.current_slice + self.batch_size
 
         return X, Y
 
@@ -279,9 +310,13 @@ class DataGenerator(keras.utils.Sequence):
         'Updates indexes after each epoch'
         self.indexes = np.arange(len(self.npy_list))
         if self.shuffle == True:
-            np.random.shuffle(self.indexes)
+            _ridx = np.random.permutation(len(self.npy_list))
+            self.indexes = self.indexes[_ridx]
+            self.num_slices_per_file = self.num_slices_per_file[_ridx]
+            self.cumsum_slices = np.cumsum(self.num_slices_per_file)
+        self.current_slice = 0
 
-    def __data_generation(self, npy_files):
+    def __data_generation(self, npy_dict):
         'Generates data containing batch_size samples' 
 
         # load volumes
@@ -289,14 +324,20 @@ class DataGenerator(keras.utils.Sequence):
         # volumes containing zero, low, and full contrast.
         # the number of slices may differ but the image dimensions
         # should be the same
-        data_list = load_npy_files('', npy_files)
 
-        if self.normalize:
-            data_list = [normalize_data(d, self.verbose) for d in data_list]
-            if self.verbose:
-                print('mean of data:', [np.mean(d, axis=(0,1,2)) for d in data_list])
+        print(npy_dict)
 
-        data = np.concatenate(data_list, axis=0)
+        data_list = []
+        for k in npy_dict.keys():
+            print(k)
+            d = np.load(k, mmap_mode='r')
+            data_list.append(d[npy_dict[k],:,:,:].transpose((0, 2, 3, 1)))
+
+        if len(data_list) > 1:
+            data = np.concatenate(data_list, axis=0)
+        else:
+            data = data_list[0]
+
         _ridx = np.random.permutation(data.shape[0])
 
         X = data[_ridx,:,:,:2]
