@@ -36,6 +36,28 @@ def set_keras_memory(limit=0.9):
     config.gpu_options.per_process_gpu_memory_fraction = limit
     set_session(tf_Session(config=config))
 
+class TensorBoardCallBack(keras.callbacks.TensorBoard):
+    def __init__(self, log_every=1, **kwargs):
+        super().__init__(**kwargs)
+        self.log_every = log_every
+        self.counter = 0
+    
+    def on_batch_end(self, batch, logs=None):
+        print('callback!')
+        self.counter+=1
+        if self.counter%self.log_every==0:
+            for name, value in logs.items():
+                if name in ['batch', 'size']:
+                    continue
+                summary = tf.Summary()
+                summary_value = summary.value.add()
+                summary_value.simple_value = value.item()
+                summary_value.tag = name
+                self.writer.add_summary(summary, self.counter)
+            self.writer.flush()
+        
+        super().on_batch_end(batch, logs)
+
 # based on u-net and v-net
 class DeepEncoderDecoder2D:
     def __init__(self,
@@ -77,12 +99,18 @@ class DeepEncoderDecoder2D:
         
         return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=False)
 
-    def callback_tensorbaord(self, log_dir=None):
+    # FIXME check
+    def callback_tensorbaord(self, log_dir=None, log_every=None):
 
         if log_dir is not None:
             self.log_dir = log_dir
         
-        return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
+        if log_every is not None and log_every > 0:
+            print('custom!')
+            return TensorBoardCallBack(log_every=log_every, log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
+        else:
+            print('regular!')
+            return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
 
     def load_weights(self, filename=None):
         if filename is not None:
