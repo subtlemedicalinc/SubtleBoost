@@ -312,6 +312,7 @@ class DataGenerator(keras.utils.Sequence):
         self.indexes = np.arange(len(self.npy_list))
         if self.shuffle == True:
             _ridx = np.random.permutation(len(self.npy_list))
+            self.npy_list = [self.npy_list[i] for i in _ridx]
             self.indexes = self.indexes[_ridx]
             self.num_slices_per_file = self.num_slices_per_file[_ridx]
             self.cumsum_slices = np.cumsum(self.num_slices_per_file)
