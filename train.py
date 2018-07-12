@@ -58,7 +58,10 @@ if __name__ == '__main__':
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
     parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
-    parser.add_argument('--data_per_fit', action='store', dest='data_per_fit', type=int, help='number of data sets per call to fit', default=1)
+    parser.add_argument('--steps_per_epoch', action='store', dest='steps_per_epoch', type=int, help='number of iterations per epoch (default -- # slices in dataset / batch_size', default=None)
+    parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=1)
+    parser.add_argument('--shuffle', action='store_true', dest='shuffle', help='shuffle input data files each epoch', default=False)
+    parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
 
 
     args = parser.parse_args()
@@ -77,7 +80,10 @@ if __name__ == '__main__':
     residual_mode = args.residual_mode
     lr_init = args.lr_init
     batch_norm = args.batch_norm
-    data_per_fit = args.data_per_fit
+    num_workers = args.num_workers
+    steps_per_epoch = args.steps_per_epoch
+    shuffle = args.shuffle
+    history_file = args.history_file
 
     if log_dir is not None:
         try:
@@ -204,17 +210,21 @@ if __name__ == '__main__':
 
         cb_checkpoint = m.callback_checkpoint()
         cb_tensorboard = m.callback_tensorbaord()
+        #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
         training_generator = suio.DataGenerator(npy_list=npy_list,
                 batch_size=batch_size,
                 num_channel_input=2, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
-                shuffle=False,
+                shuffle=shuffle,
                 verbose=verbose, 
                 residual_mode=residual_mode)
 
-        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=6, epochs=num_epochs, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+        history = m.model.fit_generator(generator=training_generator, use_multiprocessing=True, workers=num_workers, epochs=num_epochs, steps_per_epoch=steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
 
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
+
+        if history_file is not None:
+            np.save(history_file, history)
