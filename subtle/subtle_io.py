@@ -248,7 +248,7 @@ def get_num_slices(npy_file, axis=0):
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=True, residual_mode=True):
+    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=1, residual_mode=True):
 
         'Initialization'
         self.npy_list = npy_list
@@ -278,26 +278,27 @@ class DataGenerator(keras.utils.Sequence):
 
         # figure out which file to start reading from
         file_1_idx = np.argmax(self.current_slice < self.cumsum_slices)
-        print('File:', self.npy_list[file_1_idx], 'num slices:', self.num_slices_per_file[file_1_idx]) 
 
         start_idx = self.num_slices_per_file[file_1_idx] - self.cumsum_slices[file_1_idx] + self.current_slice
 
-        print('current slice:', self.current_slice, 'start_idx:', start_idx)
+        #print('current slice:', self.current_slice, 'start_idx:', start_idx)
 
         # figure out if we need to read slices from the next adjacent file
         remaining_slices = self.num_slices_per_file[file_1_idx] - start_idx
-        print('total slices in file: ', self.num_slices_per_file[file_1_idx])
-        print('remaining slices:', remaining_slices)
+        #print('total slices in file: ', self.num_slices_per_file[file_1_idx])
+        # FIXME: add case where batch size is larger than N datasets, N > 1
+        #print('remaining slices:', remaining_slices)
         if remaining_slices < self.batch_size:
-            file_2_idx = file_1_idx + 1
+            file_2_idx = (file_1_idx + 1) % len(self.npy_list)
             npy_dict = {
-                    self.npy_list[file_1_idx]: np.arange(start_idx, remaining_slices),
+                    self.npy_list[file_1_idx]: np.arange(start_idx, start_idx + remaining_slices),
                     self.npy_list[file_2_idx]: np.arange(0, self.batch_size - remaining_slices)
                     }
         else:
             npy_dict = {self.npy_list[file_1_idx]: np.arange(start_idx, start_idx + self.batch_size)}
 
-        print('list of slices:', npy_dict)
+        if self.verbose > 1:
+            print('list of slices:', npy_dict)
 
         # Generate data
         X, Y = self.__data_generation(npy_dict)
@@ -325,11 +326,10 @@ class DataGenerator(keras.utils.Sequence):
         # the number of slices may differ but the image dimensions
         # should be the same
 
-        print(npy_dict)
-
         data_list = []
         for k in npy_dict.keys():
-            print(k)
+            if self.verbose > 1:
+                print(k)
             d = np.load(k, mmap_mode='r')
             data_list.append(d[npy_dict[k],:,:,:].transpose((0, 2, 3, 1)))
 
@@ -343,11 +343,11 @@ class DataGenerator(keras.utils.Sequence):
         X = data[_ridx,:,:,:2]
         Y = data[_ridx,:,:,-1][:,:,:,None]
 
-        if self.verbose:
+        if self.verbose > 1:
             print('X, Y sizes = ', X.shape, Y.shape)
 
         if self.residual_mode:
-            if self.verbose:
+            if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
             X[:,:,:,1] -= X[:,:,:,0]
             #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
