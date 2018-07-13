@@ -209,8 +209,8 @@ if __name__ == '__main__':
 
 
         cb_checkpoint = m.callback_checkpoint()
-        cb_tensorboard = m.callback_tensorbaord()
-        #cb_tensorboard = m.callback_tensorbaord(log_every=1)
+        #cb_tensorboard = m.callback_tensorbaord()
+        cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
         training_generator = suio.DataGenerator(npy_list=npy_list,

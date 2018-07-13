@@ -43,7 +43,6 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
         self.counter = 0
     
     def on_batch_end(self, batch, logs=None):
-        print('callback!')
         self.counter+=1
         if self.counter%self.log_every==0:
             for name, value in logs.items():
@@ -106,10 +105,8 @@ class DeepEncoderDecoder2D:
             self.log_dir = log_dir
         
         if log_every is not None and log_every > 0:
-            print('custom!')
             return TensorBoardCallBack(log_every=log_every, log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
         else:
-            print('regular!')
             return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}'.format(time.time())), batch_size=8, write_graph=False)
 
     def load_weights(self, filename=None):
