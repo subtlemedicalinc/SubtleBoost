@@ -225,7 +225,7 @@ class DeepEncoderDecoder2D:
         
         # fit
         if self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:
             optimizer = self.optimizer_fun()
         model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
