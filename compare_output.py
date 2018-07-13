@@ -14,7 +14,7 @@ description_str = 'plot ground truth vs prediction'
 def tile(ims):
     return np.stack(ims, axis=2)
 
-def imshowtile(x, cmap='gray'):
+def imshowtile(x, title=None, cmap='gray'):
     plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)),cmap=cmap)
 
 if __name__ == '__main__':
@@ -27,17 +27,18 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.idx is None:
-        args.idx = data.shape[0] // 2
-
     z0 = np.load(args.npy_truth)
     z1 = np.load(args.npy_predict)
+
+    if args.idx is None:
+        args.idx = z0.shape[0] // 2
 
     z0_idx = z0[args.idx,:,:,:].squeeze().transpose((1,2,0))
     z1_idx = z1[args.idx,:,:,:]
 
     plt.figure(figsize=(20,5))
     imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
+    plt.title('pre vs. low vs. full vs. predicted')
 
     if args.output is None:
         plt.show()
