@@ -221,7 +221,7 @@ if __name__ == '__main__':
                 verbose=verbose, 
                 residual_mode=residual_mode)
 
-        history = m.model.fit_generator(generator=training_generator, use_multiprocessing=True, workers=num_workers, epochs=num_epochs, steps_per_epoch=steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=num_workers, epochs=num_epochs, steps_per_epoch=steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
 
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
