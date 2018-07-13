@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import sys
-import matplotlib.pyplot as plt
+
 import numpy as np
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 import argparse
 
@@ -21,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--slice', action='store', dest='idx', type=int, help='show this slice (Default -- middle)', default=None)
     parser.add_argument('--truth', action='store', dest='npy_truth', type=str, help='ground truth npy file')
     parser.add_argument('--prediction', action='store', dest='npy_predict', type=str, help='prediction npy file')
+    parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
 
     args = parser.parse_args()
 
@@ -31,10 +34,12 @@ if __name__ == '__main__':
     z1 = np.load(args.npy_predict)
 
     z0_idx = z0[args.idx,:,:,:].squeeze().transpose((1,2,0))
-    print(z0_idx.shape)
     z1_idx = z1[args.idx,:,:,:]
-    print(z1_idx.shape)
 
+    plt.figure(figsize=(20,5))
     imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
 
-    plt.show()
+    if args.output is None:
+        plt.show()
+    else:
+        plt.savefig(args.output)
