@@ -4,3 +4,4 @@ __pycache__/
 TransformParameters*.txt
 sync-down.sh
 sync-up.sh
+*.pyc
