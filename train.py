@@ -227,4 +227,4 @@ if __name__ == '__main__':
         print('done training ({:.0f} sec)'.format(toc - tic))
 
         if history_file is not None:
-            np.save(history_file, history)
+            np.save(history_file, history.history)
