@@ -66,35 +66,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    verbose = args.verbose
-    data_dir = args.data_dir
-    num_epochs = args.num_epochs
-    batch_size = args.batch_size
-    gpu_device = args.gpu_device
-    keras_memory = args.keras_memory
-    checkpoint_file = args.checkpoint_file
-    val_split = args.val_split
-    random_seed = args.random_seed
-    log_dir = args.log_dir
-    predict_dir = args.predict_dir
-    residual_mode = args.residual_mode
-    lr_init = args.lr_init
-    batch_norm = args.batch_norm
-    num_workers = args.num_workers
-    steps_per_epoch = args.steps_per_epoch
-    shuffle = args.shuffle
-    history_file = args.history_file
+    assert args.num_workers == 1, "FIXME"
 
-    if log_dir is not None:
+
+    if args.log_dir is not None:
         try:
-            os.mkdir(log_dir)
+            os.mkdir(args.log_dir)
         except Exception as e:
             warn(str(e))
             pass
 
-    if predict_dir is not None:
+    if args.predict_dir is not None:
         try:
-            os.mkdir(predict_dir)
+            os.mkdir(args.predict_dir)
         except Exception as e:
             warn(str(e))
             pass
@@ -104,18 +88,18 @@ if __name__ == '__main__':
     else:
         max_data_sets = args.max_data_sets
 
-    assert data_dir is not None, 'must specify data directory'
+    assert args.data_dir is not None, 'must specify data directory'
 
-    if gpu_device is not None:
+    if args.gpu_device is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_device
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
 
-    random.seed(random_seed)
-    np.random.seed(random_seed)
+    random.seed(args.random_seed)
+    np.random.seed(args.random_seed)
 
     # load data
-    if verbose:
-        print('loading data from {}'.format(data_dir))
+    if args.verbose:
+        print('loading data from {}'.format(args.data_dir))
         tic = time.time()
 
     # each element of the data_list contains 3 sets of 3D
@@ -123,7 +107,7 @@ if __name__ == '__main__':
     # the number of slices may differ but the image dimensions
     # should be the same
 
-    npy_list = suio.get_npy_files(data_dir, max_data_sets=max_data_sets)
+    npy_list = suio.get_npy_files(args.data_dir, max_data_sets=max_data_sets)
     random.shuffle(npy_list)
 
     # load initial file to get dimensions
@@ -132,26 +116,26 @@ if __name__ == '__main__':
     _, nx, ny, _ = data.shape
 
     sugn.clear_keras_memory()
-    sugn.set_keras_memory(keras_memory)
+    sugn.set_keras_memory(args.keras_memory)
 
     m = sugn.DeepEncoderDecoder2D(
             num_channel_input=2, num_channel_output=1,
             img_rows=nx, img_cols=ny,
             num_channel_first=32,
-            lr_init=lr_init,
-            batch_norm=batch_norm,
-            verbose=verbose, checkpoint_file=checkpoint_file, log_dir=log_dir)
+            lr_init=args.lr_init,
+            batch_norm=args.batch_norm,
+            verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir)
 
     m.load_weights()
 
     tic = time.time()
-    if predict_dir is not None:
+    if args.predict_dir is not None:
 
         print('predicting...')
 
         for npy_file in npy_list:
 
-            if verbose:
+            if args.verbose:
                 print('{}:'.format(npy_file))
 
             # load single volume
@@ -161,21 +145,21 @@ if __name__ == '__main__':
             X = data[:,:,:,:2]
             #Y = data[:,:,:,-1][:,:,:,None]
 
-            if verbose:
+            if args.verbose:
                 print('X size = ', X.shape)
 
-            if residual_mode:
-                if verbose:
+            if args.residual_mode:
+                if args.verbose:
                     print('residual mode. train on (zero, low - zero, full - zero)')
                 X[:,:,:,1] -= X[:,:,:,0]
                 #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
 
-            Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=batch_size, verbose=verbose)
+            Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=args.batch_size, verbose=args.verbose)
 
             npy_base = os.path.basename(npy_file)
-            npy_file_predict = '{}/{}_predict.npy'.format(predict_dir, os.path.splitext(npy_base)[0])
+            npy_file_predict = '{}/{}_predict.npy'.format(args.predict_dir, os.path.splitext(npy_base)[0])
 
-            if verbose:
+            if args.verbose:
                 print('output: {}'.format(npy_file_predict))
 
             np.save(npy_file_predict, Y_prediction)
@@ -187,9 +171,9 @@ if __name__ == '__main__':
 
         print('training...')
 
-        if val_split == 0. and len(npy_list) > 1:
+        if args.val_split == 0. and len(npy_list) > 1:
             npy_list_val = npy_list[0]
-            if verbose:
+            if args.verbose:
                 print('using {} for validation'.format(npy_list_val))
 
             npy_list = npy_list[1:]
@@ -199,8 +183,8 @@ if __name__ == '__main__':
             X_val = data_val[:,:,:,:2]
             Y_val = data_val[:,:,:,-1][:,:,:,None]
 
-            if residual_mode:
-                if verbose:
+            if args.residual_mode:
+                if args.verbose:
                     print('residual mode. train on (zero, low - zero, full - zero)')
                 X_val[:,:,:,1] -= X_val[:,:,:,0]
                 #X_val[:,:,:,1] = np.maximum(0., X_val[:,:,:,1])
@@ -214,17 +198,17 @@ if __name__ == '__main__':
 
 
         training_generator = suio.DataGenerator(npy_list=npy_list,
-                batch_size=batch_size,
+                batch_size=args.batch_size,
                 num_channel_input=2, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
-                shuffle=shuffle,
-                verbose=verbose, 
-                residual_mode=residual_mode)
+                shuffle=args.shuffle,
+                verbose=args.verbose, 
+                residual_mode=args.residual_mode)
 
-        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=num_workers, epochs=num_epochs, steps_per_epoch=steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=verbose)
+        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=args.num_workers, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=args.verbose)
 
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
 
-        if history_file is not None:
-            np.save(history_file, history.history)
+        if args.history_file is not None:
+            np.save(args.history_file, history.history)
