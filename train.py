@@ -62,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=1)
     parser.add_argument('--shuffle', action='store_true', dest='shuffle', help='shuffle input data files each epoch', default=False)
     parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
+    parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
 
 
     args = parser.parse_args()
@@ -124,7 +125,7 @@ if __name__ == '__main__':
             num_channel_first=32,
             lr_init=args.lr_init,
             batch_norm=args.batch_norm,
-            verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir)
+            verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
 
     m.load_weights()
 
