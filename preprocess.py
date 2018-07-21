@@ -46,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
     parser.add_argument('--normalize', action='store_true', dest='normalize', help="additional normalization)", default=False)
     parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
+    parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
 
     args = parser.parse_args()
 
@@ -137,16 +138,19 @@ if __name__ == '__main__':
 
     spars = sitk.GetDefaultParameterMap(transform_type)
 
-    ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=verbose)
+    if not args.skip_registration:
+        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=verbose)
 
-    if verbose:
-        print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
+        if verbose:
+            print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
-    ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=verbose)
+    if not args.skip_registration:
+        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=verbose)
 
-    if verbose:
-        print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
+        if verbose:
+            print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
 
+    print(np.max(np.abs(ims), axis=(0,2,3)))
     if normalize:
         if verbose:
             print('normalizing with function ', args.normalize_fun, normalize_fun)
