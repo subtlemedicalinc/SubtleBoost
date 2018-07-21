@@ -35,11 +35,11 @@ def mask_im(im, threshold=.08):
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
     return mask   
 
-def normalize_data(data, verbose=False):
+def normalize_data(data, verbose=False, fun=np.mean):
     ntic = time.time()
     if verbose:
         print('normalizing data')
-    data_out = normalize_im(data.copy(), axis=(0,1,2)) # normalize each contrast separately
+    data_out = normalize_im(data.copy(), axis=(0,1,2), fun=fun) # normalize each contrast separately
     ntoc = time.time()
     if verbose:
         print('done ({:.2f}s)'.format(ntoc - ntic))

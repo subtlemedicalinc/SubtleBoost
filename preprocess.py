@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
     parser.add_argument('--normalize', action='store_true', dest='normalize', help="additional normalization)", default=False)
+    parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
 
     args = parser.parse_args()
 
@@ -63,6 +64,13 @@ if __name__ == '__main__':
     transform_type = args.transform_type
 
     normalize = args.normalize
+
+    if args.normalize_fun == 'mean':
+        normalize_fun = np.mean
+    elif args.normalize_fun == 'max':
+        normalize_fun = np.max
+    else:
+        assert 0, 'unrecognized normalization fun: {}'.format(args.normalize_fun)
 
     if path_zero is not None and path_low is not None and path_full is not None:
         use_indiv_path = True
@@ -140,6 +148,8 @@ if __name__ == '__main__':
         print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
 
     if normalize:
-        sup.normalize_data(ims.transpose((0,2,3,1)), verbose).transpose((0,3,1,2))
+        if verbose:
+            print('normalizing with function ', args.normalize_fun, normalize_fun)
+        ims = sup.normalize_data(ims.transpose((0,2,3,1)), verbose=verbose, fun=normalize_fun).transpose((0,3,1,2))
 
     np.save(out_file, ims)
