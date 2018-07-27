@@ -3,10 +3,17 @@ Gadolinium Contrast Enhancement using Deep Learning
 
 ## Pre-processing
 ```bash
-python preprocess.py --path_zero /home/subtle/Data/Stanford/lowcon/Patient_0121/7_AX_BRAVO_PRE --path_low /home/subtle/Data/Stanford/lowcon/Patient_0121/10_AX_BRAVO_+C --path_full /home/subtle/Data/Stanford/lowcon/Patient_0121/13_AX_BRAVO+C --verbose --output data/Patient_0121.npy --discard_start_percent .1 --discard_end_percent .1
+python preproccess.py --path_base /home/subtle/Data/Stanford/lowcon/Patient_0121 --verbose --output Patient_0121.npy --discard_start_percent .1 --discard_end_percent .1 --normalize --normalize_fun mean 
 ```
 
 ## Training
 ```bash
-python train.py --data_dir data --verbose --checkpoint test.checkpoint
+python train.py --data_train_list ../data_full/data_train_small.txt --verbose --num_epochs 20 --batch_size 8 --gpu 0 --checkpoint xyz.checkpoint --validation_split 0. --random_seed 723 --log_dir ../logs_tb/ --max_data_sets 50 --learn_residual --learning_rate .0001 --batch_norm --num_workers 1 --shuffle --history_file history_xyz.npy --id 123xyz
+```
+
+or use helper script
+```bash
+GPU=0 DATA_LIST=../data_full/data_train_small.txt NYM_EPOCHS=20\ 
+BATCH_SIZE=8 LEARN_RESIDUAL=1 BATCH_NORM=1 \
+LEARNING_RATE=.001 MAX_DATA_SETS=50 NUM_WORKERS=1 ./scripts/train.sh 123xyz
 ```
