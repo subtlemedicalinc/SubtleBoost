@@ -2,7 +2,7 @@
 
 commit=$1
 	
-DATA_DIR=${DATA_DIR:="/home/ubuntu/jon/dev/data_full/data"}
+DATA_LIST=${DATA_LIST:="/home/ubuntu/jon/dev/data_full/data_train.txt"}
 LEARNING_RATE=${LEARNING_RATE:=".001"}
 GPU=${GPU:=0}
 MAX_DATA_SETS=${MAX_DATA_SETS:=20}
@@ -43,11 +43,12 @@ fi
 
 
 
-cmd="python train.py ${steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} --batch_size ${BATCH_SIZE} --validation_split 0. --learning_rate ${LEARNING_RATE}"
+cmd="python train.py --data_train_list ${DATA_LIST} ${steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} --num_workers ${NUM_WORKERS} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split 0. --learning_rate ${LEARNING_RATE}"
+
 job_id=$(echo $cmd | sha1sum | awk '{print $1}' | cut -c1-6)
 
 checkpoint_file="${commit}_${job_id}.checkpoint"
 log_file="log_${commit}_${job_id}.out"
 history_file="history_${commit}_${job_id}.npy"
 
-python train.py --data_dir ${DATA_DIR} ${steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} --num_workers ${NUM_WORKERS} --verbose --checkpoint ../checkpoints/${checkpoint_file} --num_epochs ${NUM_EPOCHS} --log_dir ../logs_tb --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --gpu $GPU --validation_split 0. --learning_rate ${LEARNING_RATE} --history_file ../history/${history_file} --id ${job_id} > ../logs/${log_file} 2>&1
+python train.py --data_train_list ${DATA_LIST} ${steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} --num_workers ${NUM_WORKERS} --verbose --checkpoint ../checkpoints/${checkpoint_file} --num_epochs ${NUM_EPOCHS} --log_dir ../logs_tb --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --gpu $GPU --validation_split 0. --learning_rate ${LEARNING_RATE} --history_file ../history/${history_file} --id ${job_id} > ../logs/${log_file} 2>&1

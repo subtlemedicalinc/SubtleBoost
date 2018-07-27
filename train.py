@@ -43,7 +43,8 @@ description_str = 'train SubtleGrad network on pre-processed data'
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='directory containing pre-processed npy files', default=None)
+
+    parser.add_argument('--data_train_list', action='store', dest='data_train_list', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--num_epochs', action='store', dest='num_epochs', type=int, help='number of epochs to run', default=10)
     parser.add_argument('--batch_size', action='store', dest='batch_size', type=int, help='batch size', default=8)
@@ -69,6 +70,8 @@ if __name__ == '__main__':
     
     assert args.num_workers == 1, "FIXME"
 
+    assert args.data_train_list is not None, 'must specify data list'
+
 
     if args.log_dir is not None:
         try:
@@ -89,8 +92,6 @@ if __name__ == '__main__':
     else:
         max_data_sets = args.max_data_sets
 
-    assert args.data_dir is not None, 'must specify data directory'
-
     if args.gpu_device is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
@@ -100,21 +101,25 @@ if __name__ == '__main__':
 
     # load data
     if args.verbose:
-        print('loading data from {}'.format(args.data_dir))
-        tic = time.time()
+        print('loading training data from {}'.format(args.data_train_list))
+    tic = time.time()
 
-    # each element of the data_list contains 3 sets of 3D
+    f = open(args.data_train_list, 'r')
+    args.data_train_list = [l.strip() for l in f.readlines()]
+    f.close()
+
+    # each element of the data_train_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
     # the number of slices may differ but the image dimensions
     # should be the same
 
-    npy_list = suio.get_npy_files(args.data_dir, max_data_sets=max_data_sets)
-    random.shuffle(npy_list)
+    random.shuffle(args.data_train_list)
+    args.data_train_list = args.data_train_list[:args.max_data_sets]
 
-    # load initial file to get dimensions
-    data = suio.load_npy_file(npy_list[0])
+    # get dimensions from first file
+    data_shape = suio.get_shape(args.data_train_list[0])
     #FIXME: check that image sizes are the same
-    _, nx, ny, _ = data.shape
+    _, _, nx, ny = data_shape
 
     sugn.clear_keras_memory()
     sugn.set_keras_memory(args.keras_memory)
@@ -134,13 +139,13 @@ if __name__ == '__main__':
 
         print('predicting...')
 
-        for npy_file in npy_list:
+        for data_file in args.data_train_list:
 
             if args.verbose:
-                print('{}:'.format(npy_file))
+                print('{}:'.format(data_file))
 
             # load single volume
-            data = suio.load_npy_file(npy_file)
+            data = suio.load_file(data_file).transpose((0, 2, 3, 1))
 
 
             X = data[:,:,:,:2]
@@ -157,13 +162,14 @@ if __name__ == '__main__':
 
             Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=args.batch_size, verbose=args.verbose)
 
-            npy_base = os.path.basename(npy_file)
-            npy_file_predict = '{}/{}_predict.npy'.format(args.predict_dir, os.path.splitext(npy_base)[0])
+            data_file_base = os.path.basename(data_file)
+            _1, _2 = os.path.splitext(data_file_base)
+            data_file_predict = '{}/{}_predict.{}'.format(args.predict_dir, _1, _2)
 
             if args.verbose:
-                print('output: {}'.format(npy_file_predict))
+                print('output: {}'.format(data_file_predict))
 
-            np.save(npy_file_predict, Y_prediction)
+            suio.save_data(data_file_predict, Y_prediction)
 
         toc = time.time()
         print('done predicting ({:.0f} sec)'.format(toc - tic))
@@ -172,14 +178,14 @@ if __name__ == '__main__':
 
         print('training...')
 
-        if args.val_split == 0. and len(npy_list) > 1:
-            npy_list_val = npy_list[0]
+        if args.val_split == 0. and len(args.data_train_list) > 1:
+            data_val_list = args.data_train_list[0]
             if args.verbose:
-                print('using {} for validation'.format(npy_list_val))
+                print('using {} for validation'.format(data_val_list))
 
-            npy_list = npy_list[1:]
+            args.data_train_list = args.data_train_list[1:]
 
-            data_val = suio.load_npy_file(npy_list_val)
+            data_val = suio.load_file(data_val_list).transpose((0, 2, 3, 1))
 
             X_val = data_val[:,:,:,:2]
             Y_val = data_val[:,:,:,-1][:,:,:,None]
@@ -198,7 +204,7 @@ if __name__ == '__main__':
         cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
-        training_generator = suio.DataGenerator(npy_list=npy_list,
+        training_generator = suio.DataGenerator(data_list=args.data_train_list,
                 batch_size=args.batch_size,
                 num_channel_input=2, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
