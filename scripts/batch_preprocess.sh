@@ -1,14 +1,14 @@
 #!/bin/bash
 
 export dicom_data='/data/test_cloud_inference/lowcon'
-export out_dir='/home/ubuntu/jon/dev/data_full/data_small_set'
-export out_dir_plots='/home/ubuntu/jon/dev/data_full/data_small_set/plots'
+export out_dir='/home/ubuntu/jon/dev/data_full/data'
+export out_dir_plots='/home/ubuntu/jon/dev/data_full/data/plots'
 export par_jobs=1
 
 mkdir -p ${out_dir}
 mkdir -p ${out_dir_plots}
 
-export max_files=10
+export max_files=1000
 
 function preprocess() {
 
