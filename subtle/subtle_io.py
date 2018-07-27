@@ -11,8 +11,13 @@ Created on 2018/05/18
 '''
 
 import sys
+import os # FIXME: transition from os to pathlib
+import pathlib
+
+import h5py
+
 import numpy as np
-import os
+
 try:
     import dicom as pydicom
 except:
@@ -189,22 +194,14 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
 
     return npy_list
 
+def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
+    return load_slices(input_file, slices=None, file_type=file_type, params=params)
+
+def load_h5_file(h5_file, h5_key='data'):
+    return load_slices_h5(h5_file, slices=None, h5_key=k5_key)
+
 def load_npy_file(npy_file):
-
-    ''' Load single npy file and transpose
-
-    Parameters:
-    -----------
-    npy_file : string
-        name of npy file
-
-    Returns:
-    --------
-    out : numpy array
-        numpy array transposed for network format
-    '''
-
-    return np.transpose(np.load(npy_file), (0, 2, 3, 1))
+    return load_slices_npy(npy_file, slices=None)
 
 def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
 
@@ -241,17 +238,197 @@ def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
         
     return out
 
-def get_num_slices(npy_file, axis=0):
-    f = np.load(npy_file, mmap_mode='r')
-    return f.shape[axis]
+
+def get_file_type(input_file):
+    ''' Get file type from input file
+
+    Parameters:
+    -----------
+    input_file : string
+        name of data file
+
+    Returns:
+    --------
+    file_type : str
+        string representing file type
+    '''
+
+    suffix = ''.join(pathlib.Path(input_file).suffixes)
+
+    if suffix in ['.npy', '.npz']:
+        return 'npy'
+    elif suffix in ['.h5', '.hdf5', '.h5z']:
+        return 'h5'
+    else:
+        return -1
+
+
+def save_data_npy(output_file, data):
+    try:
+        np.save(output_file, data)
+        return 0
+    except:
+        return -1
+
+def save_data_h5(output_file, data, h5_key='data', compress=True):
+    try:
+        with h5py.File(args.output_file, 'w') as f:
+            if compress:
+                f.create_dataset(h5_key, data=data, compression='gzip')
+            else:
+                f.create_dataset(h5_key, data=data)
+        return 0
+    except:
+        return -1
+
+def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': True}):
+    ''' Save data to output file using file type format
+
+    Parameters:
+    -----------
+    output_file : string
+        name of output data file
+    data : numpy array
+        numpy array to save
+    file_type : string
+        defines the file type of the input data
+    params : dict
+        dictionary used for loading the data
+
+    Returns:
+    --------
+    code : int
+        exit code (0 success, non-zero fail)
+    '''
+
+    if file_type is None:
+        file_type = get_file_type(output_file)
+
+    if file_type == 'h5':
+        return save_data_h5(output_file, data, h5_key=params['h5_key'], compress=params['compress'])
+    else:
+        # default to npy
+        return save_data_npy(output_file, data)
+
+def load_slices_h5(input_file, slices=None, h5_key='data'):
+    F = h5py.File(input_file, 'r')
+    if slices is None:
+        data = np.array(F[h5_key])
+    else:
+        data = np.array(F[h5_key][slices, :, :, :])
+    F.close()
+    return data
+
+def load_slices_npy(input_file, slices=None):
+    d = np.load(k, mmap_mode='r')
+    if slices is None:
+        return d
+    else:
+        return d[slices, :, :, :]
+
+def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}):
+    ''' Load some or all slices from data file
+
+    Parameters:
+    -----------
+    input_file : string
+        name of data file
+    slices : numpy array or list
+        list of slices to load. If None, load all slices
+    file_type : string
+        defines the file type of the input data
+    params : dict
+        dictionary used for loading the data
+
+    Returns:
+    --------
+    out : numpy array
+        numpy array
+    '''
+
+    if file_type is None:
+        file_type = get_file_type(input_file)
+
+    if file_type == 'npy':
+        return load_slices_npy(input_file, slices)
+    elif file_type == 'h5':
+        return load_slices_h5(input_file, slices, h5_key=params['h5_key'])
+    else:
+        print('subtle_io/load_slices: ERROR. unrecognized file type', file_type)
+        sys.exit(-1)
+
+
+def get_shape(input_file, file_type=None, params={'h5_key': 'data'}):
+    ''' Get shape of data from data file
+
+    Parameters:
+    -----------
+    input_file : string
+        name of data file
+    file_type : string
+        defines the file type of the input data
+    params : dict
+        dictionary used for loading the data
+
+    Returns:
+    --------
+    data_shape : numpy array
+        numpy array of dimensions
+    '''
+
+    if file_type is None:
+        file_type = get_file_type(input_file)
+
+    if file_type == 'npy':
+        return get_shape_npy(input_file)
+    elif file_type == 'h5':
+        return get_shape_h5(input_file, h5_key=params['h5_key'])
+    else:
+        print('subtle_io/get_shape: ERROR. unrecognized file type', file_type)
+        sys.exit(-1)
+
+def get_shape_npy(input_file):
+    f = np.load(input_file, mmap_mode='r')
+    return f.shape
+
+def get_shape_h5(input_file, h5_key='data'):
+    F = h5py.File(input_file, 'r')
+    data_shape = F[h5_key].shape
+    F.close()
+    return data_shape
+
+
+def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'}):
+    ''' Get number of slices along a particular axis in data file
+
+    Parameters:
+    -----------
+    input_file : string
+        name of data file
+    axis : int
+        axis to check for slices
+    file_type : string
+        defines the file type of the input data
+    params : dict
+        dictionary used for loading the data
+
+    Returns:
+    --------
+    num : int
+        number of slices in dimension axis
+    '''
+
+    data_shape = get_shape(data_file, file_type, params)
+    return data_shape[axis]
+
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, npy_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=1, residual_mode=True):
+    def __init__(self, data_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=1, residual_mode=True):
 
         'Initialization'
-        self.npy_list = npy_list
+        self.data_list = data_list
         self.batch_size = batch_size
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -262,7 +439,7 @@ class DataGenerator(keras.utils.Sequence):
         self.residual_mode = residual_mode
         self.current_slice = 0
 
-        self.num_slices_per_file = np.array([get_num_slices(npy_file) for npy_file in npy_list])
+        self.num_slices_per_file = np.array([get_num_slices(data_file) for data_file in data_list])
         self.cumsum_slices = np.cumsum(self.num_slices_per_file)
         self.num_slices = np.sum(self.num_slices_per_file)
 
@@ -289,19 +466,19 @@ class DataGenerator(keras.utils.Sequence):
         # FIXME: add case where batch size is larger than N datasets, N > 1
         #print('remaining slices:', remaining_slices)
         if remaining_slices < self.batch_size:
-            file_2_idx = (file_1_idx + 1) % len(self.npy_list)
-            npy_dict = {
-                    self.npy_list[file_1_idx]: np.arange(start_idx, start_idx + remaining_slices),
-                    self.npy_list[file_2_idx]: np.arange(0, self.batch_size - remaining_slices)
+            file_2_idx = (file_1_idx + 1) % len(self.data_list)
+            file_dict = {
+                    self.data_list[file_1_idx]: np.arange(start_idx, start_idx + remaining_slices),
+                    self.data_list[file_2_idx]: np.arange(0, self.batch_size - remaining_slices)
                     }
         else:
-            npy_dict = {self.npy_list[file_1_idx]: np.arange(start_idx, start_idx + self.batch_size)}
+            file_dict = {self.data_list[file_1_idx]: np.arange(start_idx, start_idx + self.batch_size)}
 
         if self.verbose > 1:
-            print('list of slices:', npy_dict)
+            print('list of slices:', file_dict)
 
         # Generate data
-        X, Y = self.__data_generation(npy_dict)
+        X, Y = self.__data_generation(file_dict)
 
         self.current_slice = self.current_slice + self.batch_size
 
@@ -309,16 +486,16 @@ class DataGenerator(keras.utils.Sequence):
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.npy_list))
+        self.indexes = np.arange(len(self.data_list))
         if self.shuffle == True:
-            _ridx = np.random.permutation(len(self.npy_list))
-            self.npy_list = [self.npy_list[i] for i in _ridx]
+            _ridx = np.random.permutation(len(self.data_list))
+            self.data_list = [self.data_list[i] for i in _ridx]
             self.indexes = self.indexes[_ridx]
             self.num_slices_per_file = self.num_slices_per_file[_ridx]
             self.cumsum_slices = np.cumsum(self.num_slices_per_file)
         self.current_slice = 0
 
-    def __data_generation(self, npy_dict):
+    def __data_generation(self, file_dict):
         'Generates data containing batch_size samples' 
 
         # load volumes
@@ -328,11 +505,11 @@ class DataGenerator(keras.utils.Sequence):
         # should be the same
 
         data_list = []
-        for k in npy_dict.keys():
+        for k in file_dict.keys():
             if self.verbose > 1:
                 print(k)
-            d = np.load(k, mmap_mode='r')
-            data_list.append(d[npy_dict[k],:,:,:].transpose((0, 2, 3, 1)))
+
+            data_list.append(load_slices(input_file=k, slices=file_dict[k]).transpose((0, 2, 3, 1)))
 
         if len(data_list) > 1:
             data = np.concatenate(data_list, axis=0)
