@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-import sys
 import argparse
 
 import numpy as np
 
-usage_str = 'usage: %(prog)s [options]'
+usage_str = 'usage: %(prog)s [options] N <input_file>'
 #description_str = 'pick lines from input and store in output'
 description_str = 'pick lines from input and write to stdout'
 
