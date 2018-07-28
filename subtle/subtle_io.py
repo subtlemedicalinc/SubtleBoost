@@ -422,6 +422,37 @@ def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'})
     return data_shape[axis]
 
 
+def build_slice_list(data_list):
+    ''' Builds two lists where the index is the
+    slice number and the value is the file name / slice index.
+    The length of the list is the total number of slices
+
+    Parameters:
+    -----------
+    data_list : list
+        list of file names
+
+    Returns:
+    --------
+    slice_list_files : list
+        slice list corresponding to files
+    slice_list_indexes : list
+        slice list corresponding to slice indexes
+    '''
+
+    slice_list_files = []
+    slice_list_indexes = []
+
+    for data_file in data_list:
+        num_slices = get_num_slices(data_file)
+        slice_list_files.extend([data_file] * num_slices)
+        slice_list_indexes.extend(range(num_slices))
+
+    return slice_list_files, slice_list_indexes
+
+
+
+
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
@@ -439,9 +470,11 @@ class DataGenerator(keras.utils.Sequence):
         self.residual_mode = residual_mode
         self.current_slice = 0
 
-        self.num_slices_per_file = np.array([get_num_slices(data_file) for data_file in data_list])
-        self.cumsum_slices = np.cumsum(self.num_slices_per_file)
-        self.num_slices = np.sum(self.num_slices_per_file)
+        _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
+        self.slice_list_files = np.array(_slice_list_files)
+        self.slice_list_indexes = np.array(_slice_list_indexes)
+
+        self.num_slices = len(self.slice_list_files)
 
         self.on_epoch_end()
 
@@ -451,34 +484,17 @@ class DataGenerator(keras.utils.Sequence):
 
     def __getitem__(self, index):
         'Generate one batch of data'
-        # Generate indexes of the batch
 
-        # figure out which file to start reading from
-        file_1_idx = np.argmax(self.current_slice < self.cumsum_slices)
-
-        start_idx = self.num_slices_per_file[file_1_idx] - self.cumsum_slices[file_1_idx] + self.current_slice
-
-        #print('current slice:', self.current_slice, 'start_idx:', start_idx)
-
-        # figure out if we need to read slices from the next adjacent file
-        remaining_slices = self.num_slices_per_file[file_1_idx] - start_idx
-        #print('total slices in file: ', self.num_slices_per_file[file_1_idx])
-        # FIXME: add case where batch size is larger than N datasets, N > 1
-        #print('remaining slices:', remaining_slices)
-        if remaining_slices < self.batch_size:
-            file_2_idx = (file_1_idx + 1) % len(self.data_list)
-            file_dict = {
-                    self.data_list[file_1_idx]: np.arange(start_idx, start_idx + remaining_slices),
-                    self.data_list[file_2_idx]: np.arange(0, self.batch_size - remaining_slices)
-                    }
-        else:
-            file_dict = {self.data_list[file_1_idx]: np.arange(start_idx, start_idx + self.batch_size)}
+        file_list = self.slice_list_files[self.indexes[self.current_slice:self.current_slice + self.batch_size]]
+        slice_list = self.slice_list_indexes[self.indexes[self.current_slice:self.current_slice + self.batch_size]]
 
         if self.verbose > 1:
-            print('list of slices:', file_dict)
+            print('list of files and slices:')
+            print(file_list)
+            print(slice_list)
 
         # Generate data
-        X, Y = self.__data_generation(file_dict)
+        X, Y = self.__data_generation(file_list, slice_list)
 
         self.current_slice = self.current_slice + self.batch_size
 
@@ -486,16 +502,12 @@ class DataGenerator(keras.utils.Sequence):
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.data_list))
+        self.indexes = np.arange(self.num_slices)
         if self.shuffle == True:
-            _ridx = np.random.permutation(len(self.data_list))
-            self.data_list = [self.data_list[i] for i in _ridx]
-            self.indexes = self.indexes[_ridx]
-            self.num_slices_per_file = self.num_slices_per_file[_ridx]
-            self.cumsum_slices = np.cumsum(self.num_slices_per_file)
+            self.indexes = np.random.permutation(self.indexes)
         self.current_slice = 0
 
-    def __data_generation(self, file_dict):
+    def __data_generation(self, slice_list_files, slice_list_indexes):
         'Generates data containing batch_size samples' 
 
         # load volumes
@@ -505,11 +517,8 @@ class DataGenerator(keras.utils.Sequence):
         # should be the same
 
         data_list = []
-        for k in file_dict.keys():
-            if self.verbose > 1:
-                print(k)
-
-            data_list.append(load_slices(input_file=k, slices=file_dict[k]).transpose((0, 2, 3, 1)))
+        for f, i in zip(slice_list_files, slice_list_indexes):
+            data_list.append(load_slices(input_file=f, slices=[i]).transpose((0, 2, 3, 1)))
 
         if len(data_list) > 1:
             data = np.concatenate(data_list, axis=0)
