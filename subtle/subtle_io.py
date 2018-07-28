@@ -520,20 +520,25 @@ class DataGenerator(keras.utils.Sequence):
 
         data_list_X = []
         data_list_Y = []
-        for f, i in zip(slice_list_files, slice_list_indexes):
-            num_slices = self.slices_per_file_dict[f]
-            # 2.5d
-            idxs = np.arange(i - self.slices_per_input // 2, i + self.slices_per_input // 2 + 1)
-            # handle edge cases for 2.5d by just repeating the boundary slices
-            for ii in range(len(idxs)):
-                if idxs[ii] < 0:
-                    idxs[ii] = 0
-                elif idxs[ii] >= num_slices:
-                    idxs[ii] = num_slices - 1
-            # stupid to load twice but easy and probably neglible for large number of workers...
-            data_list_X.append(load_slices(input_file=f, slices=idxs).transpose((2, 3, 1, 0))[None, :, :, :, :])
-            data_list_Y.append(load_slices(input_file=f, slices=[i]).transpose((2, 3, 1, 0))[None, :, :, :, :])
 
+        for f, c in zip(slice_list_files, slice_list_indexes):
+            num_slices = self.slices_per_file_dict[f]
+            h = self.slices_per_input // 2
+
+            # 2.5d
+            idxs = np.arange(c - h, c + h + 1)
+
+            # handle edge cases for 2.5d by just repeating the boundary slices
+            idxs = np.minimum(np.maximum(idxs, 0), num_slices - 1)
+
+            slices = load_slices(input_file=f, slices=idxs) # [c, 3, ny, nz]
+
+            slices_X = slices[:,:2,:,:][None,:,:,:,:]
+            slice_Y = slices[h, -1, :, :][None,:,:] 
+
+            data_list_X.append(slices_X)
+            data_list_Y.append(slice_Y)
+            
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
             data_Y = np.concatenate(data_list_Y, axis=0)
@@ -543,19 +548,18 @@ class DataGenerator(keras.utils.Sequence):
 
         _ridx = np.random.permutation(data_X.shape[0])
 
-        X = data_X[_ridx,:,:,:2,:]
-        Y_X = data_Y[_ridx,:,:,:2,:]
-        Y = data_Y[_ridx,:,:,-1,:][:,:,:,:,None]
+        X = data_X[_ridx,:,:,:,:]
+        Y = data_Y[_ridx,:,:]
+
 
         if self.residual_mode:
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
-            X[:,:,:,1,:] -= X[:,:,:,0,:]
-            #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
-            Y -= Y_X[:,:,:,0,:][:,:,:,:,None]
-            #Y = np.maximum(0., Y)
-        X = np.reshape(X, (data_X.shape[0], data_X.shape[1], data_X.shape[2], -1))
-        Y = np.reshape(Y, (data_X.shape[0], data_X.shape[1], data_X.shape[2], 1))
+            X[:,:,1,:,:] -= X[:,:,1,:,:]
+            Y -= X[:,h,0,:,:]
+
+        X = np.transpose(np.reshape(X, (X.shape[0], -1, X.shape[3], X.shape[4])), (0, 2, 3, 1))
+        Y = np.reshape(Y, (Y.shape[0], Y.shape[1], Y.shape[2], 1))
 
         if self.verbose > 1:
             print('X, Y sizes = ', X.shape, Y.shape)
