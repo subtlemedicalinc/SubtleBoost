@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--data_train_list', action='store', dest='data_train_list_file', type=str, help='list of pre-processed files for training', default=None)
+    parser.add_argument('--data_list', action='store', dest='data_list_file', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
     parser.add_argument('--file_ext', action='store', dest='file_ext', type=str, help='file extension of data', default=None)
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
@@ -53,8 +53,8 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', action='store', dest='gpu_device', type=str, help='set GPU', default=None)
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
-    parser.add_argument('--validation_split', action='store', dest='val_split', type=float, help='ratio of validation data', default=.1)
     parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='random number seed for numpy', default=723)
+    parser.add_argument('--validation_split', action='store', dest='validation_split', type=float, help='ratio of validation data', default=.1)
     parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
     parser.add_argument('--predict', action='store', dest='predict_dir', type=str, help='perform prediction and write to directory', default=None)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    assert args.data_train_list_file is not None, 'must specify data list'
+    assert args.data_list_file is not None, 'must specify data list'
 
 
     if args.log_dir is not None:
@@ -101,21 +101,21 @@ if __name__ == '__main__':
 
     # load data
     if args.verbose:
-        print('loading training data from {}'.format(args.data_train_list_file))
+        print('loading data from {}'.format(args.data_list_file))
     tic = time.time()
 
-    f = open(args.data_train_list_file, 'r')
-    data_train_list = []
+    f = open(args.data_list_file, 'r')
+    data_list = []
     for l in f.readlines():
         s = l.strip()
         if args.data_dir is not None:
             s = '{}/{}'.format(args.data_dir, s)
         if args.file_ext is not None:
             s = '{}.{}'.format(s, args.file_ext)
-        data_train_list.append(s)
+        data_list.append(s)
     f.close()
 
-    # each element of the data_train_list contains 3 sets of 3D
+    # each element of the data_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
     # the number of slices may differ but the image dimensions
     # should be the same
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     data_list = [data_list[i] for i in _ridx[:args.max_data_sets]]
 
     # get dimensions from first file
-    data_shape = suio.get_shape(data_train_list[0])
+    data_shape = suio.get_shape(data_list[0])
     #FIXME: check that image sizes are the same
     _, _, nx, ny = data_shape
 
@@ -191,42 +191,18 @@ if __name__ == '__main__':
 
         print('training...')
 
-        if args.val_split == 0. and len(data_train_list) > 1:
-            data_val_list = data_train_list[0]
-            if args.verbose:
-                print('using {} for validation'.format(data_val_list))
+        if len(data_list) == 1:
+            r = 0
+        elif args.validation_split == 0:
+            r = 1
+        else: # len(data_list) > 1
+            r = int(len(data_list) * args.validation_split)
 
-            data_train_list = data_train_list[1:]
+        if args.verbose:
+            print('using {} datasets for validation'.format(r))
 
-            data_val = suio.load_file(data_val_list).transpose((0, 2, 3, 1))
-
-            Y_val = data_val[:,:,:,-1][:,:,:,None]
-
-            if args.residual_mode:
-                if args.verbose:
-                    print('residual mode. train on (zero, low - zero, full - zero)')
-                Y_val -= data_val[:,:,:,0][:,:,:,None]
-
-            if args.slices_per_input > 1:
-                _idx = suio.window_stack(np.arange(data_val.shape[0]), stepsize=1, width=args.slices_per_input).reshape((-1, args.slices_per_input))
-                data_val_shape = data_val.shape
-                data_val = data_val[_idx,:,:,:].transpose((0, 2, 3, 4, 1))
-
-                X_val = data_val[:,:,:,:2,:]
-                Y_val = Y_val[args.slices_per_input//2:-1-args.slices_per_input//2+1,:,:,:]
-
-            else:
-                X_val = data_val[:,:,:,:2][:,:,:,:,None]
-
-
-            if args.residual_mode:
-                #if args.verbose:
-                    #print('residual mode. train on (zero, low - zero, full - zero)')
-                X_val[:,:,:,1,:] -= X_val[:,:,:,0,:]
-
-            _s = X_val.shape
-            X_val = np.reshape(X_val, (_s[0], _s[1], _s[2], -1))
-
+        data_val_list = data_list[:r]
+        data_train_list = data_list[r:]
 
         cb_checkpoint = m.callback_checkpoint()
         cb_tensorboard = m.callback_tensorbaord()
@@ -237,9 +213,20 @@ if __name__ == '__main__':
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
                 verbose=args.verbose, 
-                residual_mode=args.residual_mode, slices_per_input=args.slices_per_input)
+                residual_mode=args.residual_mode,
+                slices_per_input=args.slices_per_input)
 
-        history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=args.num_workers, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=args.verbose)
+        if r > 0:
+            validation_generator = suio.DataGenerator(data_list=data_val_list,
+                    batch_size=args.batch_size,
+                    shuffle=args.shuffle,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input)
+        else:
+            validation_generator = None
+
+        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=8, use_multiprocessing=True, workers=args.num_workers, max_queue_size=32, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=args.verbose)
 
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
