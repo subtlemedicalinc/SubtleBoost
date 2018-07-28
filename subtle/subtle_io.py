@@ -461,7 +461,7 @@ def window_stack(a, stepsize=1, width=3):
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, predict=False):
 
         'Initialization'
         self.data_list = data_list
@@ -470,6 +470,7 @@ class DataGenerator(keras.utils.Sequence):
         self.shuffle = shuffle
         self.verbose = verbose
         self.residual_mode = residual_mode
+        self.predict = predict
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
         self.slice_list_files = np.array(_slice_list_files)
@@ -519,7 +520,8 @@ class DataGenerator(keras.utils.Sequence):
         # should be the same
 
         data_list_X = []
-        data_list_Y = []
+        if not self.predict:
+            data_list_Y = []
 
         for f, c in zip(slice_list_files, slice_list_indexes):
             num_slices = self.slices_per_file_dict[f]
@@ -534,35 +536,47 @@ class DataGenerator(keras.utils.Sequence):
             slices = load_slices(input_file=f, slices=idxs) # [c, 3, ny, nz]
 
             slices_X = slices[:,:2,:,:][None,:,:,:,:]
-            slice_Y = slices[h, -1, :, :][None,:,:] 
-
             data_list_X.append(slices_X)
-            data_list_Y.append(slice_Y)
+
+            if not self.predict:
+                slice_Y = slices[h, -1, :, :][None,:,:] 
+                data_list_Y.append(slice_Y)
             
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
-            data_Y = np.concatenate(data_list_Y, axis=0)
+            if not self.predict:
+                data_Y = np.concatenate(data_list_Y, axis=0)
         else:
             data_X = data_list_X[0]
-            data_Y = data_list_Y[0]
+            if not self.predict:
+                data_Y = data_list_Y[0]
 
         _ridx = np.random.permutation(data_X.shape[0])
 
         X = data_X[_ridx,:,:,:,:]
-        Y = data_Y[_ridx,:,:]
+        if not self.predict:
+            Y = data_Y[_ridx,:,:]
 
 
         if self.residual_mode:
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
             X[:,:,1,:,:] -= X[:,:,1,:,:]
-            Y -= X[:,h,0,:,:]
+            if not self.predict:
+                Y -= X[:,h,0,:,:]
 
         X = np.transpose(np.reshape(X, (X.shape[0], -1, X.shape[3], X.shape[4])), (0, 2, 3, 1))
-        Y = np.reshape(Y, (Y.shape[0], Y.shape[1], Y.shape[2], 1))
+        if not self.predict:
+            Y = np.reshape(Y, (Y.shape[0], Y.shape[1], Y.shape[2], 1))
 
         if self.verbose > 1:
-            print('X, Y sizes = ', X.shape, Y.shape)
+            if self.predict:
+                print('X, size = ', X.shape)
+            else:
+                print('X, Y sizes = ', X.shape, Y.shape)
 
 
-        return X, Y
+        if self.predict:
+            return X
+        else:
+            return X, Y
