@@ -456,15 +456,11 @@ def build_slice_list(data_list):
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, shuffle=True, verbose=1, residual_mode=True):
+    def __init__(self, data_list, batch_size=8, shuffle=True, verbose=1, residual_mode=True):
 
         'Initialization'
         self.data_list = data_list
         self.batch_size = batch_size
-        self.num_channel_input = num_channel_input
-        self.num_channel_output = num_channel_output
-        self.img_rows = img_rows
-        self.img_cols = img_cols
         self.shuffle = shuffle
         self.verbose = verbose
         self.residual_mode = residual_mode
