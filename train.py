@@ -54,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
     parser.add_argument('--validation_split', action='store', dest='val_split', type=float, help='ratio of validation data', default=.1)
-    parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='RNG seed', default=723)
+    parser.add_argument('--random_seed', action='store', dest='random_seed', type=int, help='random number seed for numpy', default=723)
     parser.add_argument('--log_dir', action='store', dest='log_dir', type=str, help='log directory', default='logs')
     parser.add_argument('--max_data_sets', action='store', dest='max_data_sets', type=int, help='limit number of data sets', default=None)
     parser.add_argument('--predict', action='store', dest='predict_dir', type=str, help='perform prediction and write to directory', default=None)
@@ -97,7 +97,6 @@ if __name__ == '__main__':
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
 
-    random.seed(args.random_seed)
     np.random.seed(args.random_seed)
 
     # load data
@@ -121,8 +120,8 @@ if __name__ == '__main__':
     # the number of slices may differ but the image dimensions
     # should be the same
 
-    random.shuffle(data_train_list)
-    data_train_list = data_train_list[:args.max_data_sets]
+    _ridx = np.random.permutation(len(data_list))
+    data_list = [data_list[i] for i in _ridx[:args.max_data_sets]]
 
     # get dimensions from first file
     data_shape = suio.get_shape(data_train_list[0])
