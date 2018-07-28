@@ -468,7 +468,6 @@ class DataGenerator(keras.utils.Sequence):
         self.shuffle = shuffle
         self.verbose = verbose
         self.residual_mode = residual_mode
-        self.current_slice = 0
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
         self.slice_list_files = np.array(_slice_list_files)
@@ -485,8 +484,11 @@ class DataGenerator(keras.utils.Sequence):
     def __getitem__(self, index):
         'Generate one batch of data'
 
-        file_list = self.slice_list_files[self.indexes[self.current_slice:self.current_slice + self.batch_size]]
-        slice_list = self.slice_list_indexes[self.indexes[self.current_slice:self.current_slice + self.batch_size]]
+        if self.verbose > 1:
+            print('batch index:', index)
+
+        file_list = self.slice_list_files[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
+        slice_list = self.slice_list_indexes[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
 
         if self.verbose > 1:
             print('list of files and slices:')
@@ -496,8 +498,6 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         X, Y = self.__data_generation(file_list, slice_list)
 
-        self.current_slice = self.current_slice + self.batch_size
-
         return X, Y
 
     def on_epoch_end(self):
@@ -505,7 +505,6 @@ class DataGenerator(keras.utils.Sequence):
         self.indexes = np.arange(self.num_slices)
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
-        self.current_slice = 0
 
     def __data_generation(self, slice_list_files, slice_list_indexes):
         'Generates data containing batch_size samples' 

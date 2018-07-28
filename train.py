@@ -68,8 +68,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    assert args.num_workers == 1, "FIXME"
-
     assert args.data_train_list is not None, 'must specify data list'
 
 
