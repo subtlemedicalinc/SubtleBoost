@@ -44,7 +44,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--data_train_list', action='store', dest='data_train_list', type=str, help='list of pre-processed files for training', default=None)
+    parser.add_argument('--data_train_list', action='store', dest='data_train_list_file', type=str, help='list of pre-processed files for training', default=None)
+    parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
+    parser.add_argument('--file_ext', action='store', dest='file_ext', type=str, help='file extension of data', default=None)
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--num_epochs', action='store', dest='num_epochs', type=int, help='number of epochs to run', default=10)
     parser.add_argument('--batch_size', action='store', dest='batch_size', type=int, help='batch size', default=8)
@@ -69,7 +71,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    assert args.data_train_list is not None, 'must specify data list'
+    assert args.data_train_list_file is not None, 'must specify data list'
 
 
     if args.log_dir is not None:
@@ -100,11 +102,18 @@ if __name__ == '__main__':
 
     # load data
     if args.verbose:
-        print('loading training data from {}'.format(args.data_train_list))
+        print('loading training data from {}'.format(args.data_train_list_file))
     tic = time.time()
 
-    f = open(args.data_train_list, 'r')
-    args.data_train_list = [l.strip() for l in f.readlines()]
+    f = open(args.data_train_list_file, 'r')
+    data_train_list = []
+    for l in f.readlines():
+        s = l.strip()
+        if args.data_dir is not None:
+            s = '{}/{}'.format(args.data_dir, s)
+        if args.file_ext is not None:
+            s = '{}.{}'.format(s, args.file_ext)
+        data_train_list.append(s)
     f.close()
 
     # each element of the data_train_list contains 3 sets of 3D
@@ -112,11 +121,11 @@ if __name__ == '__main__':
     # the number of slices may differ but the image dimensions
     # should be the same
 
-    random.shuffle(args.data_train_list)
-    args.data_train_list = args.data_train_list[:args.max_data_sets]
+    random.shuffle(data_train_list)
+    data_train_list = data_train_list[:args.max_data_sets]
 
     # get dimensions from first file
-    data_shape = suio.get_shape(args.data_train_list[0])
+    data_shape = suio.get_shape(data_train_list[0])
     #FIXME: check that image sizes are the same
     _, _, nx, ny = data_shape
 
@@ -138,7 +147,7 @@ if __name__ == '__main__':
 
         print('predicting...')
 
-        for data_file in args.data_train_list:
+        for data_file in data_train_list:
 
             if args.verbose:
                 print('{}:'.format(data_file))
@@ -183,12 +192,12 @@ if __name__ == '__main__':
 
         print('training...')
 
-        if args.val_split == 0. and len(args.data_train_list) > 1:
-            data_val_list = args.data_train_list[0]
+        if args.val_split == 0. and len(data_train_list) > 1:
+            data_val_list = data_train_list[0]
             if args.verbose:
                 print('using {} for validation'.format(data_val_list))
 
-            args.data_train_list = args.data_train_list[1:]
+            data_train_list = data_train_list[1:]
 
             data_val = suio.load_file(data_val_list).transpose((0, 2, 3, 1))
 
@@ -225,7 +234,7 @@ if __name__ == '__main__':
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
-        training_generator = suio.DataGenerator(data_list=args.data_train_list,
+        training_generator = suio.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
                 verbose=args.verbose, 
