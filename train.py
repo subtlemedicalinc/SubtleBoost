@@ -64,6 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--shuffle', action='store_true', dest='shuffle', help='shuffle input data files each epoch', default=False)
     parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
+    parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
 
 
     args = parser.parse_args()
@@ -123,7 +124,7 @@ if __name__ == '__main__':
     sugn.set_keras_memory(args.keras_memory)
 
     m = sugn.DeepEncoderDecoder2D(
-            num_channel_input=2, num_channel_output=1,
+            num_channel_input=2 * args.slices_per_input, num_channel_output=1,
             img_rows=nx, img_cols=ny,
             num_channel_first=32,
             lr_init=args.lr_init,
@@ -144,6 +145,12 @@ if __name__ == '__main__':
 
             # load single volume
             data = suio.load_file(data_file).transpose((0, 2, 3, 1))
+
+            if args.slices_per_input > 1:
+                _idx = suio.window_stack(np.arange(data.shape[0]), stepsize=1, width=args.slices_per_input).reshape((-1, args.slices_per_input))
+                data_shape = data.shape
+                data = data[_idx,:,:,:].transpose((0, 2, 3, 4, 1)).reshape((data_shape[0], data_shape[1], data_shape[2], -1))
+                print(data.shape)
 
 
             X = data[:,:,:,:2]
@@ -185,16 +192,32 @@ if __name__ == '__main__':
 
             data_val = suio.load_file(data_val_list).transpose((0, 2, 3, 1))
 
-            X_val = data_val[:,:,:,:2]
             Y_val = data_val[:,:,:,-1][:,:,:,None]
 
             if args.residual_mode:
                 if args.verbose:
                     print('residual mode. train on (zero, low - zero, full - zero)')
-                X_val[:,:,:,1] -= X_val[:,:,:,0]
-                #X_val[:,:,:,1] = np.maximum(0., X_val[:,:,:,1])
-                Y_val -= X_val[:,:,:,0][:,:,:,None]
-                #Y_val = np.maximum(0., Y_val)
+                Y_val -= data_val[:,:,:,0][:,:,:,None]
+
+            if args.slices_per_input > 1:
+                _idx = suio.window_stack(np.arange(data_val.shape[0]), stepsize=1, width=args.slices_per_input).reshape((-1, args.slices_per_input))
+                data_val_shape = data_val.shape
+                data_val = data_val[_idx,:,:,:].transpose((0, 2, 3, 4, 1))
+
+                X_val = data_val[:,:,:,:2,:]
+                Y_val = Y_val[args.slices_per_input//2:-1-args.slices_per_input//2+1,:,:,:]
+
+            else:
+                X_val = data_val[:,:,:,:2][:,:,:,:,None]
+
+
+            if args.residual_mode:
+                #if args.verbose:
+                    #print('residual mode. train on (zero, low - zero, full - zero)')
+                X_val[:,:,:,1,:] -= X_val[:,:,:,0,:]
+
+            _s = X_val.shape
+            X_val = np.reshape(X_val, (_s[0], _s[1], _s[2], -1))
 
 
         cb_checkpoint = m.callback_checkpoint()
@@ -204,11 +227,9 @@ if __name__ == '__main__':
 
         training_generator = suio.DataGenerator(data_list=args.data_train_list,
                 batch_size=args.batch_size,
-                num_channel_input=2, num_channel_output=1,
-                img_rows=nx, img_cols=ny,
                 shuffle=args.shuffle,
                 verbose=args.verbose, 
-                residual_mode=args.residual_mode)
+                residual_mode=args.residual_mode, slices_per_input=args.slices_per_input)
 
         history = m.model.fit_generator(generator=training_generator, validation_data=(X_val, Y_val), use_multiprocessing=True, workers=args.num_workers, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=args.verbose)
 

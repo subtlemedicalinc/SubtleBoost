@@ -315,7 +315,10 @@ def load_slices_h5(input_file, slices=None, h5_key='data'):
     if slices is None:
         data = np.array(F[h5_key])
     else:
-        data = np.array(F[h5_key][slices, :, :, :])
+        slices_unique, slices_inverse = np.unique(slices, return_index=False, return_inverse=True, return_counts=False)
+        data = np.array(F[h5_key][slices_unique, :, :, :])
+        if len(slices_unique) < len(slices_inverse):
+            data = data[slices_inverse, :, :, :]
     F.close()
     return data
 
@@ -450,17 +453,20 @@ def build_slice_list(data_list):
 
     return slice_list_files, slice_list_indexes
 
-
+# https://stackoverflow.com/questions/15722324/sliding-window-in-numpy
+def window_stack(a, stepsize=1, width=3):
+    return np.hstack( a[i:1+i-width or None:stepsize] for i in range(0,width) )
 
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, shuffle=True, verbose=1, residual_mode=True):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True):
 
         'Initialization'
         self.data_list = data_list
         self.batch_size = batch_size
+        self.slices_per_input = slices_per_input # 2.5d
         self.shuffle = shuffle
         self.verbose = verbose
         self.residual_mode = residual_mode
@@ -469,6 +475,7 @@ class DataGenerator(keras.utils.Sequence):
         self.slice_list_files = np.array(_slice_list_files)
         self.slice_list_indexes = np.array(_slice_list_indexes)
 
+        self.slices_per_file_dict = {data_file: get_num_slices(data_file) for data_file in self.data_list}
         self.num_slices = len(self.slice_list_files)
 
         self.on_epoch_end()
@@ -511,29 +518,47 @@ class DataGenerator(keras.utils.Sequence):
         # the number of slices may differ but the image dimensions
         # should be the same
 
-        data_list = []
+        data_list_X = []
+        data_list_Y = []
         for f, i in zip(slice_list_files, slice_list_indexes):
-            data_list.append(load_slices(input_file=f, slices=[i]).transpose((0, 2, 3, 1)))
+            num_slices = self.slices_per_file_dict[f]
+            # 2.5d
+            idxs = np.arange(i - self.slices_per_input // 2, i + self.slices_per_input // 2 + 1)
+            # handle edge cases for 2.5d by just repeating the boundary slices
+            for ii in range(len(idxs)):
+                if idxs[ii] < 0:
+                    idxs[ii] = 0
+                elif idxs[ii] >= num_slices:
+                    idxs[ii] = num_slices - 1
+            # stupid to load twice but easy and probably neglible for large number of workers...
+            data_list_X.append(load_slices(input_file=f, slices=idxs).transpose((2, 3, 1, 0))[None, :, :, :, :])
+            data_list_Y.append(load_slices(input_file=f, slices=[i]).transpose((2, 3, 1, 0))[None, :, :, :, :])
 
-        if len(data_list) > 1:
-            data = np.concatenate(data_list, axis=0)
+        if len(data_list_X) > 1:
+            data_X = np.concatenate(data_list_X, axis=0)
+            data_Y = np.concatenate(data_list_Y, axis=0)
         else:
-            data = data_list[0]
+            data_X = data_list_X[0]
+            data_Y = data_list_Y[0]
 
-        _ridx = np.random.permutation(data.shape[0])
+        _ridx = np.random.permutation(data_X.shape[0])
 
-        X = data[_ridx,:,:,:2]
-        Y = data[_ridx,:,:,-1][:,:,:,None]
-
-        if self.verbose > 1:
-            print('X, Y sizes = ', X.shape, Y.shape)
+        X = data_X[_ridx,:,:,:2,:]
+        Y_X = data_Y[_ridx,:,:,:2,:]
+        Y = data_Y[_ridx,:,:,-1,:][:,:,:,:,None]
 
         if self.residual_mode:
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
-            X[:,:,:,1] -= X[:,:,:,0]
+            X[:,:,:,1,:] -= X[:,:,:,0,:]
             #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
-            Y -= X[:,:,:,0][:,:,:,None]
+            Y -= Y_X[:,:,:,0,:][:,:,:,:,None]
             #Y = np.maximum(0., Y)
+        X = np.reshape(X, (data_X.shape[0], data_X.shape[1], data_X.shape[2], -1))
+        Y = np.reshape(Y, (data_X.shape[0], data_X.shape[1], data_X.shape[2], 1))
+
+        if self.verbose > 1:
+            print('X, Y sizes = ', X.shape, Y.shape)
+
 
         return X, Y
