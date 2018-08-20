@@ -566,7 +566,7 @@ class DataGenerator(keras.utils.Sequence):
         if self.residual_mode:
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
-            X[:,:,1,:,:] -= X[:,:,1,:,:]
+            X[:,:,1,:,:] -= X[:,:,0,:,:]
             if not self.predict:
                 Y -= X[:,h,0,:,:]
 
