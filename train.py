@@ -206,8 +206,10 @@ if __name__ == '__main__':
         data_val_list = data_list[:r]
         data_train_list = data_list[r:]
 
-        cb_checkpoint = m.callback_checkpoint()
-        cb_tensorboard = m.callback_tensorbaord()
+        callbacks = []
+        callbacks.append(m.callback_checkpoint())
+        callbacks.append(m.callback_tensorbaord())
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example'))
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
@@ -228,7 +230,7 @@ if __name__ == '__main__':
         else:
             validation_generator = None
 
-        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=8, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=[cb_checkpoint, cb_tensorboard], verbose=args.verbose)
+        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=8, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose)
 
         toc = time.time()
         print('done training ({:.0f} sec)'.format(toc - tic))
