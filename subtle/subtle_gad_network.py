@@ -131,8 +131,7 @@ class DeepEncoderDecoder2D:
             num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, 
             num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
             lr_init=None, loss_function=mean_absolute_error,
-            #metrics_monitor=[PSNRLoss, mean_absolute_error, mean_squared_error],
-            metrics_monitor=[mean_absolute_error, mean_squared_error],
+            metrics_monitor=[mean_absolute_error],
             num_poolings=3, num_conv_per_pooling=3,
             batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id=''):
 
