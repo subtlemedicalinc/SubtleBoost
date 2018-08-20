@@ -502,9 +502,12 @@ class DataGenerator(keras.utils.Sequence):
             print(slice_list)
 
         # Generate data
-        X, Y = self.__data_generation(file_list, slice_list)
-
-        return X, Y
+        if self.predict:
+            X = self.__data_generation(file_list, slice_list)
+            return X
+        else:
+            X, Y = self.__data_generation(file_list, slice_list)
+            return X, Y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
