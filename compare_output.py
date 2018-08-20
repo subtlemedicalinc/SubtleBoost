@@ -8,6 +8,8 @@ plt.switch_backend('agg')
 
 import argparse
 
+import subtle.subtle_io as suio
+
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'plot ground truth vs prediction'
 
@@ -21,20 +23,20 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--slice', action='store', dest='idx', type=int, help='show this slice (Default -- middle)', default=None)
-    parser.add_argument('--truth', action='store', dest='npy_truth', type=str, help='ground truth npy file')
-    parser.add_argument('--prediction', action='store', dest='npy_predict', type=str, help='prediction npy file')
+    parser.add_argument('--truth', action='store', dest='file_truth', type=str, help='ground truth file')
+    parser.add_argument('--prediction', action='store', dest='file_predict', type=str, help='prediction file')
     parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
 
     args = parser.parse_args()
 
-    z0 = np.load(args.npy_truth)
-    z1 = np.load(args.npy_predict)
+    z0 = suio.load_file(args.file_truth)
+    z1 = suio.load_file(args.file_predict)
 
     if args.idx is None:
         args.idx = z0.shape[0] // 2
 
     z0_idx = z0[args.idx,:,:,:].squeeze().transpose((1,2,0))
-    z1_idx = z1[args.idx,:,:,:]
+    z1_idx = z1[args.idx,:,:][:,:,None]
 
     plt.figure(figsize=(20,5))
     imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
