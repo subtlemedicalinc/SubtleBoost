@@ -69,6 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
     parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
+    parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
 
 
     args = parser.parse_args()
@@ -148,43 +149,36 @@ if __name__ == '__main__':
 
         print('predicting...')
 
-        for data_file in data_train_list:
+        for data_file in data_list:
 
             if args.verbose:
                 print('{}:'.format(data_file))
 
-            # load single volume
-            data = suio.load_file(data_file).transpose((0, 2, 3, 1))
+            # use generator to maintain consistent data formatting
+            prediction_generator = suio.DataGenerator(data_list=[data_file],
+                    batch_size=args.batch_size,
+                    shuffle=False,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input)
 
-            if args.slices_per_input > 1:
-                _idx = suio.window_stack(np.arange(data.shape[0]), stepsize=1, width=args.slices_per_input).reshape((-1, args.slices_per_input))
-                data_shape = data.shape
-                data = data[_idx,:,:,:].transpose((0, 2, 3, 4, 1)).reshape((data_shape[0], data_shape[1], data_shape[2], -1))
-                print(data.shape)
+            Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
-
-            X = data[:,:,:,:2]
-            #Y = data[:,:,:,-1][:,:,:,None]
-
-            if args.verbose:
-                print('X size = ', X.shape)
-
+            # if residual mode is on, we need to load the data again
+            # so that we can add the original contrast back in
             if args.residual_mode:
-                if args.verbose:
-                    print('residual mode. train on (zero, low - zero, full - zero)')
-                X[:,:,:,1] -= X[:,:,:,0]
-                #X[:,:,:,1] = np.maximum(0., X[:,:,:,1])
-
-            Y_prediction = X[:,:,:,0][:,:,:,None] + m.model.predict(X, batch_size=args.batch_size, verbose=args.verbose)
+                data = suio.load_file(data_file).transpose((0, 2, 3, 1))
+                h = args.slices_per_input // 2
+                Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
 
             data_file_base = os.path.basename(data_file)
             _1, _2 = os.path.splitext(data_file_base)
-            data_file_predict = '{}/{}_predict.{}'.format(args.predict_dir, _1, _2)
+            data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
 
             if args.verbose:
                 print('output: {}'.format(data_file_predict))
 
-            suio.save_data(data_file_predict, Y_prediction)
+            suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
         toc = time.time()
         print('done predicting ({:.0f} sec)'.format(toc - tic))
