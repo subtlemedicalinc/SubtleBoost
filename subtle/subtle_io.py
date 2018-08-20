@@ -13,6 +13,7 @@ Created on 2018/05/18
 import sys
 import os # FIXME: transition from os to pathlib
 import pathlib
+from warnings import warn
 
 import h5py
 
@@ -270,18 +271,19 @@ def save_data_npy(output_file, data):
     except:
         return -1
 
-def save_data_h5(output_file, data, h5_key='data', compress=True):
+def save_data_h5(output_file, data, h5_key='data', compress=False):
     try:
-        with h5py.File(args.output_file, 'w') as f:
+        with h5py.File(output_file, 'w') as f:
             if compress:
                 f.create_dataset(h5_key, data=data, compression='gzip')
             else:
                 f.create_dataset(h5_key, data=data)
         return 0
-    except:
+    except Exception as e:
+        warn(str(e))
         return -1
 
-def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': True}):
+def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': False}):
     ''' Save data to output file using file type format
 
     Parameters:
@@ -323,7 +325,7 @@ def load_slices_h5(input_file, slices=None, h5_key='data'):
     return data
 
 def load_slices_npy(input_file, slices=None):
-    d = np.load(k, mmap_mode='r')
+    d = np.load(input_file, mmap_mode='r')
     if slices is None:
         return d
     else:
