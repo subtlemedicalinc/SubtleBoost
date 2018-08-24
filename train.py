@@ -124,6 +124,7 @@ if __name__ == '__main__':
     # the number of slices may differ but the image dimensions
     # should be the same
 
+    # randomly grab max_data_sets from total data pool
     _ridx = np.random.permutation(len(data_list))
     data_list = [data_list[i] for i in _ridx[:args.max_data_sets]]
 

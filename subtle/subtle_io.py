@@ -556,11 +556,9 @@ class DataGenerator(keras.utils.Sequence):
             if not self.predict:
                 data_Y = data_list_Y[0]
 
-        _ridx = np.random.permutation(data_X.shape[0])
-
-        X = data_X[_ridx,:,:,:,:]
+        X = data_X
         if not self.predict:
-            Y = data_Y[_ridx,:,:]
+            Y = data_Y
 
 
         if self.residual_mode:
