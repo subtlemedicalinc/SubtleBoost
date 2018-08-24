@@ -70,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
     parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
+    parser.add_argument('--num_channel_first', action='store', dest='num_channel_first', type=int, help='first layer channels', default=32)
 
 
     args = parser.parse_args()
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     m = sugn.DeepEncoderDecoder2D(
             num_channel_input=2 * args.slices_per_input, num_channel_output=1,
             img_rows=nx, img_cols=ny,
-            num_channel_first=32,
+            num_channel_first=args.num_channel_first,
             lr_init=args.lr_init,
             batch_norm=args.batch_norm,
             verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
