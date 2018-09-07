@@ -32,14 +32,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    data = suio.load_npy_file(args.input)
+    data = suio.load_file(args.input)
 
     if args.idx is None:
         args.idx = data.shape[0] // 2
 
-    X0 = data[args.idx,:,:,0]
-    X1 = data[args.idx,:,:,1]
-    X2 = data[args.idx,:,:,2]
+    X0 = data[args.idx,0,:,:].squeeze()
+    X1 = data[args.idx,1,:,:].squeeze()
+    X2 = data[args.idx,2,:,:].squeeze()
 
     plt.figure(figsize=(20,20))
     plt.subplot(3,1,1)
