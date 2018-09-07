@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--truth', action='store', dest='file_truth', type=str, help='ground truth file')
     parser.add_argument('--prediction', action='store', dest='file_predict', type=str, help='prediction file')
     parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
+    parser.add_argument('--show_diff', action='store_true', dest='show_diff', help='show diff images', default=False)
 
     args = parser.parse_args()
 
@@ -39,8 +40,14 @@ if __name__ == '__main__':
     z1_idx = z1[args.idx,:,:][:,:,None]
 
     plt.figure(figsize=(20,5))
-    imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
-    plt.title('pre vs. low vs. full vs. predicted')
+    if args.show_diff:
+        z0_idx_diff = abs(z0_idx[:,:,2] - z0_idx[:,:,0])
+        z1_idx_diff = abs(z1_idx[:,:,0] - z0_idx[:,:,0])
+        imshowtile(np.concatenate((z0_idx[:,:,0][:,:,None], z0_idx_diff[:,:,None], z0_idx[:,:,2][:,:,None], z1_idx_diff[:,:,None], z1_idx), axis=2))
+        plt.title('pre vs. truth diff vs. truth vs. SubtleGad diff vs. SubtleGad')
+    else:
+        imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
+        plt.title('pre vs. low vs. full vs. predicted')
 
     if args.output is None:
         plt.show()
