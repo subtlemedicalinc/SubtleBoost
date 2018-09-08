@@ -23,6 +23,7 @@ import os
 import time
 
 import subtle.subtle_io as suio
+import subtle.subtle_generator as sugen
 
 # clean up
 def clear_keras_memory():
@@ -56,7 +57,7 @@ def make_image(im):
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
     def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False,
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test'):
+            max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy'):
         super().__init__() 
         self.tag = tag
         self.data_list = data_list
@@ -72,6 +73,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.num_workers = num_workers
         self.use_multiprocessing=use_multiprocessing
         self.shuffle = shuffle
+        self.gen_type = gen_type
 
         self.batch_size = 1
 
@@ -79,20 +81,27 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
 
 
     def _init_generator(self):
-        self.generator =  suio.DataGenerator(data_list=self.data_list,
-                batch_size=self.batch_size,
-                shuffle=self.shuffle,
-                verbose=self.verbose, 
-                residual_mode=self.residual_mode,
-                slices_per_input=self.slices_per_input,
-                predict=True)
+        if self.gen_type == 'legacy':
+            self.generator =  sugen.DataGenerator(data_list=self.data_list,
+                    batch_size=self.batch_size,
+                    shuffle=self.shuffle,
+                    verbose=self.verbose, 
+                    residual_mode=self.residual_mode,
+                    slices_per_input=self.slices_per_input,
+                    predict=True)
+        elif self.gen_type == 'split':
+            self.generator =  sugen.DataGenerator_XY(data_list=self.data_list,
+                    batch_size=self.batch_size,
+                    shuffle=self.shuffle,
+                    verbose=self.verbose, 
+                    predict=True)
 
     def on_epoch_end(self, epoch, logs={}):
         _len = self.generator.__len__()
         X = self.generator.__getitem__(_len // 2)
         #Y_prediction = self.model.predict_generator(generator=self.generator, steps=1, max_queue_size=self.max_queue_size, workers=self.num_workers, use_multiprocessing=self.use_multiprocessing, verbose=self.verbose)
         Y_prediction = self.model.predict_on_batch(X)
-        if self.residual_mode:
+        if self.gen_type == 'legacy' and self.residual_mode:
             h = self.slices_per_input // 2
             Y_prediction = X[:,:,:,h].squeeze() + Y_prediction.squeeze()
         image = make_image(Y_prediction.squeeze())
@@ -179,7 +188,7 @@ class DeepEncoderDecoder2D:
 
     # FIXME check
     def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, 
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test'):
+            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy'):
         return TensorBoardImageCallback(self,
                 data_list=data_list,
                 slice_dict_list=slice_dict_list,
@@ -192,7 +201,8 @@ class DeepEncoderDecoder2D:
                 max_queue_size=max_queue_size,
                 num_workers=num_workers,
                 use_multiprocessing=use_multiprocessing,
-                tag=tag)
+                tag=tag,
+                gen_type=gen_type)
 
     def load_weights(self, filename=None):
         if filename is not None:

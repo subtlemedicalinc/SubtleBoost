@@ -28,8 +28,9 @@ import numpy as np
 
 import keras.callbacks
 
-import subtle.subtle_gad_network as sugn
+import subtle.subtle_gad_network as sudnn
 import subtle.subtle_io as suio
+import subtle.subtle_generator as sugen
 import subtle.subtle_preprocess as sup
 
 
@@ -71,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
     parser.add_argument('--num_channel_first', action='store', dest='num_channel_first', type=int, help='first layer channels', default=32)
+    parser.add_argument('--gen_type', action='store', dest='gen_type', type=str, help='generator type (legacy or split)', default='legacy')
 
 
     args = parser.parse_args()
@@ -108,16 +110,7 @@ if __name__ == '__main__':
         print('loading data from {}'.format(args.data_list_file))
     tic = time.time()
 
-    f = open(args.data_list_file, 'r')
-    data_list = []
-    for l in f.readlines():
-        s = l.strip()
-        if args.data_dir is not None:
-            s = '{}/{}'.format(args.data_dir, s)
-        if args.file_ext is not None:
-            s = '{}.{}'.format(s, args.file_ext)
-        data_list.append(s)
-    f.close()
+    data_list = suio.get_data_list(args.data_list_file, file_ext=args.file_ext, data_dir=args.data_dir)
 
     # each element of the data_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
@@ -129,20 +122,35 @@ if __name__ == '__main__':
     data_list = [data_list[i] for i in _ridx[:args.max_data_sets]]
 
     # get dimensions from first file
-    data_shape = suio.get_shape(data_list[0])
+    if args.gen_type == 'legacy':
+        data_shape = suio.get_shape(data_list[0])
+        _, _, nx, ny = data_shape
+    elif args.gen_type == 'split':
+        data_shape = suio.get_shape(data_list[0], params={'h5_key': 'data/X'})
+        print(data_shape)
     #FIXME: check that image sizes are the same
-    _, _, nx, ny = data_shape
+        _, nx, ny, nz = data_shape
 
-    sugn.clear_keras_memory()
-    sugn.set_keras_memory(args.keras_memory)
+    sudnn.clear_keras_memory()
+    sudnn.set_keras_memory(args.keras_memory)
 
-    m = sugn.DeepEncoderDecoder2D(
-            num_channel_input=2 * args.slices_per_input, num_channel_output=1,
-            img_rows=nx, img_cols=ny,
-            num_channel_first=args.num_channel_first,
-            lr_init=args.lr_init,
-            batch_norm=args.batch_norm,
-            verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
+    if args.gen_type == 'legacy':
+        m = sudnn.DeepEncoderDecoder2D(
+                num_channel_input=2 * args.slices_per_input, num_channel_output=1,
+                img_rows=nx, img_cols=ny,
+                num_channel_first=args.num_channel_first,
+                lr_init=args.lr_init,
+                batch_norm=args.batch_norm,
+                verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
+
+    elif args.gen_type == 'split':
+        m = sudnn.DeepEncoderDecoder2D(
+                num_channel_input=nz, num_channel_output=1,
+                img_rows=nx, img_cols=ny,
+                num_channel_first=args.num_channel_first,
+                lr_init=args.lr_init,
+                batch_norm=args.batch_norm,
+                verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
 
     m.load_weights()
 
@@ -157,7 +165,7 @@ if __name__ == '__main__':
                 print('{}:'.format(data_file))
 
             # use generator to maintain consistent data formatting
-            prediction_generator = suio.DataGenerator(data_list=[data_file],
+            prediction_generator = sugen.DataGenerator(data_list=[data_file],
                     batch_size=args.batch_size,
                     shuffle=False,
                     verbose=args.verbose, 
@@ -205,24 +213,36 @@ if __name__ == '__main__':
         callbacks = []
         callbacks.append(m.callback_checkpoint())
         callbacks.append(m.callback_tensorbaord())
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example'))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example', gen_type=args.gen_type))
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
-        training_generator = suio.DataGenerator(data_list=data_train_list,
-                batch_size=args.batch_size,
-                shuffle=args.shuffle,
-                verbose=args.verbose, 
-                residual_mode=args.residual_mode,
-                slices_per_input=args.slices_per_input)
-
-        if r > 0:
-            validation_generator = suio.DataGenerator(data_list=data_val_list,
+        if args.gen_type == 'legacy':
+            training_generator = sugen.DataGenerator(data_list=data_train_list,
                     batch_size=args.batch_size,
                     shuffle=args.shuffle,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     slices_per_input=args.slices_per_input)
+        elif args.gen_type == 'split':
+            training_generator = sugen.DataGenerator_XY(data_list=data_train_list,
+                    batch_size=args.batch_size,
+                    shuffle=args.shuffle,
+                    verbose=args.verbose)
+
+        if r > 0:
+            if args.gen_type == 'legacy':
+                validation_generator = sugen.DataGenerator(data_list=data_val_list,
+                        batch_size=args.batch_size,
+                        shuffle=args.shuffle,
+                        verbose=args.verbose, 
+                        residual_mode=args.residual_mode,
+                        slices_per_input=args.slices_per_input)
+            elif args.gen_type == 'split':
+                validation_generator = sugen.DataGenerator_XY(data_list=data_val_list,
+                        batch_size=args.batch_size,
+                        shuffle=args.shuffle,
+                        verbose=args.verbose)
         else:
             validation_generator = None
 
