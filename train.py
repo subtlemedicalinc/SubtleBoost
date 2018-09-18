@@ -28,7 +28,7 @@ import numpy as np
 
 import keras.callbacks
 
-import subtle.subtle_gad_network as sudnn
+import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
 import subtle.subtle_preprocess as sup
