@@ -102,7 +102,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         #Y_prediction = self.model.predict_generator(generator=self.generator, steps=1, max_queue_size=self.max_queue_size, workers=self.num_workers, use_multiprocessing=self.use_multiprocessing, verbose=self.verbose)
         Y_prediction = self.model.predict_on_batch(X)
         if self.gen_type == 'legacy' and self.residual_mode:
-            h = self.slices_per_input // 2
+            h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
             Y_prediction = X[:,:,:,h].squeeze() + Y_prediction.squeeze()
         image = make_image(Y_prediction.squeeze())
         summary = tf.Summary(value=[tf.Summary.Value(tag=self.tag, image=image)])
