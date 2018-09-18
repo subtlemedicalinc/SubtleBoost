@@ -133,9 +133,9 @@ class DataGenerator(keras.utils.Sequence):
             if not self.predict:
                 data_Y = data_list_Y[0]
 
-        X = data_X
+        X = data_X.copy()
         if not self.predict:
-            Y = data_Y
+            Y = data_Y.copy()
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
 
