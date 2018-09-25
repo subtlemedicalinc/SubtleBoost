@@ -184,13 +184,15 @@ if __name__ == '__main__':
             data_file_base = os.path.basename(data_file)
             _1, _2 = os.path.splitext(data_file_base)
             data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-            plot_file_predict = '{}/plots/{}_predict_{}.png'.format(args.predict_dir, _1, args.job_id)
 
             if args.verbose:
                 print('output: {}'.format(data_file_predict))
 
             suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
-            suplot.compare_output(data.transpose((0, 3, 1, 2)), Y_prediction, idx=None, show_diff=False, output=plot_file_predict)
+            for __idx in np.linspace(.1*Y_prediction.shape[0], .9*Y_prediction.shape[0], 5):
+                _idx = int(__idx)
+                plot_file_predict = '{}/plots/{}_predict_{}_{:03d}.png'.format(args.predict_dir, _1, args.job_id, _idx)
+                suplot.compare_output(data.transpose((0, 3, 1, 2)), Y_prediction, idx=_idx, show_diff=False, output=plot_file_predict)
 
         toc = time.time()
         print('done predicting ({:.0f} sec)'.format(toc - tic))
