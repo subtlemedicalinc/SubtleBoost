@@ -1,64 +1,80 @@
-Patient_0564 -- wrong dims. 256 x 256
-Patient_0103 -- 10% not enhancing at all
-Patient_0107 -- 10% not enhancing at all
-Patient_0110 -- 10% is actually full dose
-Patient_0114 -- registration
-Patient_0120 -- intensity correction needed for skull
-Patient_0123 -- intensity correction needed for skull
-Patient_0127 - 10% not enhancing at all
-Patient_0130 -- 10% is actually full dose
-Patient_0148 -- 10% not enhancing at all
-Patient_0151 -- 10% not enhancing at all
-Patient_0161 -- too much metal artifact
-Patient_0165 -- 10% not enhancing at all
-Patient_0169 -- 10% not enhancing at all
-Patient_0170 -- pre looks enhanced
-Patient_0176 -- 10% not enhancing at all
-Patient_0179 -- 10% not enhancing at all
-Patient_0184 -- 10% is actually full dose
-Patient_0187 -- registration
-Patient_0197 -- weird intensity variation
-Patient_0210 -- 10% not enhancing at all
-Patient_0225 -- 10% not enhancing at all
-Patient_0241 -- 10% has motion
-Patient_0250 -- full dose has motion
-Patient_0257 -- 10% does not enhance
-Patient_0262 -- part of brain is missing
-Patient_0264 -- 10% not enhancing at all
-Patient_0268 -- registration
-Patient_0276 -- 10% looks like full dose
-Patient_0279 -- 10% not enhancing at all
-Patient_0281 -- intensity correction
-Patient_0284 -- motion
-Patient_0288 -- 10% not enhancing at all
-Patient_0291 -- 10% looks like full dose
-Patient_0303 -- image order is wrong
-Patient_0310 -- motion
-Patient_0311 -- 10% looks like full dose
-Patient_0313 -- registration
-Patient_0320 -- post does not look enhanced
-Patient_0330 -- motion artifact
-Patient_0331 -- post has motion
-Patient_0339 -- post not enhancing
-Patient_0357 -- 10% does not enhance
-Patient_0359 -- 10% does not enhance
-Patient_0377 - 10% does not enhance
-Patient_0380 -- 10% does not enhance
-Patient_0383 -- motion
-Patient_0384 -- motion
-Patient_0386 -- 10% does not enhance
-Patient_0389 -- 10% looks like full dose
-Patient_0390 -- motion in full dose
-Patient_0412 -- 10% motion, full dose does not enhance
-Patient_0413 -- 10% does not enhance
-Patient_0416 -- 10% does not enhance
-Patient_0420 -- registration
-Patient_0423 -- 10% does not enhance
-Patient_0426 --  10% looks like full dose
-Patient_0427 -- 10% has motion
-Patient_0429 -- 10% and pre order wrong
-Patient_0439 -- 10% does not enhance
-Patient_0446 -- 10% and pre order wrong
-Patient_0454 -- motion
-
-
+Patient_0103
+Patient_0107
+Patient_0110
+Patient_0114
+Patient_0120
+Patient_0123
+Patient_0127
+Patient_0130
+Patient_0148
+Patient_0151
+Patient_0161
+Patient_0165
+Patient_0169
+Patient_0170
+Patient_0176
+Patient_0179
+Patient_0184
+Patient_0187
+Patient_0197
+Patient_0210
+Patient_0225
+Patient_0241
+Patient_0250
+Patient_0257
+Patient_0262
+Patient_0264
+Patient_0268
+Patient_0276
+Patient_0279
+Patient_0281
+Patient_0284
+Patient_0288
+Patient_0291
+Patient_0303
+Patient_0310
+Patient_0311
+Patient_0313
+Patient_0320
+Patient_0330
+Patient_0331
+Patient_0339
+Patient_0357
+Patient_0359
+Patient_0377
+Patient_0380
+Patient_0383
+Patient_0384
+Patient_0386
+Patient_0389
+Patient_0390
+Patient_0412
+Patient_0413
+Patient_0416
+Patient_0420
+Patient_0423
+Patient_0426
+Patient_0427
+Patient_0429
+Patient_0439
+Patient_0446
+Patient_0454
+Patient_0464
+Patient_0467
+Patient_0472
+Patient_0476
+Patient_0487
+Patient_0489
+Patient_0496
+Patient_0501
+Patient_0517
+Patient_0522
+Patient_0523
+Patient_0540
+Patient_0542
+Patient_0563
+Patient_0564
+Patient_0566
+Patient_0567
+Patient_0577
+Patient_0583
