@@ -31,8 +31,7 @@ import keras.callbacks
 import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
-import subtle.subtle_preprocess as sup
-import compare_output
+import subtle.subtle_plot as suplot
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'train SubtleGrad network on pre-processed data'
@@ -191,7 +190,7 @@ if __name__ == '__main__':
                 print('output: {}'.format(data_file_predict))
 
             suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
-            compare_output.make_plot(data.transpose((0, 3, 1, 2)), Y_prediction, idx=None, show_diff=False, output=plot_file_predict)
+            suplot.compare_output(data.transpose((0, 3, 1, 2)), Y_prediction, idx=None, show_diff=False, output=plot_file_predict)
 
         toc = time.time()
         print('done predicting ({:.0f} sec)'.format(toc - tic))

@@ -56,3 +56,31 @@ def imshowcmp(im0, im1, title='', figsize=None):
     im1n = im1n / np.max(im1n)
     im = np.stack((im0n, im1n, 0*im1n), axis=3)
     myshow3d(im, title=title, figsize=figsize)
+
+def tile(ims):
+    return np.stack(ims, axis=2)
+
+def imshowtile(x, title=None, cmap='gray'):
+    plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)),cmap=cmap)
+
+def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=None):
+    plt.switch_backend('agg')
+    if idx is None:
+        idx = data_truth.shape[0] // 2
+
+    data_truth_idx = data_truth[idx,:,:,:].squeeze().transpose((1,2,0))
+    data_predict_idx = data_predict[idx,:,:].squeeze()[:,:,None]
+
+    plt.figure(figsize=(20,5))
+    if show_diff:
+        data_truth_idx_diff = abs(data_truth_idx[:,:,2] - data_truth_idx[:,:,0])
+        data_predict_idx_diff = abs(data_predict_idx[:,:,0] - data_truth_idx[:,:,0])
+        imshowtile(np.concatenate((data_truth_idx[:,:,0][:,:,None], data_truth_idx_diff[:,:,None], data_truth_idx[:,:,2][:,:,None], data_predict_idx_diff[:,:,None], data_predict_idx), axis=2))
+        plt.title('pre vs. truth diff vs. truth vs. SubtleGad diff vs. SubtleGad')
+    else:
+        imshowtile(np.concatenate((data_truth_idx, data_predict_idx), axis=2))
+        plt.title('pre vs. low vs. full vs. predicted')
+
+    if output is not None:
+        plt.savefig(output)
+
