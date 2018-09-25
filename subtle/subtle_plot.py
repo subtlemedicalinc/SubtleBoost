@@ -15,6 +15,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+import subtle.subtle_metrics as sumetrics
+
 try:
     sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
     import SimpleITK as sitk
@@ -65,11 +67,23 @@ def imshowtile(x, title=None, cmap='gray'):
 
 def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=None):
     plt.switch_backend('agg')
+
     if idx is None:
         idx = data_truth.shape[0] // 2
 
-    data_truth_idx = data_truth[idx,:,:,:].squeeze().transpose((1,2,0))
-    data_predict_idx = data_predict[idx,:,:].squeeze()[:,:,None]
+    data_truth_idx = data_truth[idx,:,:,:].squeeze().transpose((1,2,0)).astype(np.float64)
+    data_predict_idx = data_predict[idx,:,:].squeeze()[:,:,None].astype(np.float64)
+
+    nrmse = sumetrics.nrmse(data_truth_idx[:,:,-1], data_predict_idx.squeeze())
+    psnr = sumetrics.psnr(data_truth_idx[:,:,-1], data_predict_idx.squeeze())
+    ssim = sumetrics.ssim(data_truth_idx[:,:,-1], data_predict_idx.squeeze())
+
+    metrics_text = '\n'.join((
+        'NRMSE = {:4f}'.format(nrmse),
+        'PSNR  = {:4f}'.format(psnr),
+        'SSIM  = {:4f}'.format(ssim)))
+
+    print(metrics_text)
 
     plt.figure(figsize=(20,5))
     if show_diff:
@@ -79,7 +93,11 @@ def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=N
         plt.title('pre vs. truth diff vs. truth vs. SubtleGad diff vs. SubtleGad')
     else:
         imshowtile(np.concatenate((data_truth_idx, data_predict_idx), axis=2))
-        plt.title('pre vs. low vs. full vs. predicted')
+        plt.title('Pre-contrast vs. 10% Dose vs. Post-contrast vs. SubtleGad')
+        ax = plt.gca()
+        props = dict(boxstyle='round', facecolor='wheat', alpha=1.)
+        ax.text(.95, 0.95, metrics_text, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+
 
     if output is not None:
         plt.savefig(output)
