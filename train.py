@@ -206,11 +206,13 @@ if __name__ == '__main__':
         else: # len(data_list) > 1
             r = int(len(data_list) * args.validation_split)
 
-        if args.verbose:
-            print('using {} datasets for validation'.format(r))
-
         data_val_list = data_list[:r]
         data_train_list = data_list[r:]
+
+        if args.verbose:
+            print('using {} datasets for validation'.format(r))
+            print(data_val_list)
+
 
         callbacks = []
         callbacks.append(m.callback_checkpoint())
