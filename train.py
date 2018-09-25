@@ -32,7 +32,7 @@ import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
 import subtle.subtle_preprocess as sup
-
+import compare_output
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'train SubtleGrad network on pre-processed data'
@@ -90,6 +90,7 @@ if __name__ == '__main__':
     if args.predict_dir is not None:
         try:
             os.mkdir(args.predict_dir)
+            os.mkdir('{}/plots'.format(args.predict_dir))
         except Exception as e:
             warn(str(e))
             pass
@@ -174,21 +175,23 @@ if __name__ == '__main__':
 
             Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
-            # if residual mode is on, we need to load the data again
-            # so that we can add the original contrast back in
+            data = suio.load_file(data_file).transpose((0, 2, 3, 1))
+
+            # if residual mode is on, we need to add the original contrast back in
             if args.residual_mode:
-                data = suio.load_file(data_file).transpose((0, 2, 3, 1))
                 h = args.slices_per_input // 2
                 Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
 
             data_file_base = os.path.basename(data_file)
             _1, _2 = os.path.splitext(data_file_base)
             data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
+            plot_file_predict = '{}/plots/{}_predict_{}.png'.format(args.predict_dir, _1, args.job_id)
 
             if args.verbose:
                 print('output: {}'.format(data_file_predict))
 
             suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
+            compare_output.make_plot(data.transpose((0, 3, 1, 2)), Y_prediction, idx=None, show_diff=False, output=plot_file_predict)
 
         toc = time.time()
         print('done predicting ({:.0f} sec)'.format(toc - tic))
