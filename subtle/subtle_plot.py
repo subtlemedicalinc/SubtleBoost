@@ -79,11 +79,13 @@ def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=N
     ssim = sumetrics.ssim(data_truth_idx[:,:,-1], data_predict_idx.squeeze())
 
     metrics_text = '\n'.join((
-        'NRMSE = {:4f}'.format(nrmse),
-        'PSNR  = {:4f}'.format(psnr),
-        'SSIM  = {:4f}'.format(ssim)))
+        'NRMSE = {:.3f}'.format(nrmse),
+        'PSNR  = {:.3f}'.format(psnr),
+        'SSIM  = {:.3f}'.format(ssim)))
 
+    print('Slice {}'.format(idx))
     print(metrics_text)
+    print()
 
     plt.figure(figsize=(20,5))
     if show_diff:
@@ -96,7 +98,7 @@ def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=N
         plt.title('Pre-contrast vs. 10% Dose vs. Post-contrast vs. SubtleGad')
         ax = plt.gca()
         props = dict(boxstyle='round', facecolor='wheat', alpha=1.)
-        ax.text(.95, 0.95, metrics_text, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+        ax.text(1.01, 0.95, metrics_text, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
 
 
     if output is not None:
