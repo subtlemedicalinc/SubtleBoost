@@ -19,6 +19,29 @@ def tile(ims):
 def imshowtile(x, title=None, cmap='gray'):
     plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)),cmap=cmap)
 
+def make_plot(data_truth, data_predict, idx=None, show_diff=False, output=None):
+    if idx is None:
+        idx = data_truth.shape[0] // 2
+
+    data_truth_idx = data_truth[idx,:,:,:].squeeze().transpose((1,2,0))
+    data_predict_idx = data_predict[idx,:,:].squeeze()[:,:,None]
+
+    plt.figure(figsize=(20,5))
+    if show_diff:
+        data_truth_idx_diff = abs(data_truth_idx[:,:,2] - data_truth_idx[:,:,0])
+        data_predict_idx_diff = abs(data_predict_idx[:,:,0] - data_truth_idx[:,:,0])
+        imshowtile(np.concatenate((data_truth_idx[:,:,0][:,:,None], data_truth_idx_diff[:,:,None], data_truth_idx[:,:,2][:,:,None], data_predict_idx_diff[:,:,None], data_predict_idx), axis=2))
+        plt.title('pre vs. truth diff vs. truth vs. SubtleGad diff vs. SubtleGad')
+    else:
+        imshowtile(np.concatenate((data_truth_idx, data_predict_idx), axis=2))
+        plt.title('pre vs. low vs. full vs. predicted')
+
+    if output is None:
+        plt.show()
+    else:
+        plt.savefig(output)
+    
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -30,26 +53,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    z0 = suio.load_file(args.file_truth)
-    z1 = suio.load_file(args.file_predict)
+    data_truth = suio.load_file(file_truth)
+    data_predict = suio.load_file(file_predict)
 
-    if args.idx is None:
-        args.idx = z0.shape[0] // 2
+    make_plot(data_truth, data_predict, idx=args.idx, show_diff=args.show_diff, output=args.output)
 
-    z0_idx = z0[args.idx,:,:,:].squeeze().transpose((1,2,0))
-    z1_idx = z1[args.idx,:,:][:,:,None]
-
-    plt.figure(figsize=(20,5))
-    if args.show_diff:
-        z0_idx_diff = abs(z0_idx[:,:,2] - z0_idx[:,:,0])
-        z1_idx_diff = abs(z1_idx[:,:,0] - z0_idx[:,:,0])
-        imshowtile(np.concatenate((z0_idx[:,:,0][:,:,None], z0_idx_diff[:,:,None], z0_idx[:,:,2][:,:,None], z1_idx_diff[:,:,None], z1_idx), axis=2))
-        plt.title('pre vs. truth diff vs. truth vs. SubtleGad diff vs. SubtleGad')
-    else:
-        imshowtile(np.concatenate((z0_idx, z1_idx), axis=2))
-        plt.title('pre vs. low vs. full vs. predicted')
-
-    if args.output is None:
-        plt.show()
-    else:
-        plt.savefig(args.output)
