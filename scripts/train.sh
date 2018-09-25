@@ -1,6 +1,6 @@
 #!/bin/bash
 
-commit=$1
+commit=${commit:=$(git rev-parse HEAD | cut -c1-6)}
 	
 DATA_DIR=${DATA_DIR:="/local/ubuntu/jon/dev/data_full/data"}
 DATA_LIST=${DATA_LIST:="/home/ubuntu/jon/dev/data_full/data_train.txt"}
