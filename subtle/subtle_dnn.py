@@ -14,7 +14,6 @@ from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalizati
 import keras.callbacks
 from keras.layers.merge import add as keras_add
 from keras.optimizers import Adam
-from keras.losses import mean_absolute_error, mean_squared_error
 
 from warnings import warn
 import numpy as np
@@ -24,6 +23,7 @@ import time
 
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
+import subtle.subtle_loss as suloss
 
 # clean up
 def clear_keras_memory():
@@ -139,8 +139,8 @@ class DeepEncoderDecoder2D:
     def __init__(self,
             num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, 
             num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
-            lr_init=None, loss_function=mean_absolute_error,
-            metrics_monitor=[mean_absolute_error],
+            lr_init=None, loss_function=suloss.l1_loss,
+            metrics_monitor=[suloss.l1_loss],
             num_poolings=3, num_conv_per_pooling=3,
             batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id=''):
 
