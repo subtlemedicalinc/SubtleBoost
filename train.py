@@ -31,6 +31,7 @@ import keras.callbacks
 import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
+import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
 
 usage_str = 'usage: %(prog)s [options]'
@@ -72,6 +73,8 @@ if __name__ == '__main__':
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
     parser.add_argument('--num_channel_first', action='store', dest='num_channel_first', type=int, help='first layer channels', default=32)
     parser.add_argument('--gen_type', action='store', dest='gen_type', type=str, help='generator type (legacy or split)', default='legacy')
+    parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)
+    parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)
 
 
     args = parser.parse_args()
@@ -134,23 +137,36 @@ if __name__ == '__main__':
     sudnn.clear_keras_memory()
     sudnn.set_keras_memory(args.keras_memory)
 
+    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
+    metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
+
     if args.gen_type == 'legacy':
         m = sudnn.DeepEncoderDecoder2D(
                 num_channel_input=2 * args.slices_per_input, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
                 num_channel_first=args.num_channel_first,
+                loss_function=loss_function,
+                metrics_monitor=metrics_monitor,
                 lr_init=args.lr_init,
                 batch_norm=args.batch_norm,
-                verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
+                verbose=args.verbose,
+                checkpoint_file=args.checkpoint_file,
+                log_dir=args.log_dir,
+                job_id=args.job_id)
 
     elif args.gen_type == 'split':
         m = sudnn.DeepEncoderDecoder2D(
                 num_channel_input=nz, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
                 num_channel_first=args.num_channel_first,
+                loss_function=loss_function,
+                metrics_monitor=metrics_monitor,
                 lr_init=args.lr_init,
                 batch_norm=args.batch_norm,
-                verbose=args.verbose, checkpoint_file=args.checkpoint_file, log_dir=args.log_dir, job_id=args.job_id)
+                verbose=args.verbose,
+                checkpoint_file=args.checkpoint_file,
+                log_dir=args.log_dir,
+                job_id=args.job_id)
 
     m.load_weights()
 
