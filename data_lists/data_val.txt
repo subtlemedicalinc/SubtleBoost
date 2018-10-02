@@ -2,7 +2,6 @@ Patient_0099
 Patient_0105
 Patient_0177
 Patient_0193
-Patient_0198
 Patient_0204
 Patient_0217
 Patient_0219
