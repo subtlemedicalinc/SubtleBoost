@@ -312,7 +312,6 @@ Patient_0537
 Patient_0541
 Patient_0543
 Patient_0544
-Patient_0545
 Patient_0546
 Patient_0547
 Patient_0548
