@@ -228,10 +228,12 @@ if __name__ == '__main__':
         data_train_list = data_list[r:]
 
         if args.verbose:
-            print('using {} datasets for training'.format(len(data_train_list)))
-            print(data_train_list)
-            print('using {} datasets for validation'.format(len(data_val_list)))
-            print(data_val_list)
+            print('using {} datasets for training:'.format(len(data_train_list)))
+            for d in data_train_list:
+                print(d)
+            print('using {} datasets for validation:'.format(len(data_val_list)))
+            for d in data_va_list:
+                print(d)
 
 
         callbacks = []
