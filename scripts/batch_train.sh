@@ -18,7 +18,7 @@ export HIST_DIR=/raid/jon/history
 export CHECKPOINT_DIR=/raid/jon/checkpoints
 export TB_DIR=/raid/jon/logs_tb
 
-LEARNING_RATES=( 0.01 0.001 0.0001 )
+LEARNING_RATES=( 0.0001 0.0005 0.00001 )
 LEARN_RESIDUALS=( 0 1)
 BATCH_NORMS=( 0 1)
 
