@@ -104,3 +104,5 @@ def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=N
     if output is not None:
         plt.savefig(output)
 
+    return nrmse, psnr, ssim
+
