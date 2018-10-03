@@ -9,7 +9,7 @@ export MAX_DATA_SETS=${MAX_DATA_SETS:=2}
 
 export JOB_ID=$1
 
-for id in `ls -tr ${CHECKPOINT_DIR}/80c553_* | xargs -n1 basename | sed -e 's/\.checkpoint//g'` ; do
+for id in `ls -tr ${CHECKPOINT_DIR}/${JOB_ID}_* | xargs -n1 basename | sed -e 's/\.checkpoint//g'` ; do
 	checkpoint_file="${CHECKPOINT_DIR}/${id}.checkpoint"
 	predict_file="${PREDICT_DIR}/${id}"
 	if grep --quiet "learn_residual" ${LOG_DIR}/log_${id}.out ; then
