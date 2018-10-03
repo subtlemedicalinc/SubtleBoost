@@ -232,7 +232,7 @@ if __name__ == '__main__':
             for d in data_train_list:
                 print(d)
             print('using {} datasets for validation:'.format(len(data_val_list)))
-            for d in data_va_list:
+            for d in data_val_list:
                 print(d)
 
 
