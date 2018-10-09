@@ -22,7 +22,7 @@ import datetime
 import time
 import random
 from warnings import warn
-import argparse
+import configargparse as argparse
 
 import numpy as np
 
@@ -35,7 +35,7 @@ import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
 
 usage_str = 'usage: %(prog)s [options]'
-description_str = 'train SubtleGrad network on pre-processed data'
+description_str = 'Train SubtleGrad network on pre-processed data.'
 
 # FIXME: add time stamps, logging
 # FIXME: data augmentation
@@ -45,6 +45,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument('--config', is_config_file=True, help='config file path', default=False)
     parser.add_argument('--data_list', action='store', dest='data_list_file', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
     parser.add_argument('--file_ext', action='store', dest='file_ext', type=str, help='file extension of data', default=None)
@@ -78,6 +79,12 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
+
+    print(args)
+    print("----------")
+    print(parser.format_help())
+    print("----------")
+    print(parser.format_values())
     
     assert args.data_list_file is not None, 'must specify data list'
 
