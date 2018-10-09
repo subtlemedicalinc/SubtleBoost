@@ -175,7 +175,6 @@ class DeepEncoderDecoder2D:
         
         return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=True)
 
-    # FIXME check
     def callback_tensorbaord(self, log_dir=None, log_every=None):
 
         if log_dir is not None:
@@ -186,7 +185,6 @@ class DeepEncoderDecoder2D:
         else:
             return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}_{}'.format(self.job_id, time.time())), batch_size=8, write_graph=False)
 
-    # FIXME check
     def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, 
             max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy'):
         return TensorBoardImageCallback(self,
