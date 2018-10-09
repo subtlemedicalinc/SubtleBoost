@@ -75,39 +75,42 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.shuffle = shuffle
         self.gen_type = gen_type
 
-        self.batch_size = 1
-
         self._init_generator()
 
 
     def _init_generator(self):
         if self.gen_type == 'legacy':
             self.generator =  sugen.DataGenerator(data_list=self.data_list,
-                    batch_size=self.batch_size,
+                    batch_size=1,
                     shuffle=self.shuffle,
                     verbose=self.verbose, 
                     residual_mode=self.residual_mode,
                     slices_per_input=self.slices_per_input,
-                    predict=True)
+                    predict=False)
         elif self.gen_type == 'split':
             self.generator =  sugen.DataGenerator_XY(data_list=self.data_list,
-                    batch_size=self.batch_size,
+                    batch_size=1,
                     shuffle=self.shuffle,
                     verbose=self.verbose, 
-                    predict=True)
+                    predict=False)
 
     def on_epoch_end(self, epoch, logs={}):
-        _len = self.generator.__len__()
-        X = self.generator.__getitem__(_len // 2)
-        #Y_prediction = self.model.predict_generator(generator=self.generator, steps=1, max_queue_size=self.max_queue_size, workers=self.num_workers, use_multiprocessing=self.use_multiprocessing, verbose=self.verbose)
-        Y_prediction = self.model.predict_on_batch(X)
-        if self.gen_type == 'legacy' and self.residual_mode:
-            h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
-            Y_prediction = X[:,:,:,h].squeeze() + Y_prediction.squeeze()
-        image = make_image(Y_prediction.squeeze())
-        summary = tf.Summary(value=[tf.Summary.Value(tag=self.tag, image=image)])
+        #_len = self.generator.__len__()
         writer = tf.summary.FileWriter(self.log_dir)
-        writer.add_summary(summary, epoch)
+        for ii in range(self.batch_size):
+            tag = '{}_{}'.format(self.tag, ii)
+            X, Y = self.generator.__getitem__(ii)
+            Y = Y.squeeze()
+            Y_prediction = self.model.predict_on_batch(X).squeeze()
+            if self.gen_type == 'legacy' and self.residual_mode:
+                h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
+                X_zero = X[:,:,:,h].squeeze()
+                Y_prediction = X_zero + Y_prediction
+                Y = X_zero + Y
+            display_image = np.concatenate((Y, Y_prediction), axis=1)
+            image = make_image(display_image)
+            summary = tf.Summary(value=[tf.Summary.Value(tag=tag, image=image)])
+            writer.add_summary(summary, epoch)
         writer.close()
 
         return
@@ -188,7 +191,11 @@ class DeepEncoderDecoder2D:
             return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
 
     def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, 
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None):
+            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False):
+        if log_dir is None:
+            _log_dir = self.log_dir
+        else:
+            _log_dir = log_dir
         return TensorBoardImageCallback(self,
                 data_list=data_list,
                 slice_dict_list=slice_dict_list,
@@ -201,6 +208,7 @@ class DeepEncoderDecoder2D:
                 max_queue_size=max_queue_size,
                 num_workers=num_workers,
                 use_multiprocessing=use_multiprocessing,
+                shuffle=shuffle,
                 tag=tag,
                 gen_type=gen_type)
 

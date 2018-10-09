@@ -52,6 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--num_epochs', action='store', dest='num_epochs', type=int, help='number of epochs to run', default=10)
     parser.add_argument('--batch_size', action='store', dest='batch_size', type=int, help='batch size', default=8)
+    parser.add_argument('--tbimage_batch_size', action='store', dest='tbimage_batch_size', type=int, help='TBImage batch size', default=8)
     parser.add_argument('--gpu', action='store', dest='gpu_device', type=str, help='set GPU', default=None)
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
@@ -249,7 +250,7 @@ if __name__ == '__main__':
         callbacks = []
         callbacks.append(m.callback_checkpoint())
         callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir)))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True))
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
