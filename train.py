@@ -116,6 +116,8 @@ if __name__ == '__main__':
 
     np.random.seed(args.random_seed)
 
+    log_tb_dir = os.path.join(args.log_dir, '{}_{}'.format(args.job_id, time.time()))
+
     # load data
     if args.verbose:
         print('loading data from {}'.format(args.data_list_file))
@@ -159,7 +161,7 @@ if __name__ == '__main__':
                 batch_norm=args.batch_norm,
                 verbose=args.verbose,
                 checkpoint_file=args.checkpoint_file,
-                log_dir=args.log_dir,
+                log_dir=log_tb_dir,
                 job_id=args.job_id)
 
     elif args.gen_type == 'split':
@@ -173,7 +175,7 @@ if __name__ == '__main__':
                 batch_norm=args.batch_norm,
                 verbose=args.verbose,
                 checkpoint_file=args.checkpoint_file,
-                log_dir=args.log_dir,
+                log_dir=log_tb_dir,
                 job_id=args.job_id)
 
     m.load_weights()
@@ -246,8 +248,8 @@ if __name__ == '__main__':
 
         callbacks = []
         callbacks.append(m.callback_checkpoint())
-        callbacks.append(m.callback_tensorbaord())
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example', gen_type=args.gen_type))
+        callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Image Example', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir)))
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 

@@ -177,20 +177,22 @@ class DeepEncoderDecoder2D:
 
     def callback_tensorbaord(self, log_dir=None, log_every=None):
 
-        if log_dir is not None:
-            self.log_dir = log_dir
+        if log_dir is None:
+            _log_dir = self.log_dir
+        else:
+            _log_dir = log_dir
         
         if log_every is not None and log_every > 0:
-            return TensorBoardCallBack(log_every=log_every, log_dir=os.path.join(self.log_dir, '{}_{}'.format(self.job_id, time.time())), batch_size=8, write_graph=False)
+            return TensorBoardCallBack(log_every=log_every, log_dir=_log_dir, batch_size=8, write_graph=False)
         else:
-            return keras.callbacks.TensorBoard(log_dir=os.path.join(self.log_dir, '{}_{}'.format(self.job_id, time.time())), batch_size=8, write_graph=False)
+            return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
 
     def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, 
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy'):
+            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None):
         return TensorBoardImageCallback(self,
                 data_list=data_list,
                 slice_dict_list=slice_dict_list,
-                log_dir=os.path.join(self.log_dir, '{}_{}'.format(self.job_id, time.time())),
+                log_dir=_log_dir,
                 slices_per_epoch=slices_per_epoch,
                 slices_per_input=slices_per_input,
                 batch_size=batch_size,
