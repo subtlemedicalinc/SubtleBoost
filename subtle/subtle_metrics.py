@@ -39,7 +39,7 @@ def nrmse(x_truth, x_predict, axis=None):
     return np.linalg.norm(x_truth - x_predict, axis=axis) / np.linalg.norm(x_truth, axis=axis)
 
 def normalize_ims(x_truth, x_predict):
-    ''' Normalize images w.r.t. each other.
+    ''' Normalize images w.r.t. x_truth
     x_truth and x_predict are normalized to either (-.5, .5) if negative
     or to (0, 1) if positive
 
@@ -57,12 +57,12 @@ def normalize_ims(x_truth, x_predict):
     x_predict_nrm : float or numpy ndarray
         x_predict after normalization
     '''
-    if np.all(x_truth >= 0) and np.all(x_predict >= 0):
-        max_val = np.maximum(np.max(x_truth), np.max(x_predict))
+    if np.all(x_truth >= 0):
+        max_val = np.max(x_truth)
         x_truth_nrm = x_truth / max_val
         x_predict_nrm = x_predict / max_val
     else:
-        max_val = np.maximum(np.max(abs(x_truth)), np.max(abs(x_predict)))
+        max_val = np.max(abs(x_truth))
         x_truth_nrm = x_truth / max_val / 2.
         x_predict_nrm = x_predict / max_val / 2.
     return x_truth_nrm, x_predict_nrm
