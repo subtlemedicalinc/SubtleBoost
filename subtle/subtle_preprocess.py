@@ -139,6 +139,8 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
     '''
+
+    default_transform = 'translation'
     
     sim0 = sitk.GetImageFromArray(im_fixed)
     sim1 = sitk.GetImageFromArray(im_moving)
@@ -151,8 +153,8 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     
     if param_map is None:
         if verbose:
-            print("using default 'transform' parameter map")
-        param_map = sitk.GetDefaultParameterMap('translation')
+            print("using default '{}' parameter map".format(default_transform))
+        param_map = sitk.GetDefaultParameterMap(default_transform)
 
     ef = sitk.ElastixImageFilter()
     ef.SetFixedImage(sim0)
