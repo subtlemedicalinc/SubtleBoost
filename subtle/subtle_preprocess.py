@@ -134,7 +134,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     return im_out
 
 
-def register_im(im_fixed, im_moving, param_map=None, verbose=True):
+def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -142,6 +142,12 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True):
     
     sim0 = sitk.GetImageFromArray(im_fixed)
     sim1 = sitk.GetImageFromArray(im_moving)
+
+    if im_fixed_spacing is not None:
+        sim0.SetSpacing(im_fixed_spacing)
+
+    if im_moving_spacing is not None:
+        sim1.SetSpacing(im_moving_spacing)
     
     if param_map is None:
         if verbose:

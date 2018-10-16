@@ -101,6 +101,10 @@ if __name__ == '__main__':
     ims_low, hdr_low = suio.dicom_files(path_low, normalize=False)
     ims_full, hdr_full = suio.dicom_files(path_full, normalize=False)
 
+    pixel_spacing_zero = suio.get_pixel_spacing(hdr_zero)
+    pixel_spacing_low = suio.get_pixel_spacing(hdr_low)
+    pixel_spacing_full = suio.get_pixel_spacing(hdr_full)
+
     if verbose:
         print('image sizes: ', ims_zero.shape, ims_low.shape, ims_full.shape)
 
@@ -139,13 +143,13 @@ if __name__ == '__main__':
     spars = sitk.GetDefaultParameterMap(transform_type)
 
     if not args.skip_registration:
-        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=verbose)
+        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=verbose, im_fixed_spacing=pixel_spacing_zero, im_moving_spacing=pixel_spacing_low)
 
         if verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
     if not args.skip_registration:
-        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=verbose)
+        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=verbose, im_fixed_spacing=pixel_spacing_zero, im_moving_spacing=pixel_spacing_full)
 
         if verbose:
             print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))

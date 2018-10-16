@@ -169,6 +169,13 @@ def dicom_header(dicom_dir):
     return hdr, lstDCM, fileOut
 
 
+def get_pixel_spacing(hdr):
+    ''' Get pixel spacing from dicom header '''
+    x_spacing, y_spacing = hdr.PixelSpacing
+    z_spacing = hdr.SliceThickness
+    return x_spacing, y_spacing, z_spacing
+
+
 def get_npy_files(data_dir, max_data_sets=np.inf):
     ''' Get list of npy files in a given directory
 
