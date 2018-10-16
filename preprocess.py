@@ -97,9 +97,9 @@ if __name__ == '__main__':
             print('path_low = {}'.format(path_low))
             print('path_full = {}'.format(path_full))
 
-    ims_zero, hdr_zero = suio.dicom_files(path_zero)
-    ims_low, hdr_low = suio.dicom_files(path_low)
-    ims_full, hdr_full = suio.dicom_files(path_full)
+    ims_zero, hdr_zero = suio.dicom_files(path_zero, normalize=False)
+    ims_low, hdr_low = suio.dicom_files(path_low, normalize=False)
+    ims_full, hdr_full = suio.dicom_files(path_full, normalize=False)
 
     if verbose:
         print('image sizes: ', ims_zero.shape, ims_low.shape, ims_full.shape)

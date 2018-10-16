@@ -69,7 +69,7 @@ def get_dicom_dirs(base_dir):
     return dir_list
 
 
-def dicom_files(dicom_dir, normalize = False):
+def dicom_files(dicom_dir, normalize=False):
     
     ''' Load dicom files in a given folder
     For a given dicom directory, load the dicom files that are
