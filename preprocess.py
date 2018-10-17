@@ -44,9 +44,12 @@ if __name__ == '__main__':
     parser.add_argument('--discard_end_percent', action='store', type=float, dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
     parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
-    parser.add_argument('--normalize', action='store_true', dest='normalize', help="additional normalization)", default=False)
+    parser.add_argument('--normalize', action='store_true', dest='normalize', help="additional normalization", default=False)
+    parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same normalization for all images", default=False)
     parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
     parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
+    parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
+    parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip scale_im', default=False)
 
     args = parser.parse_args()
 
@@ -129,16 +132,18 @@ if __name__ == '__main__':
     if verbose:
         print('masking')
 
-    mask = sup.mask_im(ims, threshold=mask_threshold)
-    ims *= mask
+    if not args.skip_mask:
+        mask = sup.mask_im(ims, threshold=mask_threshold)
+        ims *= mask
 
     # FIXME: expose to outside world. subject to change once we implement white striping
     levels=1024
     points=50
     mean_intensity=True
 
-    ims[:,1,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,1,:,:], levels, points, mean_intensity)
-    ims[:,2,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,2,:,], levels, points, mean_intensity)
+    if not args.skip_scale_im:
+        ims[:,1,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,1,:,:], levels, points, mean_intensity)
+        ims[:,2,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,2,:,], levels, points, mean_intensity)
 
     spars = sitk.GetDefaultParameterMap(transform_type)
 
@@ -158,6 +163,10 @@ if __name__ == '__main__':
     if normalize:
         if verbose:
             print('normalizing with function ', args.normalize_fun, normalize_fun)
-        ims = sup.normalize_data(ims.transpose((0,2,3,1)), verbose=verbose, fun=normalize_fun).transpose((0,3,1,2))
+        if args.joint_normalize:
+            axis=(0,1,2,3)
+        else:
+            axis=(0,1,2)
+        ims = sup.normalize_data(ims.transpose((0,2,3,1)), verbose=verbose, fun=normalize_fun, axis=axis).transpose((0,3,1,2))
 
     np.save(out_file, ims)
