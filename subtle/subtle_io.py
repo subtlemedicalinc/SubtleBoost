@@ -49,13 +49,16 @@ def get_dicom_dirs(base_dir):
     # get list of directories
     dirs = os.listdir(base_dir)
     dirs_split = np.array([d.split('_') for d in dirs])
-    dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
+    try:
+        dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
+    except:
+        dirs_sorted = np.array(dirs)[np.argsort([int(dd[-1]) for dd in dirs_split])]
 
     dir_list = []
 
     for d in dirs_sorted:
-        if 'ax' in d.lower():
-            if 'mprage' in d or 'bravo' in d.lower():
+        if 'ax' in d.lower() or 'sag' in d.lower():
+            if 'mprage' in d.lower() or 'bravo' in d.lower():
                 dir_list.append(os.path.join(base_dir, d))
         if len(dir_list) == 3:
             break
@@ -122,7 +125,7 @@ def dicom_files(dicom_dir, normalize=False):
     if normalize is True:
         img_array = img_array/np.amax(img_array)
         
-    return img_array, hdr
+    return np.float32(img_array), hdr
 
 #%% Load dicom files function    
 
