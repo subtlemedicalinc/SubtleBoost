@@ -57,8 +57,8 @@ def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), n_slices=10):
         print('scale low:', scale_low)
         print('scale full:', scale_full)
         print('done scaling data ({:.2f} s)'.format(ntoc - ntic))
-    data_out[:,:,:,1] = data_out[:,:,:,1] / scale_low
-    data_out[:,:,:,2] = data_out[:,:,:,2] / scale_full
+    data_out[:,:,:,1] = data_out[:,:,:,1] * scale_low
+    data_out[:,:,:,2] = data_out[:,:,:,2] * scale_full
 
     return data_out
 
