@@ -23,6 +23,7 @@ except:
     warnings.warn('SimpleITK not found!')
     
     
+# FIXME: do differently for each image
 def mask_im(im, threshold=.08):
     '''
     Image masking
