@@ -29,6 +29,80 @@ except:
 
 import subtle.subtle_preprocess as sup
 
+def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
+                   custom_series_desc=''):
+    """Write output numpy array to dicoms, given input dicoms.
+    Args:
+        input_dicom_folder (str): input dicom folder path.
+        output (numpy array): output numpy array.
+        output_dicom_folder (str): output dicom folder path.
+        custom_series_desc (str): custom series description string.
+        Modified from Long Wang
+    """
+    input_dicom_folder = pathlib.Path(input_dicom_folder)
+    output_dicom_folder = pathlib.Path(output_dicom_folder)
+    output_dicom_folder.mkdir(parents=True, exist_ok=True)
+
+    in_hdrs, in_files, in_names = dicom_header(input_dicom_folder)
+    in_data, _  = dicom_files(input_dicom_folder)
+
+    output = np.squeeze(output)
+    output_shape = output.shape
+    
+    slice_start = in_hdrs[0].SliceLocation
+    delta_slice = (in_hdrs[-1].SliceLocation - in_hdrs[0].SliceLocation) / (len(output) - 1)
+    
+    x_start = in_hdrs[0].ImagePositionPatient[0]
+    delta_x = (in_hdrs[-1].ImagePositionPatient[0] - in_hdrs[0].ImagePositionPatient[0]) / (len(output) - 1)
+    
+    y_start = in_hdrs[0].ImagePositionPatient[1]
+    delta_y = (in_hdrs[-1].ImagePositionPatient[1] - in_hdrs[0].ImagePositionPatient[1]) / (len(output) - 1)
+    
+    z_start = in_hdrs[0].ImagePositionPatient[2]
+    delta_z = (in_hdrs[-1].ImagePositionPatient[2] - in_hdrs[0].ImagePositionPatient[2]) / (len(output) - 1)
+
+    dicom = in_hdrs[0]
+
+    dtype = dicom.pixel_array.dtype
+    if row == 0 or col == 0:
+        row, col = dicom.pixel_array.shape
+        print("row=", row, "col=", col)
+    dicom.SOPInstanceUID = pydicom.uid.generate_uid()
+    dicom.SeriesInstanceUID = pydicom.uid.generate_uid()
+    dicom.SeriesNumber = str(int(dicom.SeriesNumber) + 100)
+    dicom.SliceThickness = abs(delta_z)
+    try:
+        dicom.StudyDescription = 'SubtleGad:' + dicom.StudyDescription
+    except AttributeError:
+        pass
+        
+    try:
+        dicom.SeriesDescription = 'SubtleGad:' + dicom.SeriesDescription + custom_series_desc
+    except AttributeError:
+        pass
+
+    output_min = np.min(output)
+    if output_min < 0:
+        output[np.where(output<0)] = 0
+    print("output max=", np.max(output), "min=", np.min(output))
+    output = output.astype(dtype)
+    print("after cogistration, output max=", np.max(output), "min=", np.min(output))
+
+    for i in tqdm.tqdm(range(output_shape[0])):
+        pixel_array = output[i]
+        dicom.InstanceNumber = str(i + 1)
+        dicom.SOPInstanceUID = pydicom.uid.generate_uid()
+        dicom.ImageIndex = len(output) - i + 1
+        dicom.SliceLocation = str(slice_start + delta_slice * i)
+        dicom.ImagePositionPatient[0] = str(x_start + delta_x * i)
+        dicom.ImagePositionPatient[1] = str(y_start + delta_y * i)
+        dicom.ImagePositionPatient[2] = str(z_start + delta_z * i)
+        dicom.PixelData = pixel_array.tostring()
+        dicom.Rows = row
+        dicom.Columns = col
+        dicom.save_as(str(output_dicom_folder / '{:03d}.dcm'.format(i)))
+
+
 
 def get_dicom_dirs(base_dir):
 
