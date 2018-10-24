@@ -18,13 +18,13 @@ export JOB_ID=$1
 for id in `ls -tr ${CHECKPOINT_DIR}/${JOB_ID}_* | xargs -n1 basename | sed -e 's/\.checkpoint//g'` ; do
 	checkpoint_file="${CHECKPOINT_DIR}/${id}.checkpoint"
 	predict_file="${PREDICT_DIR}/${id}"
-	if grep --quiet "learn_residual" ${LOG_DIR}/log_${id}.out ; then
+	if grep --quiet "residual_mode=True" ${LOG_DIR}/log_${id}.out ; then
 		learn_residual_str=" --learn_residual "
 	else
 		learn_residual_str=" "
 	fi
 
-	if grep --quiet "batch_norm" ${LOG_DIR}/log_${id}.out ; then
+	if grep --quiet "batch_norm=True" ${LOG_DIR}/log_${id}.out ; then
 		batch_norm_str=" --batch_norm "
 	else
 		batch_norm_str=" "
