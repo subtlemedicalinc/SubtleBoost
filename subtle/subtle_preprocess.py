@@ -37,7 +37,7 @@ def mask_im(im, threshold=.08):
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
     return mask   
 
-def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), n_slices=10):
+def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2)):
     ntic = time.time()
     if verbose:
         print('normalizing data')
@@ -50,7 +50,7 @@ def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), n_slices=10):
         print('scaling data')
     ntic = time.time()
     nz = data_out.shape[0]
-    idx_scale = range(nz//2 - n_slices//2, nz//2 + n_slices//2)
+    idx_scale = range(nz//2 - 5, nz//2 + 5)
     scale_low = scale_im_enhao(data_out[idx_scale, :, :, 0], data_out[idx_scale, :, :, 1])
     scale_full = scale_im_enhao(data_out[idx_scale, :, :, 0], data_out[idx_scale, :, :, 2])
     ntoc = time.time()
