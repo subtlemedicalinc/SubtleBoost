@@ -167,9 +167,9 @@ def dicom_header(dicom_dir):
     # Preallocation information
     
     # get the reference file from the first Dicom image
-    hdr = dicom.read_file(lstDCM[0])
+    hdr_list = [pydicom.read_file(h) for h in lstDCM]
         
-    return hdr, lstDCM, fileOut
+    return hdr_list, lstDCM, fileOut
 
 
 def get_pixel_spacing(hdr):
