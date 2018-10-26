@@ -32,7 +32,6 @@ def mask_im(im, threshold=.08):
     '''
     N, n, nx, ny = im.shape
     mask = im > (threshold * np.amax(im, axis=(2,3))[:,:,None,None])
-    mask = np.amax(mask, axis=1)[:,None,:,:].repeat(axis=1, repeats=n)
     # fill holes in mask
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
     return mask   
