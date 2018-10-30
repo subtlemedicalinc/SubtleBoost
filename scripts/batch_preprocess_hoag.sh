@@ -4,8 +4,8 @@ export dicom_data='/home/subtle/Data/SubtleGAD_Hoag'
 export out_dir='/raid/jon/data_full_hoag/data'
 export out_dir_plots='/raid/jon/data_full_hoag/plots'
 export data_list='/raid/jon/data_full_hoag/data_list.txt'
-export par_jobs=1
 export log_dir='/raid/jon/data_full_hoag/preprocess/'
+export par_jobs=1
 
 mkdir -p ${out_dir}
 mkdir -p ${out_dir_plots}
