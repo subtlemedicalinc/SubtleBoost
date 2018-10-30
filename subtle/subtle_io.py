@@ -30,7 +30,7 @@ except:
 import subtle.subtle_preprocess as sup
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
-                   custom_series_desc=''):
+        series_desc_pre='SubtleGad:', series_desc_post=''):
     """Write output numpy array to dicoms, given input dicoms.
     Args:
         input_dicom_folder (str): input dicom folder path.
@@ -65,7 +65,6 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
     dtype = dicom.pixel_array.dtype
     if row == 0 or col == 0:
         row, col = dicom.pixel_array.shape
-        print("row=", row, "col=", col)
     dicom.SOPInstanceUID = pydicom.uid.generate_uid()
     dicom.SeriesInstanceUID = pydicom.uid.generate_uid()
     dicom.SeriesNumber = str(int(dicom.SeriesNumber) + 100)
@@ -76,16 +75,14 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         pass
         
     try:
-        dicom.SeriesDescription = 'SubtleGad:' + dicom.SeriesDescription + custom_series_desc
+        dicom.SeriesDescription = '{} {} {}'.format(series_desc_pre, dicom.SeriesDescription, series_desc_post)
     except AttributeError:
         pass
 
     output_min = np.min(output)
     if output_min < 0:
         output[np.where(output<0)] = 0
-    print("output max=", np.max(output), "min=", np.min(output))
     output = output.astype(dtype)
-    print("after cogistration, output max=", np.max(output), "min=", np.min(output))
 
     for i in tqdm.tqdm(range(output_shape[0])):
         pixel_array = output[i]
@@ -132,7 +129,8 @@ def get_dicom_dirs(base_dir):
     for d in dirs_sorted:
         if 'ax' in d.lower() or 'sag' in d.lower():
             if 'mprage' in d.lower() or 'bravo' in d.lower():
-                dir_list.append(os.path.join(base_dir, d))
+                if 'reformat' not in d.lower():
+                    dir_list.append(os.path.join(base_dir, d))
         if len(dir_list) == 3:
             break
 
