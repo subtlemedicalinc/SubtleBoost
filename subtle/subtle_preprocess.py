@@ -67,18 +67,27 @@ def normalize_im(im, axis=None, fun=np.mean):
     Image normalization
     Normalizes an image along the axis dimensions using the function fun
     '''
+
+    sc = normalize_scale(im, axis, fun)
+    return im / sc
+
+def normalize_scale(im, axis=None, fun=np.mean):
+    '''
+    Image normalization
+    Returns the normalization of an image along the axis dimensions using the function fun
+    '''
     im[im < 0] = 0
 
     if type(axis) == int:
         axis = (axis,)
 
     if axis is None:
-        return im / fun(im.ravel())
+        sc = fun(im.ravel())
     else:
         sc = fun(im, axis=axis)
         for i in axis:
             sc = np.expand_dims(sc, axis=i)
-        return im / sc
+    return sc
 
 
 def scale_im_enhao(im_fixed, im_moving, levels=np.linspace(.8,1.2,30), fun=lambda x: np.mean(np.abs(x[np.abs(x)>0.1].ravel())), max_iter=1):
