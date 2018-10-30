@@ -285,6 +285,14 @@ def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
 def load_h5_file(h5_file, h5_key='data'):
     return load_slices_h5(h5_file, slices=None, h5_key=h5_key)
 
+def load_h5_metadata(h5_file, key='metadata'):
+    metadata = {}
+    with h5py.File(h5_file, 'r') as F:
+        for k in F[key].keys():
+            metadata[k] = np.array(F[key][k])
+    return metadata
+
+
 def load_npy_file(npy_file):
     return load_slices_npy(npy_file, slices=None)
 
@@ -367,17 +375,27 @@ def save_data_npy(output_file, data):
     except:
         return -1
 
-def save_data_h5(output_file, data, h5_key='data', compress=False):
+def save_data_h5(output_file, data, h5_key='data', compress=False, metadata=None):
     try:
         with h5py.File(output_file, 'w') as f:
             if compress:
                 f.create_dataset(h5_key, data=data, compression='gzip')
+
+                if metadata:
+                    for key in metadata.keys():
+                        _h5_key = 'metadata/{}'.format(key)
+                        f.create_dataset(_h5_key, data=metadata[key], compression='gzip')
             else:
                 f.create_dataset(h5_key, data=data)
+                if metadata:
+                    for key in metadata.keys():
+                        _h5_key = 'metadata/{}'.format(key)
+                        f.create_dataset(_h5_key, data=metadata[key])
         return 0
     except Exception as e:
         warn(str(e))
         return -1
+
 
 def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': False}):
     ''' Save data to output file using file type format
