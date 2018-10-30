@@ -187,3 +187,30 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     im_out = sitk.GetArrayFromImage(sim_out)
 
     return im_out, param_map_out
+
+def undo_scaling(im_predict, metadata, verbose=False):
+    ''' Applies the inverse of the scaling/normalization from preprocessing.
+    Inputs:
+    im_predict (ndarray): input volume
+    metadata (dict): dictionary containing scaling metadata
+    Outputs:
+    out (ndarray): volume after inverse of scaling
+    '''
+
+    out = im_predict.copy()
+
+    key1 = 'scale_global'
+    if key1 in  metadata.keys():
+        if verbose:
+            print('re-scaling by global scale', metadata[key1])
+        out = out * metadata[key1]
+
+    # FIXME: is this necessary? data are already scaled to match pre-con
+    key2 = 'scale_zero'
+    if key2 in metadata.keys():
+        if verbose:
+            print('re-scaling by {}'.format(key2), metadata[key2])
+        out = out / metadata[key2]
+
+    return out
+
