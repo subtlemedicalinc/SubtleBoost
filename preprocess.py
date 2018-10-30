@@ -3,7 +3,8 @@
 preprocess.py
 
 Pre-processing for contrast synthesis.
-Processes a set of dicoms and outputs npy file
+Processes a set of dicoms and outputs h5 file
+with scale/registration factors
 
 @author: Jon Tamir (jon@subtlemedical.com)
 Copyright Subtle Medical (https://www.subtlemedical.com)
@@ -44,14 +45,17 @@ if __name__ == '__main__':
     parser.add_argument('--discard_end_percent', action='store', type=float, dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
     parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
-    parser.add_argument('--normalize', action='store_true', dest='normalize', help="additional normalization", default=False)
-    parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same normalization for all images", default=False)
+    parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
+    parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
+    parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
     parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
     parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
     parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
-    parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip scale_im', default=False)
+    parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
 
     args = parser.parse_args()
+
+    metadata = {}
 
     path_zero = args.path_zero
     path_low = args.path_low
@@ -108,6 +112,10 @@ if __name__ == '__main__':
     pixel_spacing_low = suio.get_pixel_spacing(hdr_low)
     pixel_spacing_full = suio.get_pixel_spacing(hdr_full)
 
+    metadata['pixel_spacing_zero'] = pixel_spacing_zero
+    metadata['pixel_spacing_low'] = pixel_spacing_low
+    metadata['pixel_spacing_full'] = pixel_spacing_full
+
     if verbose:
         print('image sizes: ', ims_zero.shape, ims_low.shape, ims_full.shape)
 
@@ -117,6 +125,8 @@ if __name__ == '__main__':
     idx_start = int(ns * discard_start_percent) # inclusive
     idx_end = int(ns * (1 - discard_end_percent)) # not inclusive
     idx = np.arange(idx_start, idx_end)
+
+    metadata['slice_idx'] = idx
     
     if verbose and idx_start > 0:
         if verbose:
@@ -132,22 +142,38 @@ if __name__ == '__main__':
     if verbose:
         print('masking')
 
+    ### MASKING ###
     if not args.skip_mask:
         mask = sup.mask_im(ims, threshold=mask_threshold)
-        ims *= mask
+        metadata['mask'] = 1
+        metadata['mask_threshold'] = mask_threshold
+    else:
+        mask = np.ones(ims.shape)
+        metadata['mask'] = 0
 
-    # FIXME: expose to outside world. subject to change once we implement white striping
-    levels=1024
-    points=50
-    mean_intensity=True
+    ims *= mask
 
+
+    ### HISTOGRAM NORMALIZATION ###
     if not args.skip_scale_im:
+        metadata['hist_norm'] = 1
+        # FIXME: expose to outside world. subject to change once we implement white striping
+        levels=1024
+        points=50
+        mean_intensity=True
+
         ims[:,1,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,1,:,:], levels, points, mean_intensity)
         ims[:,2,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,2,:,], levels, points, mean_intensity)
+    else:
+        metadata['hist_norm'] = 0
 
+
+    ### IMAGE REGISTRATION ###
     spars = sitk.GetDefaultParameterMap(transform_type)
 
     if not args.skip_registration:
+        metadata['reg'] = 1
+        metadata['transform_type'] = transform_type
         ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=verbose, im_fixed_spacing=pixel_spacing_zero, im_moving_spacing=pixel_spacing_low)
 
         if verbose:
@@ -158,15 +184,84 @@ if __name__ == '__main__':
 
         if verbose:
             print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
+    else:
+        metadata['reg'] = 0
 
-    print(np.max(np.abs(ims), axis=(0,2,3)))
-    if normalize:
+    # for scaling
+    nslices = 20
+    idx_scale = range(ns//2 - nslices // 2, ns//2 + nslices // 2)
+
+    m = mask[idx_scale, 0, :, :]
+    im0, im1, im2 = ims[idx_scale, 0, :, :], ims[idx_scale, 1, :, :], ims[idx_scale, 2, :, :]
+
+    im0 = im0[m != 0].ravel()
+    im1 = im1[m != 0].ravel()
+    im2 = im2[m != 0].ravel()
+
+    _ims = np.stack((im0, im1, im2), axis=1)
+
+    metadata['scale_slices'] = idx_scale
+
+    ### IMAGE SCALE MATCHING ###
+    if args.scale_matching:
+        if verbose:
+            print('intensity before scaling:')
+            print('mean', np.mean(np.abs(_ims), axis=(0)))
+            print('median', np.median(np.abs(_ims), axis=(0)))
+            print('max', np.max(np.abs(_ims), axis=(0)))
+
+        levels = np.linspace(.5, 1.5, 30)
+        max_iter = 3
+
+        ntic = time.time()
+        scale_low = sup.scale_im_enhao(im0, im1, levels=levels, max_iter=max_iter)
+        scale_full = sup.scale_im_enhao(im0, im2, levels=levels, max_iter=max_iter)
+
+        metadata['scale_low'] = scale_low
+        metadata['scale_full'] = scale_full
+
+        ntoc = time.time()
+
+        if verbose:
+            print('scale low:', scale_low)
+            print('scale full:', scale_full)
+            print('done scaling data ({:.2f} s)'.format(ntoc - ntic))
+
+        ims[:,1,:,:] = ims[:,1,:,:] * scale_low
+        ims[:,2,:,:] = ims[:,2,:,:] * scale_full
+
+        _ims[:,1] = _ims[:,1] * scale_low
+        _ims[:,2] = _ims[:,2] * scale_full
+
+        if verbose:
+            print('intensity after scaling:')
+            print('mean', np.mean(np.abs(_ims), axis=(0)))
+            print('median', np.median(np.abs(_ims), axis=(0)))
+            print('max', np.max(np.abs(_ims), axis=(0)))
+
+
+    ### GLOBAL NORMALIZATION ###
+    if args.normalize:
         if verbose:
             print('normalizing with function ', args.normalize_fun, normalize_fun)
-        if args.joint_normalize:
-            axis=(0,1,2,3)
-        else:
-            axis=(0,1,2)
-        ims = sup.normalize_data(ims.transpose((0,2,3,1)), verbose=verbose, fun=normalize_fun, axis=axis).transpose((0,3,1,2))
 
-    np.save(out_file, ims)
+        if args.joint_normalize:
+            axis=(0,1)
+        else:
+            axis=(0)
+
+        ntic = time.time()
+
+        scale_global = sup.normalize_scale(_ims, axis=axis, fun=normalize_fun)
+        metadata['scale_global'] = scale_global
+
+        if verbose:
+            ntoc = time.time()
+            print('global scaling:', scale_global)
+            print('done ({:.2f}s)'.format(ntoc - ntic))
+
+        ims = ims / scale_global[:,:,None,None]
+        _ims = _ims / scale_global
+
+
+    suio.save_data_h5(out_file, data=ims, h5_key='data', metadata=metadata)

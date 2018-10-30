@@ -21,11 +21,13 @@ function preprocess() {
 
      sub_dir_no_spaces=$(echo "${sub_dir}" | sed 's/ //g' | sed 's/\///g')
      logfile=${log_dir}/${sub_dir_no_spaces}.out
-     outfile=${out_dir}/${sub_dir_no_spaces}.npy
+     errfile=${log_dir}/${sub_dir_no_spaces}.err
+     outfile=${out_dir}/${sub_dir_no_spaces}.h5
      outfile_png=${out_dir_plots}/${sub_dir_no_spaces}.png
 
-     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "affine" --skip_scale_im --joint_normalize
-     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "affine" --skip_scale_im --joint_normalize > ${logfile} 2>&1
+     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .04 --scale_matching
+
+     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .04 --scale_matching > ${logfile} 2>${errfile}
 
 
      python ${plot_grid_bin} --input $outfile --output ${outfile_png}
