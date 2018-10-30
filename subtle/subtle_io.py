@@ -19,9 +19,9 @@ import numpy as np
 import tqdm
 
 try:
-    import dicom as pydicom
-except:
     import pydicom
+except:
+    import dicom as pydicom
 try:
     import keras
 except:
@@ -39,7 +39,6 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         custom_series_desc (str): custom series description string.
         Modified from Long Wang
     """
-    input_dicom_folder = pathlib.Path(input_dicom_folder)
     output_dicom_folder = pathlib.Path(output_dicom_folder)
     output_dicom_folder.mkdir(parents=True, exist_ok=True)
 
@@ -223,7 +222,7 @@ def dicom_header(dicom_dir):
         list of full locations of all dicoms
         
     '''
-        
+
     # build the file list for Dicom images
     lstDCM = []
     fileOut = []

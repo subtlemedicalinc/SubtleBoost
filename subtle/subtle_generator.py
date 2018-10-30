@@ -19,9 +19,9 @@ import h5py
 import numpy as np
 
 try:
-    import dicom as pydicom
-except:
     import pydicom
+except:
+    import dicom as pydicom
 try:
     import keras
 except:
