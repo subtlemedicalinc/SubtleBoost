@@ -6,6 +6,7 @@ export LOG_DIR=${LOG_DIR:="/raid/jon/logs"}
 export CHECKPOINT_DIR=${CHECKPOINT_DIR:="/raid/jon/checkpoints"}
 export PREDICT_DIR=${PREDICT_DIR:="/raid/jon/predictions"}
 export MAX_DATA_SETS=${MAX_DATA_SETS:=2}
+export FILE_EXT=${FILE_EXT:="h5"}
 
 if [[ "${DATA_NUMBER}" != "-1" ]] ; then
 	DATA_LIST="data_list_${DATA_NUMBER}.txt"
@@ -30,7 +31,7 @@ for id in `ls -tr ${CHECKPOINT_DIR}/${JOB_ID}_* | xargs -n1 basename | sed -e 's
 		batch_norm_str=" "
 	fi
 	
-	python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext npy ${learn_residual_str} ${batch_norm_str} --use_multiprocessing --num_workers 4 --max_queue_size 4 --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size 1 --slices_per_input 5 --gpu ${GPU} --checkpoint ${checkpoint_file} --predict ${predict_file}  --id ${id}
+	python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${learn_residual_str} ${batch_norm_str} --use_multiprocessing --num_workers 4 --max_queue_size 4 --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size 1 --slices_per_input 5 --gpu ${GPU} --checkpoint ${checkpoint_file} --predict ${predict_file}  --id ${id}
 done
 
 
