@@ -17,7 +17,7 @@ import os
 import datetime
 import time
 
-import subtle.subtle_preprocess as sup
+import subtle.subtle_preprocess as supre
 import subtle.subtle_io as suio
 
 import argparse
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     else:
         metadata = suio.load_h5_metadata(args.input)
 
-    data_out = sup.undo_scaling(data_in, metadata, verbose=args.verbose)
+    data_out = supre.undo_scaling(data_in, metadata, verbose=args.verbose)
 
     suio.write_dicoms(args.path_ref, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
 
