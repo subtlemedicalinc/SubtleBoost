@@ -26,8 +26,6 @@ function preprocess() {
      outfile=${out_dir}/${sub_dir_no_spaces}.h5
      outfile_png=${out_dir_plots}/${sub_dir_no_spaces}.png
 
-     python2 /home/ubuntu/jon/dev/SubtleGad/preprocess.py --path_base ${dicom_data}/${sub_dir} --verbose --output ${out_dir}/${sub_dir}.npy --discard_start_percent .1 --discard_end_percent .1 --normalize --normalize_fun mean > logs_preprocess/log_${sub_dir}.out 2>&1
-
      echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --scale_matching 
 
      python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --scale_matching > ${logfile} 2>${errfile}
