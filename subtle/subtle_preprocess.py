@@ -202,8 +202,8 @@ def undo_scaling(im_predict, metadata, verbose=False):
     key1 = 'scale_global'
     if key1 in  metadata.keys():
         if verbose:
-            print('re-scaling by global scale', metadata[key1])
-        out = out * metadata[key1]
+            print('re-scaling by global scale', metadata[key1][0][-1])
+        out = out * metadata[key1][0][-1]
 
     # FIXME: is this necessary? data are already scaled to match pre-con
     key2 = 'scale_zero'
