@@ -46,11 +46,9 @@ parser = argparse.ArgumentParser(usage=usage_str, description=description_str, f
 
 parser.add_argument('--config', is_config_file=True, help='config file path', default=False)
 
+parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)
 parser.add_argument('--description', action='store', dest='description', type=str, help='append to end of series description', default='')
 parser.add_argument('--path_out', action='store', dest='path_out', type=str, help='path to output SubtleGad dicom dir', default=None)
-parser.add_argument('--path_zero', action='store', dest='path_zero', type=str, help='path to zero dose dicom dir', default=None)
-parser.add_argument('--path_low', action='store', dest='path_low', type=str, help='path to low dose dicom dir', default=None)
-parser.add_argument('--path_full', action='store', dest='path_full', type=str, help='path to full dose dicom dir', default=None)
 parser.add_argument('--path_base', action='store', dest='path_base', type=str, help='path to base dicom directory containing subdirs', default=None)
 parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
 parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
@@ -87,6 +85,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    args.path_zero = None
+    args.path_low = None
+    args.path_full = None
+
     print(args)
     print("----------")
     print(parser.format_help())
@@ -99,7 +101,19 @@ if __name__ == '__main__':
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
 
 
-    data, metadata = preprocess_chain(args)
+    if args.data_preprocess:
+        if args.verbose:
+            print('loading preprocessed data from', args.data_preprocess)
+        data = suio.load_file(args.data_preprocess)
+        metadata = suio.load_h5_metadata(args.data_preprocess)
+        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base)
+    else:
+        if args.verbose:
+            print('pre-processing data')
+        data, metadata = preprocess_chain(args)
+        if args.verbose:
+            print('done')
+
     ns, _, nx, ny = data.shape
 
     sudnn.clear_keras_memory()
