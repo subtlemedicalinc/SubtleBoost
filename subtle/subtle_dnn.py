@@ -103,12 +103,14 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             X, Y = self.generator.__getitem__(ii)
             Y = Y.squeeze()
             Y_prediction = self.model.predict_on_batch(X).squeeze()
+            h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
+            X_zero = X[:,:,:,h].squeeze().copy()
+            X_low = X[:,:,:,h+1].squeeze().copy()
             if self.gen_type == 'legacy' and self.residual_mode:
-                h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
-                X_zero = X[:,:,:,h].squeeze()
                 Y_prediction = X_zero + Y_prediction
                 Y = X_zero + Y
-            display_image = np.concatenate((Y, Y_prediction), axis=1)
+                X_low = X_low + X_zero
+            display_image = np.concatenate((X_zero, X_low, Y, Y_prediction), axis=1)
             image = make_image(display_image)
             summary = tf.Summary(value=[tf.Summary.Value(tag=tag, image=image)])
             writer.add_summary(summary, epoch)
