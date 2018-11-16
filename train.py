@@ -70,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=1)
     parser.add_argument('--max_queue_size', action='store', dest='max_queue_size', type=int, help='generator queue size', default=16)
     parser.add_argument('--shuffle', action='store_true', dest='shuffle', help='shuffle input data files each epoch', default=False)
+    parser.add_argument('--positive_only', action='store_true', dest='positive_only', help='keep only positive part of residual', default=False)
     parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
     parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
@@ -197,6 +198,7 @@ if __name__ == '__main__':
                     shuffle=False,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
+                    positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input)
 
             Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
@@ -260,6 +262,7 @@ if __name__ == '__main__':
                     shuffle=args.shuffle,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
+                    positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input)
         elif args.gen_type == 'split':
             training_generator = sugen.DataGenerator_XY(data_list=data_train_list,
@@ -274,6 +277,7 @@ if __name__ == '__main__':
                         shuffle=args.shuffle,
                         verbose=args.verbose, 
                         residual_mode=args.residual_mode,
+                        positive_only = args.positive_only,
                         slices_per_input=args.slices_per_input)
             elif args.gen_type == 'split':
                 validation_generator = sugen.DataGenerator_XY(data_list=data_val_list,

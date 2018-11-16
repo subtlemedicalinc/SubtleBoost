@@ -17,6 +17,7 @@ VAL_STEPS_PER_EPOCH=${VAL_STEPS_PER_EPOCH:=0}
 SHUFFLE=${SHUFFLE:=1}
 BATCH_NORM=${BATCH_NORM:=0}
 LEARN_RESIDUAL=${LEARN_RESIDUAL:=0}
+POSITIVE_ONLY=${POSITIVE_ONLY:=0}
 SPLIT=${SPLIT:=0}
 SLICES_PER_INPUT=${SLICES_PER_INPUT:=1}
 FILE_EXT=${FILE_EXT:="h5"}
@@ -33,6 +34,12 @@ if [[ ${LEARN_RESIDUAL} -eq "0" ]] ; then
 	learn_residual_str=" "
 else
 	learn_residual_str="--learn_residual"
+fi
+
+if [[ ${POSITIVE_ONLY} -eq "0" ]] ; then
+	positive_only_str=" "
+else
+	positive_only_str="--positive_only"
 fi
 
 if [[ ${MULTIPROCESSING} -eq "0" ]] ; then
@@ -77,7 +84,7 @@ fi
 
 
 
-cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${split_str} ${multiprocessing_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA}"
+cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA}"
 
 job_id=$(echo $cmd | sha1sum | awk '{print $1}' | cut -c1-6)
 
@@ -85,4 +92,4 @@ checkpoint_file="${commit}_${job_id}.checkpoint"
 log_file="log_${commit}_${job_id}.out"
 history_file="history_${commit}_${job_id}.npy"
 
-python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${split_str} ${multiprocessing_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --history_file ${HIST_DIR}/${history_file} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
+python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --history_file ${HIST_DIR}/${history_file} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1

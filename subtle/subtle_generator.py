@@ -33,7 +33,7 @@ from subtle.subtle_io import *
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, predict=False):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False):
 
         'Initialization'
         self.data_list = data_list
@@ -43,6 +43,7 @@ class DataGenerator(keras.utils.Sequence):
         self.verbose = verbose
         self.residual_mode = residual_mode
         self.predict = predict
+        self.positive_only = positive_only
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
         self.slice_list_files = np.array(_slice_list_files)
@@ -145,8 +146,12 @@ class DataGenerator(keras.utils.Sequence):
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
             X[:,:,1,:,:] -= X[:,:,0,:,:]
+            if self.positive_only:
+                X[:,:,1,:,:] = np.maximum(0, X[:,:,1,:,:])
             if not self.predict:
                 Y -= X[:,h,0,:,:]
+                if self.positive_only:
+                    Y = np.maximum(0, Y)
         if self.verbose > 1:
             print('reisdual mode in {} s'.format(time.time() - tic))
 

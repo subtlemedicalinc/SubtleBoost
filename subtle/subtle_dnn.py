@@ -85,6 +85,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     shuffle=self.shuffle,
                     verbose=self.verbose, 
                     residual_mode=self.residual_mode,
+                    positive_only = args.positive_only,
                     slices_per_input=self.slices_per_input,
                     predict=False)
         elif self.gen_type == 'split':
