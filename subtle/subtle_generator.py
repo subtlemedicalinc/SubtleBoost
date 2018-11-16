@@ -112,6 +112,8 @@ class DataGenerator(keras.utils.Sequence):
             # handle edge cases for 2.5d by just repeating the boundary slices
             idxs = np.minimum(np.maximum(idxs, 0), num_slices - 1)
 
+            # FIXME: don't train on slices with very little brain signal. Can remove them by checking mask size relative to image size
+
             tic = time.time()
             slices = load_slices(input_file=f, slices=idxs) # [c, 3, ny, nz]
             if self.verbose > 1:
