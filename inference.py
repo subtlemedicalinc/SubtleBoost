@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 '''
 inference.py
@@ -39,50 +38,15 @@ import subtle.subtle_preprocess as supre
 
 from preprocess import preprocess_chain
 
+import subtle.subtle_args as sargs
+
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
-
-parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-parser.add_argument('--config', is_config_file=True, help='config file path', default=False)
-
-parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)
-parser.add_argument('--description', action='store', dest='description', type=str, help='append to end of series description', default='')
-parser.add_argument('--path_out', action='store', dest='path_out', type=str, help='path to output SubtleGad dicom dir', default=None)
-parser.add_argument('--path_base', action='store', dest='path_base', type=str, help='path to base dicom directory containing subdirs', default=None)
-parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
-parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
-parser.add_argument('--discard_end_percent', action='store', type=float, dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
-parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
-parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
-parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
-parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
-parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
-parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
-parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
-parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
-parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
-
-parser.add_argument('--gpu', action='store', dest='gpu_device', type=str, help='set GPU', default=None)
-parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
-parser.add_argument('--checkpoint', action='store', dest='checkpoint_file', type=str, help='checkpoint file', default=None)
-parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
-parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
-parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
-parser.add_argument('--use_multiprocessing', action='store_true', dest='use_multiprocessing', help='use multiprocessing in generator', default=False)
-parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=1)
-parser.add_argument('--max_queue_size', action='store', dest='max_queue_size', type=int, help='generator queue size', default=16)
-parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
-parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
-parser.add_argument('--num_channel_first', action='store', dest='num_channel_first', type=int, help='first layer channels', default=32)
-parser.add_argument('--gen_type', action='store', dest='gen_type', type=str, help='generator type (legacy or split)', default='legacy')
-parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)
-parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)
-
 
 if __name__ == '__main__':
 
 
+    parser = sargs.parser(usage_str, description_str)
     args = parser.parse_args()
 
     args.path_zero = None
