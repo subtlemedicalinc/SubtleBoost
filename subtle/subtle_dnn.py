@@ -57,7 +57,7 @@ def make_image(im):
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
     def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False,
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy'):
+            max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False):
         super().__init__() 
         self.tag = tag
         self.data_list = data_list
@@ -74,6 +74,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.use_multiprocessing=use_multiprocessing
         self.shuffle = shuffle
         self.gen_type = gen_type
+        self.positive_only = positive_only
 
         self._init_generator()
 
@@ -85,7 +86,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     shuffle=self.shuffle,
                     verbose=self.verbose, 
                     residual_mode=self.residual_mode,
-                    positive_only = args.positive_only,
+                    positive_only = self.positive_only,
                     slices_per_input=self.slices_per_input,
                     predict=False)
         elif self.gen_type == 'split':
