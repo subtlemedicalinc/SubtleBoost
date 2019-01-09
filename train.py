@@ -128,7 +128,8 @@ if __name__ == '__main__':
                 verbose=args.verbose,
                 checkpoint_file=args.checkpoint_file,
                 log_dir=log_tb_dir,
-                job_id=args.job_id)
+                job_id=args.job_id,
+                save_best_only=args.save_best_only)
 
     elif args.gen_type == 'split':
         m = sudnn.DeepEncoderDecoder2D(
@@ -142,7 +143,8 @@ if __name__ == '__main__':
                 verbose=args.verbose,
                 checkpoint_file=args.checkpoint_file,
                 log_dir=log_tb_dir,
-                job_id=args.job_id)
+                job_id=args.job_id,
+                save_best_only=args.save_best_only)
 
     m.load_weights()
 

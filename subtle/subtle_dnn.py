@@ -149,7 +149,7 @@ class DeepEncoderDecoder2D:
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
             num_poolings=3, num_conv_per_pooling=3,
-            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id=''):
+            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True):
 
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -168,6 +168,7 @@ class DeepEncoderDecoder2D:
         self.checkpoint_file = checkpoint_file
         self.log_dir = log_dir
         self.job_id = job_id
+        self.save_best_only = save_best_only
 
         self.model = None # to be assigned by _build_model()
         self._build_model()
@@ -180,7 +181,7 @@ class DeepEncoderDecoder2D:
         if filename is not None:
             self.checkpoint_file = filename
         
-        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=True)
+        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=self.save_best_only)
 
     def callback_tensorbaord(self, log_dir=None, log_every=None):
 

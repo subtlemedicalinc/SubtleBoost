@@ -69,6 +69,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--positive_only', action='store_true', dest='positive_only', help='keep only positive part of residual', default=False)
     parser.add_argument('--history_file', action='store', dest='history_file', type=str, help='store history in npy file', default=None)
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
+    parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
 
     return parser
 
