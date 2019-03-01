@@ -78,6 +78,9 @@ if __name__ == '__main__':
         if args.verbose:
             print('done')
 
+    # get ground-truth for testing (e.g. hist re-normalization)
+    im_gt, hdr_gt = suio.dicom_files(args.path_full, normalize=False)
+
     ns, _, nx, ny = data.shape
 
     sudnn.clear_keras_memory()
@@ -148,6 +151,12 @@ if __name__ == '__main__':
         ## HERE
         data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose)
         suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
+        if args.predict_dir:
+            # save raw data
+            data_file_base = os.path.basename(data_file)
+            _1, _2 = os.path.splitext(data_file_base)
+            data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
+            suio.save_data(data_file_predict, data_out, file_type=args.predict_file_ext)
 
     toc = time.time()
     print('done predicting ({:.0f} sec)'.format(toc - tic))
