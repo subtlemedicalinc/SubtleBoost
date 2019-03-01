@@ -118,8 +118,8 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     Normalize im_moving to match im_fixed
     '''
     
-    sim0 = sitk.GetImageFromArray(im_fixed)
-    sim1 = sitk.GetImageFromArray(im_moving)
+    sim0 = sitk.GetImageFromArray(im_fixed.squeeze())
+    sim1 = sitk.GetImageFromArray(im_moving.squeeze())
     
     hm = sitk.HistogramMatchingImageFilter()
     hm.SetNumberOfHistogramLevels(levels)
@@ -188,7 +188,7 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
 
     return im_out, param_map_out
 
-def undo_scaling(im_predict, metadata, verbose=False):
+def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     ''' Applies the inverse of the scaling/normalization from preprocessing.
     Inputs:
     im_predict (ndarray): input volume
@@ -203,7 +203,9 @@ def undo_scaling(im_predict, metadata, verbose=False):
     if key1 in  metadata.keys():
         if verbose:
             print('re-scaling by global scale', metadata[key1][0][0])
+        # using x0 scale because we will not have access to x2 at inference time
         out = out * metadata[key1][0][0]
+
 
     # FIXME: is this necessary? data are already scaled to match pre-con
     key2 = 'scale_zero'
@@ -211,6 +213,18 @@ def undo_scaling(im_predict, metadata, verbose=False):
         if verbose:
             print('re-scaling by {}'.format(key2), metadata[key2])
         out = out / metadata[key2]
+
+    # undo histogram normalization. as a quick test I am using x2 for this, but in the future we should only be using a template image
+    levels=1024
+    points=50
+    mean_intensity=True
+    key3 = 'hist_norm'
+    if key3 in metadata.keys():
+        if verbose:
+            print('undoing histogram normalization (TODO: use template)'.format(key3))
+            out = scale_im(im_gt, out, levels, points, mean_intensity)
+        #for idx in range(out.shape[0]):
+            #out[idx,...] = scale_im(im_gt[idx,...], out[idx,...], levels, points, mean_intensity)[...,None]
 
     return out
 
