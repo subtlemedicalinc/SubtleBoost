@@ -149,7 +149,7 @@ if __name__ == '__main__':
             Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
 
         ## HERE
-        data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose)
+        data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
         suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
         if args.predict_dir:
             # save raw data
