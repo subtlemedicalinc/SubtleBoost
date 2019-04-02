@@ -23,6 +23,12 @@ except:
     warnings.warn('SimpleITK not found!')
     
     
+def scale_slope_intercept(im, rs, ri, ss):
+    return (im * rs + ri) / (rs * ss)
+def rescale_slope_intercept(im, rs, ri, ss):
+    return (im * rs * ss - ri) / rs
+
+
 # FIXME: do differently for each image
 def mask_im(im, threshold=.08):
     '''
@@ -205,6 +211,13 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
             print('re-scaling by global scale', metadata[key1][0][0])
         # using x0 scale because we will not have access to x2 at inference time
         out = out * metadata[key1][0][0]
+
+    key = 'dicom_scaling_zero'
+    if key in metadata.keys():
+        if verbose:
+            print('re-scaling by dicom tags{}'.format(key), metadata[key])
+        rs, ri, ss = metadata[key]
+        out = rescale_slope_intercept(out, rs, ri, ss)
 
 
     # FIXME: is this necessary? data are already scaled to match pre-con
