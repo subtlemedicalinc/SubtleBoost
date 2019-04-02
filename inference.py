@@ -194,7 +194,7 @@ if __name__ == '__main__':
         ## HERE
         #data_out = Y_prediction.copy()
         data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-        suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
+        suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
     toc = time.time()
     print('done predicting ({:.0f} sec)'.format(toc - tic))
 

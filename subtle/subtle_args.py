@@ -35,6 +35,7 @@ def parser(usage_str, description_str):
 
     ## inference args
     parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)
+    parser.add_argument('--series_num', action='store', dest='series_num', type=str, help='series number', default='')
     parser.add_argument('--description', action='store', dest='description', type=str, help='append to end of series description', default='')
     parser.add_argument('--path_out', action='store', dest='path_out', type=str, help='path to output SubtleGad dicom dir', default=None)
     parser.add_argument('--path_zero', action='store', dest='path_zero', type=str, help='path to zero dose dicom dir', default=None)

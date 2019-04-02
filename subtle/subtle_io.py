@@ -30,7 +30,7 @@ except:
 import subtle.subtle_preprocess as sup
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
-        series_desc_pre='SubtleGad:', series_desc_post=''):
+        series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
     """Write output numpy array to dicoms, given input dicoms.
     Args:
         input_dicom_folder (str): input dicom folder path.
@@ -67,7 +67,10 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         row, col = dicom.pixel_array.shape
     dicom.SOPInstanceUID = pydicom.uid.generate_uid()
     dicom.SeriesInstanceUID = pydicom.uid.generate_uid()
-    dicom.SeriesNumber = str(int(dicom.SeriesNumber) + 100)
+    if series_num is None:
+        dicom.SeriesNumber = str(int(dicom.SeriesNumber) + 100)
+    else:
+        dicom.SeriesNumber = str(int(series_num))
     dicom.SliceThickness = abs(delta_z)
     try:
         dicom.StudyDescription = 'SubtleGad:' + dicom.StudyDescription

@@ -38,6 +38,14 @@ SSIM_LAMBDA=${SSIM_LAMBDA:="0."}
 NO_SAVE_BEST_ONLY=${NO_SAVE_BEST_ONLY:=0}
 ZOOM=${ZOOM:=0}
 OVERRIDE=${OVERRIDE:=0}
+SERIES_NUM=${SERIES_NUM:=0}
+DESCRIPTION=${DESCRIPTION:=" "}
+
+if [[ ${SERIES_NUM} -eq "0" ]] ; then
+	series_num_str=" "
+else
+	series_num_str="--series_num ${SERIES_NUM}"
+fi
 
 if [[ ${OVERRIDE} -eq "0" ]] ; then
 	override_str=" "
