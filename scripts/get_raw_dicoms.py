@@ -45,13 +45,13 @@ if __name__ == '__main__':
     args.path_low = None
     args.path_full = None
 
-    args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base)
+    args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
 
     _, path_zero = os.path.split(args.path_zero)
     _, path_low = os.path.split(args.path_low)
     _, path_full = os.path.split(args.path_full)
 
-    for dicom_dir in suio.get_dicom_dirs(args.path_base):
+    for dicom_dir in suio.get_dicom_dirs(args.path_base, override=args.override):
         _, base_dir = os.path.split(dicom_dir)
         try:
             mydir = '{}/{}'.format(args.path_out, base_dir)

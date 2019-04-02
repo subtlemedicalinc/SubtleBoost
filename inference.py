@@ -70,7 +70,7 @@ if __name__ == '__main__':
             print('loading preprocessed data from', args.data_preprocess)
         data = suio.load_file(args.data_preprocess)
         metadata = suio.load_h5_metadata(args.data_preprocess)
-        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base)
+        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
     else:
         if args.verbose:
             print('pre-processing data')

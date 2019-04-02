@@ -51,6 +51,7 @@ parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', typ
 parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
 parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
 parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
+parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
 
 def preprocess_chain(args):
 
@@ -81,7 +82,7 @@ def preprocess_chain(args):
 
 
     if use_base_path:
-        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base)
+        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
         if args.verbose:
             print('path_zero = {}'.format(args.path_zero))
             print('path_low = {}'.format(args.path_low))

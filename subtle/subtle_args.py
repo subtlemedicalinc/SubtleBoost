@@ -75,6 +75,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
     parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
     parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
+    parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
 
     return parser
 
