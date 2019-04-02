@@ -115,9 +115,9 @@ cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext 
 
 job_id=$(echo $cmd | sha1sum | awk '{print $1}' | cut -c1-6)
 
-checkpoint_file="${commit}_${job_id}.checkpoint"
-log_file="log_inference_${commit}_${job_id}.out"
-out_dir=${PREDICT_DIR}/${commit}_${job_id}
+checkpoint_file=${checkpoint_file:="${commit}_${job_id}.checkpoint"}
+log_file=${log_file:="log_inference_${commit}_${job_id}.out"}
+out_dir=${out_dir:="${PREDICT_DIR}/${commit}_${job_id}"}
 
 mkdir -p ${out_dir}
 
