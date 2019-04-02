@@ -49,10 +49,6 @@ if __name__ == '__main__':
     parser = sargs.parser(usage_str, description_str)
     args = parser.parse_args()
 
-    args.path_zero = None
-    args.path_low = None
-    args.path_full = None
-
     print(args)
     print("----------")
     print(parser.format_help())
