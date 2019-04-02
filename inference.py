@@ -78,6 +78,32 @@ if __name__ == '__main__':
         if args.verbose:
             print('done')
 
+    if args.zoom:
+        data_shape = data.shape
+        from scipy.ndimage import zoom
+        if args.verbose:
+            ticz = time.time()
+            print('zoom 0')
+        data_zoom_0 = zoom(data[:,0,:,:].squeeze(), zoom=(1., args.zoom/data_shape[2], args.zoom/data.shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 0 done: {} s'.format(tocz-ticz))
+            ticz = time.time()
+            print('zoom 1')
+        data_zoom_1 = zoom(data[:,1,:,:].squeeze(), zoom=(1., args.zoom/data_shape[2], args.zoom/data_shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 1 done: {} s'.format(tocz-ticz))
+            ticz = time.time()
+            print('zoom 2')
+        data_zoom_2 = zoom(data[:,2,:,:].squeeze(), zoom=(1., args.zoom/data_shape[2], args.zoom/data_shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 3 done: {} s'.format(tocz-ticz))
+        data = np.concatenate((data_zoom_0[:,None,...], data_zoom_1[:,None,...], data_zoom_2[:,None,...]), axis=1)
+        if args.verbose:
+            print(data.shape)
+
     # get ground-truth for testing (e.g. hist re-normalization)
     im_gt, hdr_gt = suio.dicom_files(args.path_full, normalize=False)
 
@@ -148,16 +174,26 @@ if __name__ == '__main__':
             h = args.slices_per_input // 2
             Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
 
-        ## HERE
-        data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-        suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
+        if args.zoom:
+            if args.verbose:
+                print('unzoom')
+                ticz = time.time()
+            Y_prediction = zoom(Y_prediction[...,0], zoom=(1, data_shape[2]/args.zoom, data_shape[3]/args.zoom), order=args.zoom_order)[...,None]
+            if args.verbose:
+                tocz = time.time()
+                print('unzoom done: {} s'.format(tocz-ticz))
+
         if args.predict_dir:
             # save raw data
             data_file_base = os.path.basename(data_file)
             _1, _2 = os.path.splitext(data_file_base)
             data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-            suio.save_data(data_file_predict, data_out, file_type=args.predict_file_ext)
+            suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
+        ## HERE
+        #data_out = Y_prediction.copy()
+        data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
+        suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
     toc = time.time()
     print('done predicting ({:.0f} sec)'.format(toc - tic))
 
