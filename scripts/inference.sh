@@ -36,12 +36,19 @@ CHECKPOINT_DIR=${CHECKPOINT_DIR:="/local/checkpoints"}
 L1_LAMBDA=${L1_LAMBDA:="1."}
 SSIM_LAMBDA=${SSIM_LAMBDA:="0."}
 NO_SAVE_BEST_ONLY=${NO_SAVE_BEST_ONLY:=0}
+ZOOM=${ZOOM:=0}
 OVERRIDE=${OVERRIDE:=0}
 
 if [[ ${OVERRIDE} -eq "0" ]] ; then
 	override_str=" "
 else
 	override_str="--override_dicom_naming"
+fi
+
+if [[ ${ZOOM} -eq "0" ]] ; then
+	zoom_str=" "
+else
+	zoom_str="--zoom ${ZOOM}"
 fi
 
 if [[ ${NO_SAVE_BEST_ONLY} -eq "0" ]] ; then
@@ -104,7 +111,7 @@ fi
 
 
 
-cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${no_save_best_only_str} ${override_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA} --num_channel_first ${NUM_CHANNEL_FIRST}"
+cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${no_save_best_only_str} ${zoom_str} ${override_str} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA} --num_channel_first ${NUM_CHANNEL_FIRST}"
 
 job_id=$(echo $cmd | sha1sum | awk '{print $1}' | cut -c1-6)
 
@@ -114,4 +121,4 @@ out_dir=${PREDICT_DIR}/${commit}_${job_id}
 
 mkdir -p ${out_dir}
 
-cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad_rehist ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${override_str} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
+cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${zoom_str} ${override_str} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
