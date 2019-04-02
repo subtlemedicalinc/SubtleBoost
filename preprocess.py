@@ -52,6 +52,7 @@ parser.add_argument('--skip_registration', action='store_true', dest='skip_regis
 parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
 parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
 parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
+parser.add_argument('--scale_dicom_tags', action='store_true', dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
 
 def preprocess_chain(args):
 
@@ -197,6 +198,7 @@ def preprocess_chain(args):
         levels = np.linspace(.5, 1.5, 30)
         max_iter = 3
 
+
         ntic = time.time()
         scale_low = sup.scale_im_enhao(im0, im1, levels=levels, max_iter=max_iter)
         scale_full = sup.scale_im_enhao(im0, im2, levels=levels, max_iter=max_iter)
@@ -223,6 +225,40 @@ def preprocess_chain(args):
             print('median', np.median(np.abs(_ims), axis=(0)))
             print('max', np.max(np.abs(_ims), axis=(0)))
 
+    ### DICOM SCALING
+    if args.scale_dicom_tags:
+        if args.verbose:
+            print('using dicom tags for scaling')
+        rs0 = float(hdr_zero.RescaleSlope)
+        ri0 = float(hdr_zero.RescaleIntercept)
+        ss0 = hdr_zero[0x2005, 0x100e].value
+
+        rs1 = float(hdr_low.RescaleSlope)
+        ri1 = float(hdr_low.RescaleIntercept)
+        ss1 = hdr_low[0x2005, 0x100e].value
+
+        rs2 = float(hdr_full.RescaleSlope)
+        ri2 = float(hdr_full.RescaleIntercept)
+        ss2 = hdr_full[0x2005, 0x100e].value
+
+        metadata['dicom_scaling_zero'] = (rs0, ri0, ss0)
+        metadata['dicom_scaling_low'] = (rs1, ri1, ss1)
+        metadata['dicom_scaling_full'] = (rs2, ri2, ss2)
+
+        if args.verbose:
+            print(rs0, rs1, rs2)
+            print(ri0, ri1, ri2)
+            print(ss0, ss1, ss2)
+
+        ims[:,0,:,:] = sup.scale_slope_intercept(ims[:,0,:,:], rs0, ri0, ss0)
+        ims[:,1,:,:] = sup.scale_slope_intercept(ims[:,1,:,:], rs1, ri1, ss1)
+        ims[:,2,:,:] = sup.scale_slope_intercept(ims[:,2,:,:], rs2, ri2, ss2)
+
+        ## FIXME redundant
+        _ims[:,0] = sup.scale_slope_intercept(_ims[:,0], rs0, ri0, ss0)
+        _ims[:,1] = sup.scale_slope_intercept(_ims[:,1], rs1, ri1, ss1)
+        _ims[:,2] = sup.scale_slope_intercept(_ims[:,2], rs2, ri2, ss2)
+
 
     ### GLOBAL NORMALIZATION ###
     if args.normalize:
@@ -240,12 +276,24 @@ def preprocess_chain(args):
         metadata['scale_global'] = scale_global
 
         if args.verbose:
+            print('intensity before global scaling:')
+            print('mean', np.mean(np.abs(_ims), axis=axis))
+            print('median', np.median(np.abs(_ims), axis=axis))
+            print('max', np.max(np.abs(_ims), axis=axis))
+
+        if args.verbose:
             ntoc = time.time()
             print('global scaling:', scale_global)
             print('done ({:.2f}s)'.format(ntoc - ntic))
 
         ims = ims / scale_global[:,:,None,None]
         _ims = _ims / scale_global
+
+        if args.verbose:
+            print('intensity after global scaling:')
+            print('mean', np.mean(np.abs(_ims), axis=axis))
+            print('median', np.median(np.abs(_ims), axis=axis))
+            print('max', np.max(np.abs(_ims), axis=axis))
 
     return ims, metadata
 

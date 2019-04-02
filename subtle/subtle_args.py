@@ -53,6 +53,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
     parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
     parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
+    parser.add_argument('--scale_dicom_tags', action='store_true', dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
 
 
     ## train args
