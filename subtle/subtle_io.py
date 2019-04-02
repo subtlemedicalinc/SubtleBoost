@@ -100,7 +100,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
 
 
 
-def get_dicom_dirs(base_dir):
+def get_dicom_dirs(base_dir, override=False):
 
     ''' Get list of 'pre', 'low' and 'full' contrast dicom dirs
     For a given base directory, get the subdirectories that
@@ -127,9 +127,9 @@ def get_dicom_dirs(base_dir):
     dir_list = []
 
     for d in dirs_sorted:
-        if 'ax' in d.lower() or 'sag' in d.lower():
-            if 'mprage' in d.lower() or 'bravo' in d.lower():
-                if 'reformat' not in d.lower():
+        if override or 'ax' in d.lower() or 'sag' in d.lower():
+            if override or 'mprage' in d.lower() or 'bravo' in d.lower():
+                if override or 'reformat' not in d.lower():
                     dir_list.append(os.path.join(base_dir, d))
         if len(dir_list) == 3:
             break
