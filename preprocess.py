@@ -247,7 +247,7 @@ def preprocess_chain(args):
         ims = ims / scale_global[:,:,None,None]
         _ims = _ims / scale_global
 
-        return ims, metadata
+    return ims, metadata
 
 
 if __name__ == '__main__':
