@@ -103,6 +103,11 @@ if __name__ == '__main__':
     # get ground-truth for testing (e.g. hist re-normalization)
     im_gt, hdr_gt = suio.dicom_files(args.path_full, normalize=False)
 
+    if args.denoise:
+        if args.verbose:
+            print('Denoise mode')
+        data[:,1,:,:] = data[:,0,:,:].copy()
+
     ns, _, nx, ny = data.shape
 
     sudnn.clear_keras_memory()

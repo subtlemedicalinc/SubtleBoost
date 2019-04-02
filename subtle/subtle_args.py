@@ -76,6 +76,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
     parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
     parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
+    parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
 
     return parser
 
