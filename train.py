@@ -114,7 +114,7 @@ if __name__ == '__main__':
     sudnn.set_keras_memory(args.keras_memory)
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
-    metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
+    metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
 
     if args.gen_type == 'legacy':
         m = sudnn.DeepEncoderDecoder2D(

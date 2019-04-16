@@ -14,9 +14,11 @@ import warnings
 import time
 import numpy as np
 
-from skimage.measure import compare_ssim
+#from skimage.measure import compare_ssim, compare_psnr
 
 try:
+    from tensorflow import log as tf_log
+    from tensorflow import constant as tf_constant
     import keras.losses
     from keras import backend as K
 except:
@@ -71,6 +73,10 @@ def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_
 
 def mse_loss(y_true, y_pred):
     return keras.losses.mean_squared_error(y_true, y_pred)
+
+def psnr_loss(y_true, y_pred):
+    denominator = tf_log(tf_constant(10.0))
+    return 20.*tf_log(K.max(y_true)) / denominator - 10. * tf_log(K.mean(K.square(y_pred - y_true))) / denominator
 
 def l1_loss(y_true, y_pred):
     return keras.losses.mean_absolute_error(y_true, y_pred)
