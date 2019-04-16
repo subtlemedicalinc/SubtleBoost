@@ -6,3 +6,6 @@ TransformParameters*.txt
 sync-down.sh
 sync-up.sh
 *.pyc
+tags
+*.swn
+*.ipynv
