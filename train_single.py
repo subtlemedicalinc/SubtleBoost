@@ -230,7 +230,8 @@ if __name__ == '__main__':
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input,
-                    image_index=0)
+                    image_index=0,
+                    mode='random')
         elif args.gen_type == 'split':
             training_generator = sugen.DataGenerator_XY(data_list=data_train_list,
                     batch_size=args.batch_size,
@@ -246,7 +247,8 @@ if __name__ == '__main__':
                         residual_mode=args.residual_mode,
                         positive_only = args.positive_only,
                         slices_per_input=args.slices_per_input,
-                        image_index=0)
+                        image_index=0,
+                        mode='random')
             elif args.gen_type == 'split':
                 validation_generator = sugen.DataGenerator_XY(data_list=data_val_list,
                         batch_size=args.batch_size,

@@ -303,7 +303,7 @@ class DataGenerator_XY(keras.utils.Sequence):
 class DataGeneratorSingle(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, image_index=0):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, image_index=0, mode='standard'):
 
         'Initialization'
         self.data_list = data_list
@@ -315,6 +315,7 @@ class DataGeneratorSingle(keras.utils.Sequence):
         self.predict = predict
         self.positive_only = positive_only
         self.image_index = image_index
+        self.mode = mode
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
         self.slice_list_files = np.array(_slice_list_files)
@@ -390,11 +391,21 @@ class DataGeneratorSingle(keras.utils.Sequence):
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
 
-            slices_X = slices[:,self.image_index,:,:][None,None,:,:,:]
+            if self.mode == 'random':
+                _ridx = np.random.permutation(3)
+                inp_idx = _ridx[0]
+                out_idx = _ridx[1]
+            elif self.mode == 'standard':
+                inp_idx = self.image_index
+                out_idx = self.image_index
+            else:
+                print('error!')
+                sys.exit(-1)
+            slices_X = slices[:,inp_idx,:,:][None,None,:,:,:]
             data_list_X.append(slices_X)
 
             if not self.predict:
-                slice_Y = slices[h, self.image_index, :, :][None,:,:] 
+                slice_Y = slices[h, out_idx, :, :][None,:,:] 
                 data_list_Y.append(slice_Y)
             
         tic = time.time()
