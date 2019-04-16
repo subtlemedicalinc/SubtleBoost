@@ -33,7 +33,7 @@ from subtle.subtle_io import *
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2]):
 
         'Initialization'
         self.data_list = data_list
@@ -51,6 +51,9 @@ class DataGenerator(keras.utils.Sequence):
 
         self.slices_per_file_dict = {data_file: get_num_slices(data_file) for data_file in self.data_list}
         self.num_slices = len(self.slice_list_files)
+
+        self.input_idx = input_idx
+        self.output_idx = output_idx
 
         self.on_epoch_end()
 
@@ -119,12 +122,12 @@ class DataGenerator(keras.utils.Sequence):
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
 
-            slices_X = slices[:,:2,:,:][None,:,:,:,:]
+            slices_X = slices[:,self.input_idx,:,:][None,...]
             data_list_X.append(slices_X)
 
             if not self.predict:
-                slice_Y = slices[h, -1, :, :][None,:,:] 
-                data_list_Y.append(slice_Y)
+                slices_Y = slices[h, self.output_idx, :, :][None,None,...]
+                data_list_Y.append(slices_Y)
             
         tic = time.time()
         if len(data_list_X) > 1:
@@ -144,7 +147,7 @@ class DataGenerator(keras.utils.Sequence):
 
 
         tic = time.time()
-        if self.residual_mode:
+        if self.residual_mode and len(self.input_idx) == 2 and len(self.output_idx) == 1:
             if self.verbose > 1:
                 print('residual mode. train on (zero, low - zero, full - zero)')
             X[:,:,1,:,:] -= X[:,:,0,:,:]
@@ -158,9 +161,12 @@ class DataGenerator(keras.utils.Sequence):
             print('reisdual mode in {} s'.format(time.time() - tic))
 
         tic = time.time()
+        # dims are [batch, slices_per_input, len(input_idx), nx, ny]
+        # reshape to [batch, -1, nx, ny]
+        # then transpose to [batch, nx, ny, -1]
         X = np.transpose(np.reshape(X, (X.shape[0], -1, X.shape[3], X.shape[4])), (0, 2, 3, 1))
         if not self.predict:
-            Y = np.reshape(Y, (Y.shape[0], Y.shape[1], Y.shape[2], 1))
+            Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
 
         if self.verbose > 1:
             print('tranpose data in {} s'.format(time.time() - tic))
@@ -405,8 +411,8 @@ class DataGeneratorSingle(keras.utils.Sequence):
             data_list_X.append(slices_X)
 
             if not self.predict:
-                slice_Y = slices[h, out_idx, :, :][None,:,:] 
-                data_list_Y.append(slice_Y)
+                slices_Y = slices[h, out_idx, :, :][None,:,:] 
+                data_list_Y.append(slices_Y)
             
         tic = time.time()
         if len(data_list_X) > 1:

@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     if args.gen_type == 'legacy':
         m = sudnn.DeepEncoderDecoder2D(
-                num_channel_input=2 * args.slices_per_input, num_channel_output=1,
+                num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
                 img_rows=nx, img_cols=ny,
                 num_channel_first=args.num_channel_first,
                 loss_function=loss_function,
@@ -165,7 +165,9 @@ if __name__ == '__main__':
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input)
+                    slices_per_input=args.slices_per_input,
+                    input_idx=args.input_idx,
+                    output_idx=args.output_idx)
 
             Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
@@ -218,7 +220,7 @@ if __name__ == '__main__':
         callbacks = []
         callbacks.append(m.callback_checkpoint())
         callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx))
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
@@ -229,7 +231,9 @@ if __name__ == '__main__':
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input)
+                    slices_per_input=args.slices_per_input,
+                    input_idx=args.input_idx,
+                    output_idx=args.output_idx)
         elif args.gen_type == 'split':
             training_generator = sugen.DataGenerator_XY(data_list=data_train_list,
                     batch_size=args.batch_size,
@@ -244,7 +248,9 @@ if __name__ == '__main__':
                         verbose=args.verbose, 
                         residual_mode=args.residual_mode,
                         positive_only = args.positive_only,
-                        slices_per_input=args.slices_per_input)
+                        slices_per_input=args.slices_per_input,
+                        input_idx=args.input_idx,
+                        output_idx=args.output_idx)
             elif args.gen_type == 'split':
                 validation_generator = sugen.DataGenerator_XY(data_list=data_val_list,
                         batch_size=args.batch_size,

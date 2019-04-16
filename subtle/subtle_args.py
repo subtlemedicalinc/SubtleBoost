@@ -80,5 +80,8 @@ def parser(usage_str, description_str):
     parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
     parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
 
+    parser.add_argument('--input_idx', nargs='+', type=int, help='input indices from data', default=[0, 1])
+    parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])
+
     return parser
 

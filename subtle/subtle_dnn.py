@@ -56,7 +56,7 @@ def make_image(im):
                          encoded_image_string=image_string)
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random'):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2]):
         super().__init__() 
         self.tag = tag
         self.data_list = data_list
@@ -76,6 +76,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.positive_only = positive_only
         self.image_index = image_index
         self.mode = mode
+        self.input_idx = input_idx
+        self.output_idx = output_idx
 
         self._init_generator()
 
@@ -90,6 +92,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                         residual_mode=self.residual_mode,
                         positive_only = self.positive_only,
                         slices_per_input=self.slices_per_input,
+                        input_idx=self.input_idx,
+                        output_idx=self.output_idx,
                         predict=False)
             else:
                 self.generator =  sugen.DataGeneratorSingle(data_list=self.data_list,
@@ -114,24 +118,22 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         writer = tf.summary.FileWriter(self.log_dir)
         for ii in range(self.batch_size):
             tag = '{}_{}'.format(self.tag, ii)
+            # X is [1, nx, ny, N * 2.5d]
+            # Y is [1, nx, ny, N]
             X, Y = self.generator.__getitem__(ii)
-            Y = Y.squeeze()
-            Y_prediction = self.model.predict_on_batch(X).squeeze()
-            if self.image_index is None:
-                h = self.slices_per_input // 2 * 2 # intentional. grabs the zero-dose slice at the center of the 2.5d stack
-            else:
-                h = self.slices_per_input // 2
-            X_zero = X[:,:,:,h].squeeze().copy()
-            if self.image_index is None:
-                X_low = X[:,:,:,h+1].squeeze().copy()
-            if self.gen_type == 'legacy' and self.residual_mode:
-                Y_prediction = X_zero + Y_prediction
-                Y = X_zero + Y
-                X_low = X_low + X_zero
-            if self.image_index is None:
-                display_image = np.concatenate((X_zero, X_low, Y, Y_prediction), axis=1)
-            else:
-                display_image = np.concatenate((X_zero, Y, Y_prediction), axis=1)
+            Y_prediction = self.model.predict_on_batch(X)
+            #print(X.shape, Y.shape, Y_prediction.shape)
+            # separate 2.5D and N
+            X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
+            h = self.slices_per_input // 2
+            X_center = X[...,h,:].squeeze() # [nx, ny, N]
+            if self.gen_type == 'legacy' and self.residual_mode and len(self.input_idx) == 2:
+                Y_prediction = X_center[..., 0] + Y_prediction
+                Y = X_center[..., 0] + Y
+                X_center[..., 1] = X_center[..., 1] + X_center[..., 0]
+            X_center = X_center[None,...]
+            display_image = np.concatenate((X_center, Y, Y_prediction), axis=3).transpose((0,1,3,2)).reshape((X_center.shape[1], -1))
+            print(display_image.shape)
             image = make_image(display_image)
             summary = tf.Summary(value=[tf.Summary.Value(tag=tag, image=image)])
             writer.add_summary(summary, epoch)
@@ -215,8 +217,7 @@ class DeepEncoderDecoder2D:
         else:
             return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
 
-    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, 
-            max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None):
+    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2]):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -236,7 +237,9 @@ class DeepEncoderDecoder2D:
                 shuffle=shuffle,
                 tag=tag,
                 gen_type=gen_type,
-                image_index=image_index)
+                image_index=image_index,
+                input_idx=input_idx,
+                output_idx=output_idx)
 
     def load_weights(self, filename=None):
         if filename is not None:
