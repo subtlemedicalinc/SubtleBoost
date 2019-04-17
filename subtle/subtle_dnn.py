@@ -126,12 +126,11 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             # separate 2.5D and N
             X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
             h = self.slices_per_input // 2
-            X_center = X[...,h,:].squeeze() # [nx, ny, N]
+            X_center = X[...,h,:] # [1, nx, ny, N]
             if self.gen_type == 'legacy' and self.residual_mode and len(self.input_idx) == 2:
                 Y_prediction = X_center[..., 0] + Y_prediction
                 Y = X_center[..., 0] + Y
                 X_center[..., 1] = X_center[..., 1] + X_center[..., 0]
-            X_center = X_center[None,...]
             display_image = np.concatenate((X_center, Y, Y_prediction), axis=3).transpose((0,1,3,2)).reshape((X_center.shape[1], -1))
             print(display_image.shape)
             image = make_image(display_image)
