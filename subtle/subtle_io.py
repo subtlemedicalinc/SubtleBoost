@@ -171,7 +171,7 @@ def dicom_files(dicom_dir, normalize=False):
     lstDCM = []
     for dirName, subdirList, fileList in os.walk(dicom_dir):
         for filename in fileList:
-            if ".dcm" in filename.lower():
+            if ".dcm" in filename.lower() or "mag" in filename.lower():
                 lstDCM.append(os.path.join(dirName,filename))
     
     # sort the list
@@ -229,7 +229,7 @@ def dicom_header(dicom_dir):
     fileOut = []
     for dirName, subdirList, fileList in os.walk(dicom_dir):
         for filename in fileList:
-            if ".dcm" in filename.lower():
+            if ".dcm" in filename.lower() or 'mag' in filename.lower():
                 lstDCM.append(os.path.join(dirName,filename))
                 fileOut.append(filename)
 
