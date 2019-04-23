@@ -19,6 +19,8 @@ import os
 import datetime
 import time
 
+from scipy.ndimage import zoom
+
 sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
 
@@ -53,6 +55,8 @@ parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='
 parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
 parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
 parser.add_argument('--scale_dicom_tags', action='store_true', dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
+parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
+parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
 
 def preprocess_chain(args):
 
@@ -132,11 +136,10 @@ def preprocess_chain(args):
         mask = sup.mask_im(ims, threshold=args.mask_threshold)
         metadata['mask'] = 1
         metadata['mask_threshold'] = args.mask_threshold
+        ims *= mask
     else:
-        mask = np.ones(ims.shape)
         metadata['mask'] = 0
 
-    ims *= mask
 
 
     ### HISTOGRAM NORMALIZATION ###
@@ -172,12 +175,49 @@ def preprocess_chain(args):
     else:
         metadata['reg'] = 0
 
+    ### IMAGE ZOOM ###
+    if args.zoom:
+        ims_shape = ims.shape
+        if args.verbose:
+            print('zooming to {}'.format(args.zoom))
+        if args.verbose:
+            ticz = time.time()
+            print('zoom 0')
+        ims_zoom_0 = zoom(ims[:,0,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims.shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 0 done: {} s'.format(tocz-ticz))
+            ticz = time.time()
+            print('zoom 1')
+        ims_zoom_1 = zoom(ims[:,1,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims_shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 1 done: {} s'.format(tocz-ticz))
+            ticz = time.time()
+            print('zoom 2')
+        ims_zoom_2 = zoom(ims[:,2,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims_shape[3]), order=args.zoom_order)
+        if args.verbose:
+            tocz = time.time()
+            print('zoom 2 done: {} s'.format(tocz-ticz))
+        ims = np.concatenate((ims_zoom_0[:,None,...], ims_zoom_1[:,None,...], ims_zoom_2[:,None,...]), axis=1)
+        if args.verbose:
+            print(ims.shape)
+        ns, nc, nx, ny = ims.shape
+        metadata['zoom'] = args.zoom
+        metadata['zoom_order'] = args.zoom_order
+
+
+
     # for scaling
     nslices = 20
     idx_scale = range(ns//2 - nslices // 2, ns//2 + nslices // 2)
 
-    m = mask[idx_scale, 0, :, :]
     im0, im1, im2 = ims[idx_scale, 0, :, :], ims[idx_scale, 1, :, :], ims[idx_scale, 2, :, :]
+
+    if not args.skip_mask:
+        m = mask[idx_scale, 0, :, :]
+    else:
+        m = np.ones(im0.shape)
 
     im0 = im0[m != 0].ravel()
     im1 = im1[m != 0].ravel()
