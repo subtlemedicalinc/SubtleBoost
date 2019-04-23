@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export dicom_data="/home/subtle/Data/Tiantan"
-export base_dir="/raid/jon/data_full_tiantan"
+export base_dir="/raid/jon/data_full_tiantan_zoom320"
 
 # --- should not require modification
 export out_dir="${base_dir}/data"
