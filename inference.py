@@ -95,7 +95,7 @@ if __name__ == '__main__':
         data_zoom_2 = zoom(data[:,2,:,:].squeeze(), zoom=(1., args.zoom/data_shape[2], args.zoom/data_shape[3]), order=args.zoom_order)
         if args.verbose:
             tocz = time.time()
-            print('zoom 3 done: {} s'.format(tocz-ticz))
+            print('zoom 2 done: {} s'.format(tocz-ticz))
         data = np.concatenate((data_zoom_0[:,None,...], data_zoom_1[:,None,...], data_zoom_2[:,None,...]), axis=1)
         if args.verbose:
             print(data.shape)
