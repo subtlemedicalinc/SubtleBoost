@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export dicom_data="/home/subtle/Data/Tiantan_Batch1"
+export dicom_data="/home/subtle/Data/Tiantan"
 export base_dir="/raid/jon/data_full_tiantan"
 
 # --- should not require modification
@@ -29,9 +29,9 @@ function preprocess() {
      outfile=${out_dir}/${sub_dir_no_spaces}.h5
      outfile_png=${out_dir_plots}/${sub_dir_no_spaces}.png
 
-     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --scale_matching --override_dicom_naming
+     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --skip_scale_im --joint_normalize --skip_mask --scale_dicom_tags --override_dicom_naming 
 
-     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --scale_matching --override_dicom_naming > ${logfile} 2>${errfile}
+     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --transform_type "rigid" --skip_scale_im --joint_normalize --skip_mask --scale_dicom_tags --override_dicom_naming > ${logfile} 2>${errfile}
 
      python ${plot_grid_bin} --input $outfile --output ${outfile_png}
 
