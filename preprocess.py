@@ -203,6 +203,7 @@ def preprocess_chain(args):
         if args.verbose:
             print(ims.shape)
         ns, nc, nx, ny = ims.shape
+        metadata['zoom_dims'] = ims_shape
         metadata['zoom'] = args.zoom
         metadata['zoom_order'] = args.zoom_order
 
