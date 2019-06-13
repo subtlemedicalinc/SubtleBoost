@@ -311,8 +311,10 @@ def preprocess_chain(args):
         if args.global_scale_ref_im0:
             __ims = _ims[...,0]
             axis = (0)
+            metadata['global_scale_ref_im0'] = True
         else:
             __ims = _ims
+            metadata['global_scale_ref_im0'] = False
         scale_global = sup.normalize_scale(__ims, axis=axis, fun=normalize_fun)
         metadata['scale_global'] = scale_global
 

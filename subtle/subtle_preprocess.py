@@ -207,10 +207,14 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
 
     key1 = 'scale_global'
     if key1 in  metadata.keys():
+        if metadata['global_scale_ref_im0']:
+            sc = metadata[key1][0]
+        else:
+            sc = metadata[key1][0][0]
         if verbose:
-            print('re-scaling by global scale', metadata[key1][0][0])
+            print('re-scaling by global scale', sc)
         # using x0 scale because we will not have access to x2 at inference time
-        out = out * metadata[key1][0][0]
+        out = out * sc
 
     key = 'dicom_scaling_zero'
     if key in metadata.keys():
