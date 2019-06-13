@@ -58,6 +58,7 @@ parser.add_argument('--override_dicom_naming', action='store_true', dest='overri
 parser.add_argument('--scale_dicom_tags', action='store_true', dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
 parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
 parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
+parser.add_argument('--nslices', action='store', dest='nslices', type=int, help='number of slices for scaling', default=20)
 
 def preprocess_chain(args):
 
@@ -211,8 +212,7 @@ def preprocess_chain(args):
 
 
     # for scaling
-    nslices = 20
-    idx_scale = range(ns//2 - nslices // 2, ns//2 + nslices // 2)
+    idx_scale = range(ns//2 - args.nslices // 2, ns//2 + args.nslices // 2)
 
     im0, im1, im2 = ims[idx_scale, 0, :, :], ims[idx_scale, 1, :, :], ims[idx_scale, 2, :, :]
 
