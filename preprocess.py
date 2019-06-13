@@ -49,6 +49,7 @@ parser.add_argument('--transform_type', action='store', type=str, dest='transfor
 parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
 parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
 parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
+parser.add_argument('--global_scale_ref_im0', action='store_true', dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
 parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
 parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
 parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
@@ -313,7 +314,12 @@ def preprocess_chain(args):
 
         ntic = time.time()
 
-        scale_global = sup.normalize_scale(_ims, axis=axis, fun=normalize_fun)
+        if args.global_scale_ref_im0:
+            __ims = _ims[...,0]
+            axis = (0)
+        else:
+            __ims = _ims
+        scale_global = sup.normalize_scale(__ims, axis=axis, fun=normalize_fun)
         metadata['scale_global'] = scale_global
 
         if args.verbose:
@@ -327,7 +333,10 @@ def preprocess_chain(args):
             print('global scaling:', scale_global)
             print('done ({:.2f}s)'.format(ntoc - ntic))
 
-        ims = ims / scale_global[:,:,None,None]
+        if args.global_scale_ref_im0:
+            ims = ims / scale_global[:,None,None,None]
+        else:
+            ims = ims / scale_global[:,:,None,None]
         _ims = _ims / scale_global
 
         if args.verbose:
