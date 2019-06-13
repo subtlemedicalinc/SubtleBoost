@@ -142,6 +142,34 @@ def preprocess_chain(args):
     else:
         metadata['mask'] = 0
 
+    ### DICOM SCALING
+    if args.scale_dicom_tags:
+        if args.verbose:
+            print('using dicom tags for scaling')
+        rs0 = float(hdr_zero.RescaleSlope)
+        ri0 = float(hdr_zero.RescaleIntercept)
+        ss0 = hdr_zero[0x2005, 0x100e].value
+
+        rs1 = float(hdr_low.RescaleSlope)
+        ri1 = float(hdr_low.RescaleIntercept)
+        ss1 = hdr_low[0x2005, 0x100e].value
+
+        rs2 = float(hdr_full.RescaleSlope)
+        ri2 = float(hdr_full.RescaleIntercept)
+        ss2 = hdr_full[0x2005, 0x100e].value
+
+        metadata['dicom_scaling_zero'] = (rs0, ri0, ss0)
+        metadata['dicom_scaling_low'] = (rs1, ri1, ss1)
+        metadata['dicom_scaling_full'] = (rs2, ri2, ss2)
+
+        if args.verbose:
+            print(rs0, rs1, rs2)
+            print(ri0, ri1, ri2)
+            print(ss0, ss1, ss2)
+
+        ims[:,0,:,:] = sup.scale_slope_intercept(ims[:,0,:,:], rs0, ri0, ss0)
+        ims[:,1,:,:] = sup.scale_slope_intercept(ims[:,1,:,:], rs1, ri1, ss1)
+        ims[:,2,:,:] = sup.scale_slope_intercept(ims[:,2,:,:], rs2, ri2, ss2)
 
 
     ### HISTOGRAM NORMALIZATION ###
@@ -266,40 +294,6 @@ def preprocess_chain(args):
             print('mean', np.mean(np.abs(_ims), axis=(0)))
             print('median', np.median(np.abs(_ims), axis=(0)))
             print('max', np.max(np.abs(_ims), axis=(0)))
-
-    ### DICOM SCALING
-    if args.scale_dicom_tags:
-        if args.verbose:
-            print('using dicom tags for scaling')
-        rs0 = float(hdr_zero.RescaleSlope)
-        ri0 = float(hdr_zero.RescaleIntercept)
-        ss0 = hdr_zero[0x2005, 0x100e].value
-
-        rs1 = float(hdr_low.RescaleSlope)
-        ri1 = float(hdr_low.RescaleIntercept)
-        ss1 = hdr_low[0x2005, 0x100e].value
-
-        rs2 = float(hdr_full.RescaleSlope)
-        ri2 = float(hdr_full.RescaleIntercept)
-        ss2 = hdr_full[0x2005, 0x100e].value
-
-        metadata['dicom_scaling_zero'] = (rs0, ri0, ss0)
-        metadata['dicom_scaling_low'] = (rs1, ri1, ss1)
-        metadata['dicom_scaling_full'] = (rs2, ri2, ss2)
-
-        if args.verbose:
-            print(rs0, rs1, rs2)
-            print(ri0, ri1, ri2)
-            print(ss0, ss1, ss2)
-
-        ims[:,0,:,:] = sup.scale_slope_intercept(ims[:,0,:,:], rs0, ri0, ss0)
-        ims[:,1,:,:] = sup.scale_slope_intercept(ims[:,1,:,:], rs1, ri1, ss1)
-        ims[:,2,:,:] = sup.scale_slope_intercept(ims[:,2,:,:], rs2, ri2, ss2)
-
-        ## FIXME redundant
-        _ims[:,0] = sup.scale_slope_intercept(_ims[:,0], rs0, ri0, ss0)
-        _ims[:,1] = sup.scale_slope_intercept(_ims[:,1], rs1, ri1, ss1)
-        _ims[:,2] = sup.scale_slope_intercept(_ims[:,2], rs2, ri2, ss2)
 
 
     ### GLOBAL NORMALIZATION ###
