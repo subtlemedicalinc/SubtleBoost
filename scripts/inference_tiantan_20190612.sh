@@ -1,11 +1,11 @@
 #data_list=data_lists/data_test_tiantan.txt
 data_list=data_lists/data_val_tiantan_20190612.txt
-checkpoint_file=/raid/jon/checkpoints/b99220_fa31da.checkpoint # tiantan model, with no pre-processing except for a global scale factor
+checkpoint_file=/raid/jon/checkpoints/b99220_fa31da_epoch50.checkpoint # tiantan model, with no pre-processing except for a global scale factor
 path_base=/home/subtle/Data/Tiantan # path to dicom directories
-path_out=/raid/jon/predictions/Tiantan_model_2019_06_12 # inference output dicoms
+path_out=/raid/jon/predictions/Tiantan_model_b99220_fa31da_epoch50_2019_06_12 # inference output dicoms
 gpu=0
 #description="TiantanModelNoScale" # append to dicom description
-series=999 # series number
+series=998 # series number
 description="TiantanModel"
 
 
