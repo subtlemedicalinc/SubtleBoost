@@ -18,6 +18,8 @@ import h5py
 
 import numpy as np
 
+import sigpy as sp
+
 try:
     import pydicom
 except:
@@ -33,7 +35,7 @@ from subtle.subtle_io import *
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2]):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0):
 
         'Initialization'
         self.data_list = data_list
@@ -44,12 +46,14 @@ class DataGenerator(keras.utils.Sequence):
         self.residual_mode = residual_mode
         self.predict = predict
         self.positive_only = positive_only
+        self.slice_axis = slice_axis
+        self.resize = resize
 
-        _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list)
+        _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis)
         self.slice_list_files = np.array(_slice_list_files)
         self.slice_list_indexes = np.array(_slice_list_indexes)
 
-        self.slices_per_file_dict = {data_file: get_num_slices(data_file) for data_file in self.data_list}
+        self.slices_per_file_dict = {data_file: get_num_slices(data_file, axis=self.slice_axis) for data_file in self.data_list}
         self.num_slices = len(self.slice_list_files)
 
         self.input_idx = input_idx
@@ -118,7 +122,20 @@ class DataGenerator(keras.utils.Sequence):
             # FIXME: don't train on slices with very little brain signal. Can remove them by checking mask size relative to image size
 
             tic = time.time()
-            slices = load_slices(input_file=f, slices=idxs) # [c, 3, ny, nz]
+            slices = load_slices(input_file=f, slices=idxs, dim=self.slice_axis) # [c, 3, ny, nz]
+
+            if self.slice_axis == 0:
+                pass
+            if self.slice_axis == 1:
+                assert False, 'invalid slice axis!, {}'.format(self.slice_axis)
+            elif self.slice_axis == 2:
+                slices = np.transpose(slices, (2, 1, 0, 3))
+            elif self.slice_axis == 3:
+                slices = np.transpose(slices, (3, 1, 0, 2))
+
+            if self.resize is not None and (self.resize > slices.shape[-1] or self.resize > slices.shape[-2]):
+                slices = sp.util.resize(slices, [slices.shape[0], slices.shape[1], self.resize, self.resize])
+
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
 

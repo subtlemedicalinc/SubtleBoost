@@ -132,7 +132,6 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 Y = X_center[..., 0] + Y
                 X_center[..., 1] = X_center[..., 1] + X_center[..., 0]
             display_image = np.concatenate((X_center, Y, Y_prediction), axis=3).transpose((0,1,3,2)).reshape((X_center.shape[1], -1))
-            print(display_image.shape)
             image = make_image(display_image)
             summary = tf.Summary(value=[tf.Summary.Value(tag=tag, image=image)])
             writer.add_summary(summary, epoch)

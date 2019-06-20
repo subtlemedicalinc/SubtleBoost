@@ -427,26 +427,46 @@ def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'comp
         # default to npy
         return save_data_npy(output_file, data)
 
-def load_slices_h5(input_file, slices=None, h5_key='data'):
+def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     F = h5py.File(input_file, 'r')
     if slices is None:
         data = np.array(F[h5_key])
     else:
         slices_unique, slices_inverse = np.unique(slices, return_index=False, return_inverse=True, return_counts=False)
-        data = np.array(F[h5_key][slices_unique, :, :, :])
-        if len(slices_unique) < len(slices_inverse):
-            data = data[slices_inverse, :, :, :]
+        if dim == 0:
+            data = np.array(F[h5_key][slices_unique, :, :, :])
+            if len(slices_unique) < len(slices_inverse):
+                data = data[slices_inverse, :, :, :]
+        elif dim == 1:
+            data = np.array(F[h5_key][:, slices_unique,  :, :])
+            if len(slices_unique) < len(slices_inverse):
+                data = data[:, slices_inverse, :, :]
+        elif dim == 2:
+            data = np.array(F[h5_key][:, :, slices_unique, :])
+            if len(slices_unique) < len(slices_inverse):
+                data = data[:, :, slices_inverse, :]
+        elif dim == 3:
+            data = np.array(F[h5_key][:, :, :, slices_unique])
+            if len(slices_unique) < len(slices_inverse):
+                data = data[:, :, :, slices_inverse]
     F.close()
     return data
 
-def load_slices_npy(input_file, slices=None):
+def load_slices_npy(input_file, slices=None, dim=0):
     d = np.load(input_file, mmap_mode='r')
     if slices is None:
         return d
     else:
-        return d[slices, :, :, :]
+        if dim == 0:
+            return d[slices, :, :, :]
+        elif dim == 1:
+            return d[:, slices, :, :]
+        elif dim == 2:
+            return d[:, :, slices, :]
+        elif dim == 3:
+            return d[:, :, :, slices]
 
-def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}):
+def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}, dim=0):
     ''' Load some or all slices from data file
 
     Parameters:
@@ -470,9 +490,9 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
         file_type = get_file_type(input_file)
 
     if file_type == 'npy':
-        return load_slices_npy(input_file, slices)
+        return load_slices_npy(input_file, slices, dim=dim)
     elif file_type == 'h5':
-        return load_slices_h5(input_file, slices, h5_key=params['h5_key'])
+        return load_slices_h5(input_file, slices, h5_key=params['h5_key'], dim=dim)
     else:
         print('subtle_io/load_slices: ERROR. unrecognized file type', file_type)
         sys.exit(-1)
@@ -542,7 +562,7 @@ def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'})
     return data_shape[axis]
 
 
-def build_slice_list(data_list, params={'h5_key': 'data'}):
+def build_slice_list(data_list, params={'h5_key': 'data'}, slice_axis=0):
     ''' Builds two lists where the index is the
     slice number and the value is the file name / slice index.
     The length of the list is the total number of slices
@@ -551,6 +571,8 @@ def build_slice_list(data_list, params={'h5_key': 'data'}):
     -----------
     data_list : list
         list of file names
+    slice_axis : int
+        axis to check for slices
 
     Returns:
     --------
@@ -564,7 +586,7 @@ def build_slice_list(data_list, params={'h5_key': 'data'}):
     slice_list_indexes = []
 
     for data_file in data_list:
-        num_slices = get_num_slices(data_file, params=params)
+        num_slices = get_num_slices(data_file, params=params, axis=slice_axis)
         slice_list_files.extend([data_file] * num_slices)
         slice_list_indexes.extend(range(num_slices))
 

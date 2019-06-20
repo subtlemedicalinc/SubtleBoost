@@ -76,6 +76,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
     parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
     parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
+    parser.add_argument('--resize', action='store', dest='resize', type=int, help='resize to 3D matrix size', default=None)
     parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
     parser.add_argument('--nslices', action='store', dest='nslices', type=int, help='number of slices for scaling', default=20)
     parser.add_argument('--global_scale_ref_im0', action='store_true', dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
@@ -84,6 +85,7 @@ def parser(usage_str, description_str):
 
     parser.add_argument('--input_idx', nargs='+', type=int, help='input indices from data', default=[0, 1])
     parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])
+    parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
 
     return parser
 

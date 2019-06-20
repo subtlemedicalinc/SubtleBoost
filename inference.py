@@ -27,6 +27,7 @@ import configargparse as argparse
 
 import numpy as np
 from scipy.ndimage import zoom
+import sigpy as sp
 
 import keras.callbacks
 
@@ -140,11 +141,26 @@ if __name__ == '__main__':
                 shuffle=False,
                 verbose=args.verbose, 
                 residual_mode=args.residual_mode,
-                slices_per_input=args.slices_per_input)
+                slices_per_input=args.slices_per_input,
+                resize=args.resize,
+                slice_axis=args.slice_axis)
 
         Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
         data = data.transpose((0, 2, 3, 1))
+
+        if args.slice_axis == 0:
+            pass
+        elif args.slice_axis == 1:
+            assert False, 'Invalid slice axis: {}'.format(args.slice_axis)
+        elif args.slice_axis == 2:
+            Y_prediction = np.transpose(Y_prediction, (1, 0, 2, 3))
+        elif args.slice_axis == 3:
+            Y_prediction = np.transpose(Y_prediction, (1, 2, 0, 3))
+
+        if args.resize:
+            Y_prediction = sp.util.resize(Y_prediction, [ns, nx, ny, 1])
+
 
         # if residual mode is on, we need to add the original contrast back in
         if args.residual_mode:
