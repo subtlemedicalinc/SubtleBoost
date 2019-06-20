@@ -85,37 +85,18 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
 
 
     def _init_generator(self):
-        if self.gen_type == 'legacy':
-            if self.image_index is None:
-                self.generator =  sugen.DataGenerator(data_list=self.data_list,
-                        batch_size=1,
-                        shuffle=self.shuffle,
-                        verbose=self.verbose, 
-                        residual_mode=self.residual_mode,
-                        positive_only = self.positive_only,
-                        slices_per_input=self.slices_per_input,
-                        input_idx=self.input_idx,
-                        output_idx=self.output_idx,
-                        predict=False,
-                        resize=self.resize,
-                        slice_axis=self.slice_axis)
-            else:
-                self.generator =  sugen.DataGeneratorSingle(data_list=self.data_list,
-                        batch_size=1,
-                        shuffle=self.shuffle,
-                        verbose=self.verbose, 
-                        residual_mode=self.residual_mode,
-                        positive_only = self.positive_only,
-                        slices_per_input=self.slices_per_input,
-                        predict=False,
-                        image_index=self.image_index,
-                        mode=self.mode)
-        elif self.gen_type == 'split':
-            self.generator =  sugen.DataGenerator_XY(data_list=self.data_list,
+            self.generator =  sugen.DataGenerator(data_list=self.data_list,
                     batch_size=1,
                     shuffle=self.shuffle,
                     verbose=self.verbose, 
-                    predict=False)
+                    residual_mode=self.residual_mode,
+                    positive_only = self.positive_only,
+                    slices_per_input=self.slices_per_input,
+                    input_idx=self.input_idx,
+                    output_idx=self.output_idx,
+                    predict=False,
+                    resize=self.resize,
+                    slice_axis=self.slice_axis)
 
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()

@@ -224,8 +224,20 @@ if __name__ == '__main__':
         #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
-        if args.gen_type == 'legacy':
-            training_generator = sugen.DataGenerator(data_list=data_train_list,
+        training_generator = sugen.DataGenerator(data_list=data_train_list,
+                batch_size=args.batch_size,
+                shuffle=args.shuffle,
+                verbose=args.verbose, 
+                residual_mode=args.residual_mode,
+                positive_only = args.positive_only,
+                slices_per_input=args.slices_per_input,
+                input_idx=args.input_idx,
+                output_idx=args.output_idx,
+                slice_axis=args.slice_axis,
+                resize=args.resize)
+
+        if r > 0:
+            validation_generator = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=args.shuffle,
                     verbose=args.verbose, 
@@ -236,20 +248,6 @@ if __name__ == '__main__':
                     output_idx=args.output_idx,
                     slice_axis=args.slice_axis,
                     resize=args.resize)
-
-        if r > 0:
-            if args.gen_type == 'legacy':
-                validation_generator = sugen.DataGenerator(data_list=data_val_list,
-                        batch_size=args.batch_size,
-                        shuffle=args.shuffle,
-                        verbose=args.verbose, 
-                        residual_mode=args.residual_mode,
-                        positive_only = args.positive_only,
-                        slices_per_input=args.slices_per_input,
-                        input_idx=args.input_idx,
-                        output_idx=args.output_idx,
-                        slice_axis=args.slice_axis,
-                        resize=args.resize)
         else:
             validation_generator = None
 
