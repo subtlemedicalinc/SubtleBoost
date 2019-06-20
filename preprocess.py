@@ -238,7 +238,6 @@ def preprocess_chain(args):
         metadata['zoom_order'] = args.zoom_order
 
 
-
     # for scaling
     idx_scale = range(ns//2 - args.nslices // 2, ns//2 + args.nslices // 2)
 
@@ -340,6 +339,7 @@ def preprocess_chain(args):
             print('mean', np.mean(np.abs(_ims), axis=axis))
             print('median', np.median(np.abs(_ims), axis=axis))
             print('max', np.max(np.abs(_ims), axis=axis))
+
 
     return ims, metadata
 

@@ -236,11 +236,6 @@ if __name__ == '__main__':
                     output_idx=args.output_idx,
                     slice_axis=args.slice_axis,
                     resize=args.resize)
-        elif args.gen_type == 'split':
-            training_generator = sugen.DataGenerator_XY(data_list=data_train_list,
-                    batch_size=args.batch_size,
-                    shuffle=args.shuffle,
-                    verbose=args.verbose)
 
         if r > 0:
             if args.gen_type == 'legacy':
@@ -255,11 +250,6 @@ if __name__ == '__main__':
                         output_idx=args.output_idx,
                         slice_axis=args.slice_axis,
                         resize=args.resize)
-            elif args.gen_type == 'split':
-                validation_generator = sugen.DataGenerator_XY(data_list=data_val_list,
-                        batch_size=args.batch_size,
-                        shuffle=args.shuffle,
-                        verbose=args.verbose)
         else:
             validation_generator = None
 
