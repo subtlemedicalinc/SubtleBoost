@@ -121,31 +121,94 @@ if __name__ == '__main__':
         if args.verbose:
             print(args.path_base)
 
-        # use generator to maintain consistent data formatting
-        prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                batch_size=1,
-                shuffle=False,
-                verbose=args.verbose, 
-                residual_mode=args.residual_mode,
-                slices_per_input=args.slices_per_input,
-                resize=args.resize,
-                slice_axis=args.slice_axis)
+        if args.inference_mpr:
+            if args.verbose:
+                print('running inference on orthogonal planes')
 
-        Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+            prediction_generator = sugen.DataGenerator(data_list=[data_file],
+                    batch_size=1,
+                    shuffle=False,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input,
+                    resize=args.resize,
+                    slice_axis=0)
+
+            if args.checkpoint_file_0:
+                m.load_weights(args.checkpoint_file_0)
+
+            Y_prediction_0 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+            if args.resize:
+                Y_prediction_0 = sp.util.resize(Y_prediction_0, [ns, nx, ny, 1])
+
+            prediction_generator = sugen.DataGenerator(data_list=[data_file],
+                    batch_size=1,
+                    shuffle=False,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input,
+                    resize=args.resize,
+                    slice_axis=2)
+
+            if args.checkpoint_file_2:
+                m.load_weights(args.checkpoint_file_2)
+
+            Y_prediction_2 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+            Y_prediction_2 = np.transpose(Y_prediction_2, (1, 0, 2, 3))
+            if args.resize:
+                Y_prediction_2 = sp.util.resize(Y_prediction_2, [ns, nx, ny, 1])
+
+            prediction_generator = sugen.DataGenerator(data_list=[data_file],
+                    batch_size=1,
+                    shuffle=False,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input,
+                    resize=args.resize,
+                    slice_axis=3)
+
+            if args.checkpoint_file_3:
+                m.load_weights(args.checkpoint_file_3)
+
+            Y_prediction_3 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+            Y_prediction_3 = np.transpose(Y_prediction_3, (1, 2, 0, 3))
+            if args.resize:
+                Y_prediction_3 = sp.util.resize(Y_prediction_3, [ns, nx, ny, 1])
+
+            if args.verbose:
+                print('averaging each plane')
+            if 'mean' in args.inference_mpr_avg:
+                Y_prediction = (Y_prediction_0 + Y_prediction_2 + Y_prediction_3) / 3.
+            elif 'median' in args.inference_mpr_avg:
+                Y_prediction = np.median(np.stack((Y_prediction_0, Y_prediction_2, Y_prediction_3), axis=3), axis=3, keepdims=True)
+
+        else:
+            # use generator to maintain consistent data formatting
+            prediction_generator = sugen.DataGenerator(data_list=[data_file],
+                    batch_size=1,
+                    shuffle=False,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    slices_per_input=args.slices_per_input,
+                    resize=args.resize,
+                    slice_axis=args.slice_axis)
+
+            Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
         data = data.transpose((0, 2, 3, 1))
 
-        if args.slice_axis == 0:
-            pass
-        elif args.slice_axis == 1:
-            assert False, 'Invalid slice axis: {}'.format(args.slice_axis)
-        elif args.slice_axis == 2:
-            Y_prediction = np.transpose(Y_prediction, (1, 0, 2, 3))
-        elif args.slice_axis == 3:
-            Y_prediction = np.transpose(Y_prediction, (1, 2, 0, 3))
+        if not args.inference_mpr:
+            if args.slice_axis == 0:
+                pass
+            elif args.slice_axis == 1:
+                assert False, 'Invalid slice axis: {}'.format(args.slice_axis)
+            elif args.slice_axis == 2:
+                Y_prediction = np.transpose(Y_prediction, (1, 0, 2, 3))
+            elif args.slice_axis == 3:
+                Y_prediction = np.transpose(Y_prediction, (1, 2, 0, 3))
 
-        if args.resize:
-            Y_prediction = sp.util.resize(Y_prediction, [ns, nx, ny, 1])
+            if args.resize:
+                Y_prediction = sp.util.resize(Y_prediction, [ns, nx, ny, 1])
 
 
         # if residual mode is on, we need to add the original contrast back in
