@@ -92,31 +92,17 @@ if __name__ == '__main__':
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
-    if args.gen_type == 'legacy':
-        m = sudnn.DeepEncoderDecoder2D(
-                num_channel_input=2 * args.slices_per_input, num_channel_output=1,
-                img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
-                loss_function=loss_function,
-                metrics_monitor=metrics_monitor,
-                lr_init=args.lr_init,
-                batch_norm=args.batch_norm,
-                verbose=args.verbose,
-                checkpoint_file=args.checkpoint_file,
-                job_id=args.job_id)
-
-    elif args.gen_type == 'split':
-        m = sudnn.DeepEncoderDecoder2D(
-                num_channel_input=nz, num_channel_output=1,
-                img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
-                loss_function=loss_function,
-                metrics_monitor=metrics_monitor,
-                lr_init=args.lr_init,
-                batch_norm=args.batch_norm,
-                verbose=args.verbose,
-                checkpoint_file=args.checkpoint_file,
-                job_id=args.job_id)
+    m = sudnn.DeepEncoderDecoder2D(
+            num_channel_input=2 * args.slices_per_input, num_channel_output=1,
+            img_rows=nx, img_cols=ny,
+            num_channel_first=args.num_channel_first,
+            loss_function=loss_function,
+            metrics_monitor=metrics_monitor,
+            lr_init=args.lr_init,
+            batch_norm=args.batch_norm,
+            verbose=args.verbose,
+            checkpoint_file=args.checkpoint_file,
+            job_id=args.job_id)
 
     m.load_weights()
 
