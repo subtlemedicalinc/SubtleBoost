@@ -264,7 +264,7 @@ if __name__ == '__main__':
         validation_generator = None
 
     if args.train_mpr:
-        for i in range(0, args.num_epochs // 3, 3):
+        for i in range(0, args.num_epochs, 3):
             print('##### EPOCH {} OF {} #####'.format(i+1, args.num_epochs))
             history = m.model.fit_generator(generator=training_generator_0, validation_data=validation_generator_0, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+1, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i)
             history = m.model.fit_generator(generator=training_generator_2, validation_data=validation_generator_2, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+2, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+1)
