@@ -87,6 +87,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])
     parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
     parser.add_argument('--inference_mpr', action='store_true', dest='inference_mpr', help='run through multiple planes and average', default=False)
+    parser.add_argument('--train_mpr', action='store_true', dest='train_mpr', help='train acrossa multiple planes ', default=False)
     parser.add_argument('--checkpoint_slice_axis_0', action='store', dest='checkpoint_file_0', type=str, help='checkpoint file for MPR 0', default=None)
     parser.add_argument('--checkpoint_slice_axis_2', action='store', dest='checkpoint_file_2', type=str, help='checkpoint file for MPR 2', default=None)
     parser.add_argument('--checkpoint_slice_axis_3', action='store', dest='checkpoint_file_3', type=str, help='checkpoint file for MPR 3', default=None)

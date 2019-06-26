@@ -116,114 +116,91 @@ if __name__ == '__main__':
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
 
-    if args.gen_type == 'legacy':
-        m = sudnn.DeepEncoderDecoder2D(
-                num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
-                img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
-                loss_function=loss_function,
-                metrics_monitor=metrics_monitor,
-                lr_init=args.lr_init,
-                batch_norm=args.batch_norm,
-                verbose=args.verbose,
-                checkpoint_file=args.checkpoint_file,
-                log_dir=log_tb_dir,
-                job_id=args.job_id,
-                save_best_only=args.save_best_only)
-
-    elif args.gen_type == 'split':
-        m = sudnn.DeepEncoderDecoder2D(
-                num_channel_input=nz, num_channel_output=1,
-                img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
-                loss_function=loss_function,
-                metrics_monitor=metrics_monitor,
-                lr_init=args.lr_init,
-                batch_norm=args.batch_norm,
-                verbose=args.verbose,
-                checkpoint_file=args.checkpoint_file,
-                log_dir=log_tb_dir,
-                job_id=args.job_id,
-                save_best_only=args.save_best_only)
+    m = sudnn.DeepEncoderDecoder2D(
+            num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
+            img_rows=nx, img_cols=ny,
+            num_channel_first=args.num_channel_first,
+            loss_function=loss_function,
+            metrics_monitor=metrics_monitor,
+            lr_init=args.lr_init,
+            batch_norm=args.batch_norm,
+            verbose=args.verbose,
+            checkpoint_file=args.checkpoint_file,
+            log_dir=log_tb_dir,
+            job_id=args.job_id,
+            save_best_only=args.save_best_only)
 
     m.load_weights()
 
     tic = time.time()
-    if args.predict_dir is not None:
+    print('training...')
 
-        print('predicting...')
+    if len(data_list) == 1:
+        r = 0
+    elif args.validation_split == 0:
+        r = 1
+    else: # len(data_list) > 1
+        r = int(len(data_list) * args.validation_split)
 
-        for data_file in data_list:
+    data_val_list = data_list[:r]
+    data_train_list = data_list[r:]
 
-            if args.verbose:
-                print('{}:'.format(data_file))
+    if args.verbose:
+        print('using {} datasets for training:'.format(len(data_train_list)))
+        for d in data_train_list:
+            print(d)
+        print('using {} datasets for validation:'.format(len(data_val_list)))
+        for d in data_val_list:
+            print(d)
 
-            # use generator to maintain consistent data formatting
-            prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    verbose=args.verbose, 
-                    residual_mode=args.residual_mode,
-                    positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input,
-                    input_idx=args.input_idx,
-                    output_idx=args.output_idx)
 
-            Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
-
-            data = suio.load_file(data_file).transpose((0, 2, 3, 1))
-
-            # if residual mode is on, we need to add the original contrast back in
-            if args.residual_mode:
-                h = args.slices_per_input // 2
-                Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
-
-            data_file_base = os.path.basename(data_file)
-            _1, _2 = os.path.splitext(data_file_base)
-            data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-
-            if args.verbose:
-                print('output: {}'.format(data_file_predict))
-
-            suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
-            for __idx in np.linspace(.1*Y_prediction.shape[0], .9*Y_prediction.shape[0], 5):
-                _idx = int(__idx)
-                plot_file_predict = '{}/plots/{}_predict_{}_{:03d}.png'.format(args.predict_dir, _1, args.job_id, _idx)
-                suplot.compare_output(data.transpose((0, 3, 1, 2)), Y_prediction, idx=_idx, show_diff=False, output=plot_file_predict)
-
-        toc = time.time()
-        print('done predicting ({:.0f} sec)'.format(toc - tic))
-
+    callbacks = []
+    callbacks.append(m.callback_checkpoint())
+    callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
+    if args.train_mpr:
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 1', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=0, resize=args.resize))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 2', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=2, resize=args.resize))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 3', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=3, resize=args.resize))
     else:
-
-        print('training...')
-
-        if len(data_list) == 1:
-            r = 0
-        elif args.validation_split == 0:
-            r = 1
-        else: # len(data_list) > 1
-            r = int(len(data_list) * args.validation_split)
-
-        data_val_list = data_list[:r]
-        data_train_list = data_list[r:]
-
-        if args.verbose:
-            print('using {} datasets for training:'.format(len(data_train_list)))
-            for d in data_train_list:
-                print(d)
-            print('using {} datasets for validation:'.format(len(data_val_list)))
-            for d in data_val_list:
-                print(d)
-
-
-        callbacks = []
-        callbacks.append(m.callback_checkpoint())
-        callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
         callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize))
-        #cb_tensorboard = m.callback_tensorbaord(log_every=1)
+    #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
+    if args.train_mpr:
+        training_generator_0 = sugen.DataGenerator(data_list=data_train_list,
+                batch_size=args.batch_size,
+                shuffle=args.shuffle,
+                verbose=args.verbose, 
+                residual_mode=args.residual_mode,
+                positive_only = args.positive_only,
+                slices_per_input=args.slices_per_input,
+                input_idx=args.input_idx,
+                output_idx=args.output_idx,
+                slice_axis=0,
+                resize=args.resize)
+        training_generator_2 = sugen.DataGenerator(data_list=data_train_list,
+                batch_size=args.batch_size,
+                shuffle=args.shuffle,
+                verbose=args.verbose, 
+                residual_mode=args.residual_mode,
+                positive_only = args.positive_only,
+                slices_per_input=args.slices_per_input,
+                input_idx=args.input_idx,
+                output_idx=args.output_idx,
+                slice_axis=2,
+                resize=args.resize)
+        training_generator_3 = sugen.DataGenerator(data_list=data_train_list,
+                batch_size=args.batch_size,
+                shuffle=args.shuffle,
+                verbose=args.verbose, 
+                residual_mode=args.residual_mode,
+                positive_only = args.positive_only,
+                slices_per_input=args.slices_per_input,
+                input_idx=args.input_idx,
+                output_idx=args.output_idx,
+                slice_axis=3,
+                resize=args.resize)
+    else:
         training_generator = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
@@ -236,7 +213,42 @@ if __name__ == '__main__':
                 slice_axis=args.slice_axis,
                 resize=args.resize)
 
-        if r > 0:
+    if r > 0:
+        if args.train_mpr:
+            validation_generator_0 = sugen.DataGenerator(data_list=data_val_list,
+                    batch_size=args.batch_size,
+                    shuffle=args.shuffle,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    positive_only = args.positive_only,
+                    slices_per_input=args.slices_per_input,
+                    input_idx=args.input_idx,
+                    output_idx=args.output_idx,
+                    slice_axis=0,
+                    resize=args.resize)
+            validation_generator_2 = sugen.DataGenerator(data_list=data_val_list,
+                    batch_size=args.batch_size,
+                    shuffle=args.shuffle,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    positive_only = args.positive_only,
+                    slices_per_input=args.slices_per_input,
+                    input_idx=args.input_idx,
+                    output_idx=args.output_idx,
+                    slice_axis=2,
+                    resize=args.resize)
+            validation_generator_3 = sugen.DataGenerator(data_list=data_val_list,
+                    batch_size=args.batch_size,
+                    shuffle=args.shuffle,
+                    verbose=args.verbose, 
+                    residual_mode=args.residual_mode,
+                    positive_only = args.positive_only,
+                    slices_per_input=args.slices_per_input,
+                    input_idx=args.input_idx,
+                    output_idx=args.output_idx,
+                    slice_axis=3,
+                    resize=args.resize)
+        else:
             validation_generator = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=args.shuffle,
@@ -248,13 +260,20 @@ if __name__ == '__main__':
                     output_idx=args.output_idx,
                     slice_axis=args.slice_axis,
                     resize=args.resize)
-        else:
-            validation_generator = None
+    else:
+        validation_generator = None
 
-        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose)
+    if args.train_mpr:
+        for i in range(0, args.num_epochs // 3, 3):
+            print('##### EPOCH {} OF {} #####'.format(i+1, args.num_epochs))
+            history = m.model.fit_generator(generator=training_generator_0, validation_data=validation_generator_0, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+1, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i)
+            history = m.model.fit_generator(generator=training_generator_2, validation_data=validation_generator_2, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+2, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+1)
+            history = m.model.fit_generator(generator=training_generator_3, validation_data=validation_generator_3, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+3, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+2)
+    else:
+        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+2)
 
-        toc = time.time()
-        print('done training ({:.0f} sec)'.format(toc - tic))
+    toc = time.time()
+    print('done training ({:.0f} sec)'.format(toc - tic))
 
-        if args.history_file is not None:
-            np.save(args.history_file, history.history)
+    if args.history_file is not None:
+        np.save(args.history_file, history.history)
