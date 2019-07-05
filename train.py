@@ -209,7 +209,7 @@ if __name__ == '__main__':
         if args.train_mpr:
             validation_generator_0 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
-                    shuffle=args.shuffle,
+                    shuffle=False,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
@@ -220,7 +220,7 @@ if __name__ == '__main__':
                     resize=args.resize)
             validation_generator_2 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
-                    shuffle=args.shuffle,
+                    shuffle=False,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
@@ -231,7 +231,7 @@ if __name__ == '__main__':
                     resize=args.resize)
             validation_generator_3 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
-                    shuffle=args.shuffle,
+                    shuffle=False,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
@@ -243,7 +243,7 @@ if __name__ == '__main__':
         else:
             validation_generator = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
-                    shuffle=args.shuffle,
+                    shuffle=False,
                     verbose=args.verbose, 
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
