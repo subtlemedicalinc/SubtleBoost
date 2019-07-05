@@ -63,14 +63,6 @@ if __name__ == '__main__':
             warn(str(e))
             pass
 
-    if args.predict_dir is not None:
-        try:
-            os.mkdir(args.predict_dir)
-            os.mkdir('{}/plots'.format(args.predict_dir))
-        except Exception as e:
-            warn(str(e))
-            pass
-
     if args.max_data_sets is None:
         max_data_sets = np.inf
     else:
