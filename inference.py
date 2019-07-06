@@ -27,6 +27,7 @@ import configargparse as argparse
 
 import numpy as np
 from scipy.ndimage import zoom
+from scipy.ndimage.interpolation import rotate
 import sigpy as sp
 
 import keras.callbacks
@@ -108,135 +109,113 @@ if __name__ == '__main__':
 
 
     # FIXME: change generator to work with ndarray directly, so that we don't have to write the inputs to disk
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        data_file = '{}/data.h5'.format(tmpdirname)
-        suio.save_data_h5(data_file, data=data, h5_key='data', metadata=metadata)
 
 
-        tic = time.time()
+    tic = time.time()
 
-        print('predicting...')
+    print('predicting...')
 
+    if args.verbose:
+        print(args.path_base)
 
+    if args.inference_mpr:
         if args.verbose:
-            print(args.path_base)
+            print('running inference on orthogonal planes')
+        slice_axes = [0, 2, 3]
+    else:
+        slice_axes = [args.slice_axis]
 
-        if args.inference_mpr:
+    checkpoint_files = [args.checkpoint_file_0, args.checkpoint_file_2, args.checkpoint_file_3]
+
+    Y_predictions = np.zeros((ns, nx, ny, len(slice_axes), args.num_rotations))
+
+    if args.num_rotations > 1:
+        angles = np.linspace(0, 90, args.num_rotations, endpoint=False)
+
+    for rr, angle in enumerate(angles):
+        if args.num_rotations > 1 and angle > 0:
             if args.verbose:
-                print('running inference on orthogonal planes')
-
-            prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                    batch_size=1,
-                    shuffle=False,
-                    verbose=args.verbose, 
-                    residual_mode=args.residual_mode,
-                    slices_per_input=args.slices_per_input,
-                    resize=args.resize,
-                    slice_axis=0)
-
-            if args.checkpoint_file_0:
-                m.load_weights(args.checkpoint_file_0)
-
-            Y_prediction_0 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
-            if args.resize:
-                Y_prediction_0 = sp.util.resize(Y_prediction_0, [ns, nx, ny, 1])
-
-            prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                    batch_size=1,
-                    shuffle=False,
-                    verbose=args.verbose, 
-                    residual_mode=args.residual_mode,
-                    slices_per_input=args.slices_per_input,
-                    resize=args.resize,
-                    slice_axis=2)
-
-            if args.checkpoint_file_2:
-                m.load_weights(args.checkpoint_file_2)
-
-            Y_prediction_2 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
-            Y_prediction_2 = np.transpose(Y_prediction_2, (1, 0, 2, 3))
-            if args.resize:
-                Y_prediction_2 = sp.util.resize(Y_prediction_2, [ns, nx, ny, 1])
-
-            prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                    batch_size=1,
-                    shuffle=False,
-                    verbose=args.verbose, 
-                    residual_mode=args.residual_mode,
-                    slices_per_input=args.slices_per_input,
-                    resize=args.resize,
-                    slice_axis=3)
-
-            if args.checkpoint_file_3:
-                m.load_weights(args.checkpoint_file_3)
-
-            Y_prediction_3 = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
-            Y_prediction_3 = np.transpose(Y_prediction_3, (1, 2, 0, 3))
-            if args.resize:
-                Y_prediction_3 = sp.util.resize(Y_prediction_3, [ns, nx, ny, 1])
-
-            if args.verbose:
-                print('averaging each plane')
-            if 'mean' in args.inference_mpr_avg:
-                Y_prediction = (Y_prediction_0 + Y_prediction_2 + Y_prediction_3) / 3.
-            elif 'median' in args.inference_mpr_avg:
-                Y_prediction = np.median(np.stack((Y_prediction_0, Y_prediction_2, Y_prediction_3), axis=3), axis=3, keepdims=True)
-
+                print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
+            data_rot = rotate(data, angle, reshape=False, axes=(0, 2))
         else:
-            # use generator to maintain consistent data formatting
-            prediction_generator = sugen.DataGenerator(data_list=[data_file],
-                    batch_size=1,
-                    shuffle=False,
-                    verbose=args.verbose, 
-                    residual_mode=args.residual_mode,
-                    slices_per_input=args.slices_per_input,
-                    resize=args.resize,
-                    slice_axis=args.slice_axis)
+            data_rot = data
 
-            Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+        with tempfile.TemporaryDirectory() as tmpdirname:
 
-        data = data.transpose((0, 2, 3, 1))
+            data_file = '{}/data.h5'.format(tmpdirname)
+            suio.save_data_h5(data_file, data=data_rot, h5_key='data', metadata=metadata)
 
-        if not args.inference_mpr:
-            if args.slice_axis == 0:
-                pass
-            elif args.slice_axis == 1:
-                assert False, 'Invalid slice axis: {}'.format(args.slice_axis)
-            elif args.slice_axis == 2:
-                Y_prediction = np.transpose(Y_prediction, (1, 0, 2, 3))
-            elif args.slice_axis == 3:
-                Y_prediction = np.transpose(Y_prediction, (1, 2, 0, 3))
+            for ii, slice_axis in enumerate(slice_axes):
 
-            if args.resize:
-                Y_prediction = sp.util.resize(Y_prediction, [ns, nx, ny, 1])
+                prediction_generator = sugen.DataGenerator(data_list=[data_file],
+                        batch_size=1,
+                        shuffle=False,
+                        verbose=args.verbose, 
+                        residual_mode=args.residual_mode,
+                        slices_per_input=args.slices_per_input,
+                        resize=args.resize,
+                        slice_axis=slice_axis)
+
+                if checkpoint_files[ii]:
+                    m.load_weights(checkpoint_files[ii])
+
+                _Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+
+                if slice_axis == 0:
+                    pass
+                elif slice_axis == 2:
+                    _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
+                elif slice_axis == 3:
+                    _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
+
+                if args.resize:
+                    _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
+
+                if args.num_rotations > 1 and angle > 0:
+                    _Y_prediction = rotate(_Y_prediction, -angle, reshape=False, axes=(0, 1))
 
 
-        # if residual mode is on, we need to add the original contrast back in
-        if args.residual_mode:
-            h = args.slices_per_input // 2
-            Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
+                Y_predictions[..., ii, rr] = _Y_prediction[..., 0]
 
-        if args.zoom:
-            data_shape = metadata['zoom_dims']
-            if args.verbose:
-                print('unzoom')
-                ticz = time.time()
-            Y_prediction = zoom(Y_prediction[...,0], zoom=(1, data_shape[2]/args.zoom, data_shape[3]/args.zoom), order=args.zoom_order)[...,None]
-            if args.verbose:
-                tocz = time.time()
-                print('unzoom done: {} s'.format(tocz-ticz))
+    if args.verbose:
+        print('averaging each plane')
 
-        if args.predict_dir:
-            # save raw data
-            data_file_base = os.path.basename(data_file)
-            _1, _2 = os.path.splitext(data_file_base)
-            data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-            suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
+    if 'mean' in args.inference_mpr_avg:
+        Y_masks_sum = np.sum(np.array(Y_predictions > 0, dtype=np.float), axis=(-1, -2), keepdims=False)
+        Y_prediction = np.divide(np.sum(Y_predictions, axis=(-1, -2), keepdims=False), Y_masks_sum, where=Y_masks_sum > 0)[..., None]
+    elif 'median' in args.inference_mpr_avg:
+        assert args.num_rotations == 1, 'Median not currently supported when doing multiple rotations (need to account for non-zeros only)'
+        # FIXME need to apply median along non-zero values only. Something like this:
+        #out = np.apply_along_axis(lambda v: np.median(v[np.nonzero(v)]), 0, x123)
+        Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
-        ## HERE
-        #data_out = Y_prediction.copy()
-        data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-        suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+
+    data = data.transpose((0, 2, 3, 1))
+
+    # if residual mode is on, we need to add the original contrast back in
+    if args.residual_mode:
+        h = args.slices_per_input // 2
+        Y_prediction = data[:,:,:,0].squeeze() + Y_prediction.squeeze()
+
+    if args.zoom:
+        data_shape = metadata['zoom_dims']
+        if args.verbose:
+            print('unzoom')
+            ticz = time.time()
+        Y_prediction = zoom(Y_prediction[...,0], zoom=(1, data_shape[2]/args.zoom, data_shape[3]/args.zoom), order=args.zoom_order)[...,None]
+        if args.verbose:
+            tocz = time.time()
+            print('unzoom done: {} s'.format(tocz-ticz))
+
+    if args.predict_dir:
+        # save raw data
+        data_file_base = os.path.basename(data_file)
+        _1, _2 = os.path.splitext(data_file_base)
+        data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
+        suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
+
+    data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
+    suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
     toc = time.time()
     print('done predicting ({:.0f} sec)'.format(toc - tic))
 
