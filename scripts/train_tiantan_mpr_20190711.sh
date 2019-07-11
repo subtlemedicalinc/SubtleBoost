@@ -1,0 +1,21 @@
+export GPU=1
+export DATA_DIR=/raid/jon/data_full_tiantan/data
+export DATA_LIST=data_lists/data_train_tiantan_20190711.txt
+export MAX_DATA_SETS=100
+export BATCH_SIZE=8
+export NUM_EPOCHS=99
+export NUM_WORKERS=4
+export QUEUE_SIZE=4
+export MULTIPROCESSING=0
+export SLICES_PER_INPUT=7
+export VAL_SPLIT=0
+export LOG_DIR=/raid/jon/logs
+export TB_DIR=/raid/jon/logs_tb
+export HIST_DIR=/raid/jon/history
+export CHECKPOINT_DIR=/raid/jon/checkpoints
+export L1_LAMBDA=.6
+export SSIM_LAMBDA=.4
+export NO_SAVE_BEST_ONLY=1
+export RESIZE=240
+export TRAIN_MPR=1
+./scripts/train.sh
