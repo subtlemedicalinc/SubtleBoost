@@ -127,10 +127,8 @@ if __name__ == '__main__':
     tic = time.time()
     print('training...')
 
-    if len(data_list) == 1:
+    if len(data_list) == 1 or args.validation_split == 0:
         r = 0
-    elif args.validation_split == 0:
-        r = 1
     else: # len(data_list) > 1
         r = int(len(data_list) * args.validation_split)
 
