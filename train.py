@@ -253,6 +253,9 @@ if __name__ == '__main__':
                     resize=args.resize)
     else:
         validation_generator = None
+        validation_generator_0 = None
+        validation_generator_2 = None
+        validation_generator_3 = None
 
     if args.train_mpr:
         for i in range(0, args.num_epochs, 3):
