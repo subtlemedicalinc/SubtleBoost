@@ -1,14 +1,14 @@
 #!/bin/bash
 
 commit=${commit:=$(git rev-parse HEAD | cut -c1-6)}
-	
+
 DATA_DIR=${DATA_DIR:="/local/ubuntu/jon/dev/data_full/data"}
 DATA_LIST=${DATA_LIST:="/home/ubuntu/jon/dev/data_full/data_train.txt"}
 LEARNING_RATE=${LEARNING_RATE:=".001"}
 GPU=${GPU:=0}
 MAX_DATA_SETS=${MAX_DATA_SETS:=20}
 BATCH_SIZE=${BATCH_SIZE:=8}
-NUM_EPOCHS=${NUM_EPOCHS:=20}
+NUM_EPOCHS=${NUM_EPOCHS:=100}
 NUM_WORKERS=${NUM_WORKERS:=1}
 QUEUE_SIZE=${QUEUE_SIZE:=1}
 MULTIPROCESSING=${MULTIPROCESSING:=0}

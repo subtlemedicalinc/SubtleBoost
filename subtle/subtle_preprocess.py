@@ -21,8 +21,8 @@ try:
     import SimpleITK as sitk
 except:
     warnings.warn('SimpleITK not found!')
-    
-    
+
+
 def scale_slope_intercept(im, rs, ri, ss):
     return (im * rs + ri) / (rs * ss)
 def rescale_slope_intercept(im, rs, ri, ss):
@@ -40,7 +40,7 @@ def mask_im(im, threshold=.08):
     mask = im > (threshold * np.amax(im, axis=(2,3))[:,:,None,None])
     # fill holes in mask
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
-    return mask   
+    return mask
 
 def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), nslices=5):
     ntic = time.time()
@@ -115,7 +115,7 @@ def scale_im_enhao(im_fixed, im_moving, levels=np.linspace(.8,1.2,30), fun=lambd
         delta_scale = levels[1] - levels[0]
         levels = np.linspace(best_scale - delta_scale, best_scale + delta_scale, len(levels))
 
-    return best_scale  
+    return best_scale
 
 
 def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, verbose=True):
@@ -123,10 +123,10 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     Image intensity normalization using SimpleITK
     Normalize im_moving to match im_fixed
     '''
-    
+
     sim0 = sitk.GetImageFromArray(im_fixed.squeeze())
     sim1 = sitk.GetImageFromArray(im_moving.squeeze())
-    
+
     hm = sitk.HistogramMatchingImageFilter()
     hm.SetNumberOfHistogramLevels(levels)
     hm.SetNumberOfMatchPoints(points)
@@ -138,9 +138,9 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     if verbose:
         print('image intensity normalization')
         tic = time.time()
-    
+
     sim_out = hm.Execute(sim1, sim0)
-    
+
     if verbose:
         toc = time.time()
         print('scaling done, {:.3} s'.format(toc - tic))
@@ -157,7 +157,7 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     '''
 
     default_transform = 'translation'
-    
+
     sim0 = sitk.GetImageFromArray(im_fixed)
     sim1 = sitk.GetImageFromArray(im_moving)
 
@@ -166,7 +166,7 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
 
     if im_moving_spacing is not None:
         sim1.SetSpacing(im_moving_spacing)
-    
+
     if param_map is None:
         if verbose:
             print("using default '{}' parameter map".format(default_transform))
@@ -180,9 +180,9 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     if verbose:
         print('image registration')
         tic = time.time()
-    
+
     ef.Execute()
-    
+
     if verbose:
         toc = time.time()
         print('registration done, {:.3} s'.format(toc - tic))
@@ -233,16 +233,16 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
 
 
     # undo histogram normalization. as a quick test I am using x2 for this, but in the future we should only be using a template image
-    #levels=1024
-    #points=50
-    #mean_intensity=True
-    #key3 = 'hist_norm'
-    #if key3 in metadata.keys():
-        #if verbose:
-            #print('undoing histogram normalization (TODO: use template)'.format(key3))
-            #out = scale_im(im_gt, out, levels, points, mean_intensity)
-        #for idx in range(out.shape[0]):
-            #out[idx,...] = scale_im(im_gt[idx,...], out[idx,...], levels, points, mean_intensity)[...,None]
+
+    # levels=1024
+    # points=50
+    # mean_intensity=True
+    # key3 = 'hist_norm'
+    # if key3 in metadata.keys():
+    #     if verbose:
+    #         print('undoing histogram normalization (TODO: use template)'.format(key3))
+    #         out = scale_im(im_gt, out, levels, points, mean_intensity)
+    #     #for idx in range(out.shape[0]):
+    #         #out[idx,...] = scale_im(im_gt[idx,...], out[idx,...], levels, points, mean_intensity)[...,None]
 
     return out
-

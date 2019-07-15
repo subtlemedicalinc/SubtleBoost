@@ -1,7 +1,7 @@
 #!/bin/bash
 
 commit=${commit:=$(git rev-parse HEAD | cut -c1-6)}
-	
+
 
 
 PREDICT_DIR=${PREDICT_DIR:="/raid/jon/predictions/dicoms"}
@@ -136,4 +136,4 @@ out_dir=${out_dir:="${PREDICT_DIR}/${commit}_${job_id}"}
 
 mkdir -p ${out_dir}
 
-cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${zoom_str} ${override_str} ${denoise_str} ${series_num_str} --description ${DESCRIPTION} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
+cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${zoom_str} ${override_str} ${denoise_str} ${series_num_str} --description ${DESCRIPTION} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} --num_rotations 2 --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
