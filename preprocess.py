@@ -29,41 +29,73 @@ import subtle.subtle_io as suio
 
 import argparse
 
-usage_str = 'usage: %(prog)s [options]'
-description_str = 'pre-process data for SubtleGad project'
+def fetch_args():
+    usage_str = 'usage: %(prog)s [options]'
+    description_str = 'pre-process data for SubtleGad project'
 
-# FIXME: add time stamps, logging
+    # FIXME: add time stamps, logging
+    parser = argparse.ArgumentParser(
+        usage=usage_str, description=description_str,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
+    parser.add_argument('--path_zero', action='store', dest='path_zero',
+                        type=str, help='path to zero dose dicom dir',
+                        default=None)
+    parser.add_argument('--path_low', action='store', dest='path_low',
+                        type=str, help='path to low dose dicom dir',
+                        default=None)
+    parser.add_argument('--path_full', action='store', dest='path_full',
+                        type=str, help='path to full dose dicom dir',
+                        default=None)
+    parser.add_argument('--path_base', action='store', dest='path_base',
+                        type=str, help='path to base dicom directory containing subdirs', default=None)
+    parser.add_argument('--output', action='store', dest='out_file', type=str,
+                        help='output to npy file', default='out.npy')
+    parser.add_argument('--verbose', action='store_true', dest='verbose',
+                        help='verbose')
+    parser.add_argument('--discard_start_percent', action='store', type=float,
+                        dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
+    parser.add_argument('--discard_end_percent', action='store', type=float,
+                        dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
+    parser.add_argument('--mask_threshold', action='store', type=float,
+                        dest='mask_threshold', help='cutoff threshold for mask', default=.08)
+    parser.add_argument('--transform_type', action='store', type=str,
+                        dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
+    parser.add_argument('--normalize', action='store_true', dest='normalize',
+                        help="global scaling", default=False)
+    parser.add_argument('--scale_matching', action='store_true',
+                        dest='scale_matching', help="match scaling of each image to each other", default=False)
+    parser.add_argument('--joint_normalize', action='store_true',
+                        dest='joint_normalize', help="use same global scaling for all images", default=False)
+    parser.add_argument('--global_scale_ref_im0', action='store_true',
+                        dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
+    parser.add_argument('--normalize_fun', action='store',
+                        dest='normalize_fun', type=str, help='normalization fun', default='mean')
+    parser.add_argument('--skip_registration', action='store_true',
+                        dest='skip_registration', help='skip co-registration',
+                        default=False)
+    parser.add_argument('--skip_mask', action='store_true', dest='skip_mask',
+                        help='skip mask', default=False)
+    parser.add_argument('--skip_scale_im', action='store_true',
+                        dest='skip_scale_im', help='skip histogram matching',
+                        default=False)
+    parser.add_argument('--override_dicom_naming', action='store_true',
+                        dest='override', help='dont check dicom names',
+                        default=False)
+    parser.add_argument('--scale_dicom_tags', action='store_true',
+                        dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
+    parser.add_argument('--zoom', action='store', dest='zoom', type=int,
+                        help='zoom to in-plane matrix size', default=None)
+    parser.add_argument('--zoom_order', action='store', dest='zoom_order',
+                        type=int, help='zoom order', default=3)
+    parser.add_argument('--nslices', action='store', dest='nslices', type=int,
+                        help='number of slices for scaling', default=20)
 
-parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--path_zero', action='store', dest='path_zero', type=str, help='path to zero dose dicom dir', default=None)
-parser.add_argument('--path_low', action='store', dest='path_low', type=str, help='path to low dose dicom dir', default=None)
-parser.add_argument('--path_full', action='store', dest='path_full', type=str, help='path to full dose dicom dir', default=None)
-parser.add_argument('--path_base', action='store', dest='path_base', type=str, help='path to base dicom directory containing subdirs', default=None)
-parser.add_argument('--output', action='store', dest='out_file', type=str, help='output to npy file', default='out.npy')
-parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
-parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
-parser.add_argument('--discard_end_percent', action='store', type=float, dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
-parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
-parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
-parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
-parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
-parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
-parser.add_argument('--global_scale_ref_im0', action='store_true', dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
-parser.add_argument('--normalize_fun', action='store', dest='normalize_fun', type=str, help='normalization fun', default='mean')
-parser.add_argument('--skip_registration', action='store_true', dest='skip_registration', help='skip co-registration', default=False)
-parser.add_argument('--skip_mask', action='store_true', dest='skip_mask', help='skip mask', default=False)
-parser.add_argument('--skip_scale_im', action='store_true', dest='skip_scale_im', help='skip histogram matching', default=False)
-parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
-parser.add_argument('--scale_dicom_tags', action='store_true', dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
-parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
-parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
-parser.add_argument('--nslices', action='store', dest='nslices', type=int, help='number of slices for scaling', default=20)
+    args = parser.parse_args()
+    return args
 
-def preprocess_chain(args):
-
-    metadata = {}
-
+def _assert_and_get_init_vars(args):
     if args.normalize_fun == 'mean':
         normalize_fun = np.mean
     elif args.normalize_fun == 'max':
@@ -71,7 +103,10 @@ def preprocess_chain(args):
     else:
         assert 0, 'unrecognized normalization fun: {}'.format(args.normalize_fun)
 
-    if args.path_zero is not None and args.path_low is not None and args.path_full is not None:
+    if (args.path_zero is not None and
+        args.path_low is not None and
+        args.path_full is not None
+    ):
         use_indiv_path = True
     else:
         use_indiv_path = False
@@ -87,6 +122,14 @@ def preprocess_chain(args):
     assert args.discard_start_percent >= 0 and args.discard_start_percent < 1
     assert args.discard_end_percent >= 0 and args.discard_end_percent < 1
 
+    return normalize_fun, use_indiv_path, use_base_path
+
+def _get_images(args, metadata):
+    normalize_fun, use_indiv_path, use_base_path = _assert_and_get_init_vars(args)
+
+    metadata['normalize_fun'] = normalize_fun
+    metadata['use_indiv_path'] = use_indiv_path
+    metadata['use_base_path'] = use_base_path
 
     if use_base_path:
         args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
@@ -118,7 +161,7 @@ def preprocess_chain(args):
     idx = np.arange(idx_start, idx_end)
 
     metadata['slice_idx'] = idx
-    
+
     if args.verbose and idx_start > 0:
         if args.verbose:
             print('discarding first {:d} slices'.format(idx_start))
@@ -126,10 +169,12 @@ def preprocess_chain(args):
     if args.verbose and idx_end < ns - 1:
         print('discarding last {:d} slices'.format(ns - idx_end))
 
-    ims = np.stack((ims_zero[idx,:,:], ims_low[idx,:,:], ims_full[idx,:,:]), axis=1)
+    ims = np.stack(
+    (ims_zero[idx,:,:], ims_low[idx,:,:], ims_full[idx,:,:]), axis=1)
 
-    ns, nc, nx, ny = ims.shape
+    return ims, (hdr_zero, hdr_low, hdr_full), metadata
 
+def _mask_images(args, ims, metadata):
     if args.verbose:
         print('masking')
 
@@ -142,7 +187,11 @@ def preprocess_chain(args):
     else:
         metadata['mask'] = 0
 
-    ### DICOM SCALING
+    return ims, mask, metadata
+
+def _dicom_scaling(args, ims, hdr, metadata):
+    hdr_zero, hdr_low, hdr_full = hdr
+
     if args.scale_dicom_tags:
         if args.verbose:
             print('using dicom tags for scaling')
@@ -171,8 +220,9 @@ def preprocess_chain(args):
         ims[:,1,:,:] = sup.scale_slope_intercept(ims[:,1,:,:], rs1, ri1, ss1)
         ims[:,2,:,:] = sup.scale_slope_intercept(ims[:,2,:,:], rs2, ri2, ss2)
 
+    return ims, metadata
 
-    ### HISTOGRAM NORMALIZATION ###
+def _hist_norm(args, ims, metadata):
     if not args.skip_scale_im:
         metadata['hist_norm'] = 1
         # FIXME: expose to outside world. subject to change once we implement white striping
@@ -185,27 +235,30 @@ def preprocess_chain(args):
     else:
         metadata['hist_norm'] = 0
 
+    return ims, metadata
 
-    ### IMAGE REGISTRATION ###
+def _register(args, ims, metadata):
     spars = sitk.GetDefaultParameterMap(args.transform_type)
 
     if not args.skip_registration:
         metadata['reg'] = 1
         metadata['transform_type'] = args.transform_type
-        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=pixel_spacing_zero, im_moving_spacing=pixel_spacing_low)
+        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
     if not args.skip_registration:
-        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=pixel_spacing_zero, im_moving_spacing=pixel_spacing_full)
+        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
 
         if args.verbose:
             print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
     else:
         metadata['reg'] = 0
 
-    ### IMAGE ZOOM ###
+    return ims, metadata
+
+def _zoom(args, ims, metadata):
     if args.zoom:
         ims_shape = ims.shape
         if args.verbose:
@@ -237,8 +290,11 @@ def preprocess_chain(args):
         metadata['zoom'] = args.zoom
         metadata['zoom_order'] = args.zoom_order
 
+    return ims, metadata
 
-    # for scaling
+def _prescale_process(args, ims, mask, metadata):
+    ns, nc, nx, ny = ims.shape
+
     idx_scale = range(ns//2 - args.nslices // 2, ns//2 + args.nslices // 2)
 
     im0, im1, im2 = ims[idx_scale, 0, :, :], ims[idx_scale, 1, :, :], ims[idx_scale, 2, :, :]
@@ -252,25 +308,27 @@ def preprocess_chain(args):
     im1 = im1[m != 0].ravel()
     im2 = im2[m != 0].ravel()
 
-    _ims = np.stack((im0, im1, im2), axis=1)
+    ims_mod = np.stack((im0, im1, im2), axis=1)
 
     metadata['scale_slices'] = idx_scale
 
-    ### IMAGE SCALE MATCHING ###
+    return ims, ims_mod, metadata
+
+def _match_scales(args, ims, ims_mod, metadata):
     if args.scale_matching:
         if args.verbose:
             print('intensity before scaling:')
-            print('mean', np.mean(np.abs(_ims), axis=(0)))
-            print('median', np.median(np.abs(_ims), axis=(0)))
-            print('max', np.max(np.abs(_ims), axis=(0)))
+            print('mean', np.mean(np.abs(ims_mod), axis=(0)))
+            print('median', np.median(np.abs(ims_mod), axis=(0)))
+            print('max', np.max(np.abs(ims_mod), axis=(0)))
 
         levels = np.linspace(.5, 1.5, 30)
         max_iter = 3
 
 
         ntic = time.time()
-        scale_low = sup.scale_im_enhao(im0, im1, levels=levels, max_iter=max_iter)
-        scale_full = sup.scale_im_enhao(im0, im2, levels=levels, max_iter=max_iter)
+        scale_low = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 1], levels=levels, max_iter=max_iter)
+        scale_full = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 1], levels=levels, max_iter=max_iter)
 
         metadata['scale_low'] = scale_low
         metadata['scale_full'] = scale_full
@@ -285,18 +343,20 @@ def preprocess_chain(args):
         ims[:,1,:,:] = ims[:,1,:,:] * scale_low
         ims[:,2,:,:] = ims[:,2,:,:] * scale_full
 
-        _ims[:,1] = _ims[:,1] * scale_low
-        _ims[:,2] = _ims[:,2] * scale_full
+        ims_mod[:,1] = ims_mod[:,1] * scale_low
+        ims_mod[:,2] = ims_mod[:,2] * scale_full
 
         if args.verbose:
             print('intensity after scaling:')
-            print('mean', np.mean(np.abs(_ims), axis=(0)))
-            print('median', np.median(np.abs(_ims), axis=(0)))
-            print('max', np.max(np.abs(_ims), axis=(0)))
+            print('mean', np.mean(np.abs(ims_mod), axis=(0)))
+            print('median', np.median(np.abs(ims_mod), axis=(0)))
+            print('max', np.max(np.abs(ims_mod), axis=(0)))
 
+    return ims, ims_mod, metadata
 
-    ### GLOBAL NORMALIZATION ###
+def _global_norm(args, ims, ims_mod, metadata):
     if args.normalize:
+        normalize_fun = metadata['normalize_fun']
         if args.verbose:
             print('normalizing with function ', args.normalize_fun, normalize_fun)
 
@@ -308,20 +368,20 @@ def preprocess_chain(args):
         ntic = time.time()
 
         if args.global_scale_ref_im0:
-            __ims = _ims[...,0]
+            ims_norm = ims_mod[...,0]
             axis = (0)
             metadata['global_scale_ref_im0'] = True
         else:
-            __ims = _ims
+            ims_norm = ims_mod
             metadata['global_scale_ref_im0'] = False
-        scale_global = sup.normalize_scale(__ims, axis=axis, fun=normalize_fun)
+        scale_global = sup.normalize_scale(ims_norm, axis=axis, fun=normalize_fun)
         metadata['scale_global'] = scale_global
 
         if args.verbose:
             print('intensity before global scaling:')
-            print('mean', np.mean(np.abs(_ims), axis=axis))
-            print('median', np.median(np.abs(_ims), axis=axis))
-            print('max', np.max(np.abs(_ims), axis=axis))
+            print('mean', np.mean(np.abs(ims_mod), axis=axis))
+            print('median', np.median(np.abs(ims_mod), axis=axis))
+            print('max', np.max(np.abs(ims_mod), axis=axis))
 
         if args.verbose:
             ntoc = time.time()
@@ -332,20 +392,34 @@ def preprocess_chain(args):
             ims = ims / scale_global[:,None,None,None]
         else:
             ims = ims / scale_global[:,:,None,None]
-        _ims = _ims / scale_global
+        ims_mod = ims_mod / scale_global
 
         if args.verbose:
             print('intensity after global scaling:')
-            print('mean', np.mean(np.abs(_ims), axis=axis))
-            print('median', np.median(np.abs(_ims), axis=axis))
-            print('max', np.max(np.abs(_ims), axis=axis))
-
+            print('mean', np.mean(np.abs(ims_mod), axis=axis))
+            print('median', np.median(np.abs(ims_mod), axis=axis))
+            print('max', np.max(np.abs(ims_mod), axis=axis))
 
     return ims, metadata
 
+def preprocess_chain(args):
+    metadata = {}
+
+    ims, hdr, metadata = _get_images(args, metadata)
+
+    ims, mask, metadata = _mask_images(args, ims, metadata)
+    ims, metadata = _dicom_scaling(args, ims, hdr, metadata)
+    ims, metadata = _hist_norm(args, ims, metadata)
+    ims, metadata = _register(args, ims, metadata)
+    ims, metadata = _zoom(args, ims, metadata)
+
+    ims, ims_mod, metadata = _prescale_process(args, ims, mask, metadata)
+    ims, ims_mod, metadata = _match_scales(args, ims, ims_mod, metadata)
+    ims, metadata = _global_norm(args, ims, ims_mod, metadata)
+
+    return ims, metadata
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-
+    args = fetch_args()
     ims, metadata = preprocess_chain(args)
     suio.save_data_h5(args.out_file, data=ims, h5_key='data', metadata=metadata)
