@@ -40,7 +40,7 @@ def fetch_args():
     args = parser.parse_args()
     return args
 
-def _assert_and_get_init_vars(args):
+def assert_and_get_init_vars(args):
     if args.normalize_fun == 'mean':
         normalize_fun = np.mean
     elif args.normalize_fun == 'max':
@@ -69,8 +69,8 @@ def _assert_and_get_init_vars(args):
 
     return normalize_fun, use_indiv_path, use_base_path
 
-def _get_images(args, metadata):
-    normalize_fun, use_indiv_path, use_base_path = _assert_and_get_init_vars(args)
+def get_images(args, metadata):
+    normalize_fun, use_indiv_path, use_base_path = assert_and_get_init_vars(args)
 
     metadata['normalize_fun'] = normalize_fun
     metadata['use_indiv_path'] = use_indiv_path
@@ -119,7 +119,7 @@ def _get_images(args, metadata):
 
     return ims, (hdr_zero, hdr_low, hdr_full), metadata
 
-def _mask_images(args, ims, metadata):
+def mask_images(args, ims, metadata):
     if args.verbose:
         print('masking')
 
@@ -134,7 +134,7 @@ def _mask_images(args, ims, metadata):
 
     return ims, mask, metadata
 
-def _dicom_scaling(args, ims, hdr, metadata):
+def dicom_scaling(args, ims, hdr, metadata):
     hdr_zero, hdr_low, hdr_full = hdr
 
     if args.scale_dicom_tags:
@@ -167,7 +167,7 @@ def _dicom_scaling(args, ims, hdr, metadata):
 
     return ims, metadata
 
-def _hist_norm(args, ims, metadata):
+def hist_norm(args, ims, metadata):
     if not args.skip_scale_im:
         metadata['hist_norm'] = 1
         # FIXME: expose to outside world. subject to change once we implement white striping
@@ -182,7 +182,7 @@ def _hist_norm(args, ims, metadata):
 
     return ims, metadata
 
-def _register(args, ims, metadata):
+def register(args, ims, metadata):
     spars = sitk.GetDefaultParameterMap(args.transform_type)
 
     if not args.skip_registration:
@@ -203,7 +203,7 @@ def _register(args, ims, metadata):
 
     return ims, metadata
 
-def _zoom(args, ims, metadata):
+def zoom_process(args, ims, metadata):
     if args.zoom:
         ims_shape = ims.shape
         if args.verbose:
@@ -237,7 +237,7 @@ def _zoom(args, ims, metadata):
 
     return ims, metadata
 
-def _prescale_process(args, ims, mask, metadata):
+def prescale_process(args, ims, mask, metadata):
     ns, nc, nx, ny = ims.shape
 
     idx_scale = range(ns//2 - args.nslices // 2, ns//2 + args.nslices // 2)
@@ -259,7 +259,7 @@ def _prescale_process(args, ims, mask, metadata):
 
     return ims, ims_mod, metadata
 
-def _match_scales(args, ims, ims_mod, metadata):
+def match_scales(args, ims, ims_mod, metadata):
     if args.scale_matching:
         if args.verbose:
             print('intensity before scaling:')
@@ -299,7 +299,7 @@ def _match_scales(args, ims, ims_mod, metadata):
 
     return ims, ims_mod, metadata
 
-def _global_norm(args, ims, ims_mod, metadata):
+def global_norm(args, ims, ims_mod, metadata):
     if args.normalize:
         normalize_fun = metadata['normalize_fun']
         if args.verbose:
@@ -350,17 +350,17 @@ def _global_norm(args, ims, ims_mod, metadata):
 def preprocess_chain(args):
     metadata = {}
 
-    ims, hdr, metadata = _get_images(args, metadata)
+    ims, hdr, metadata = get_images(args, metadata)
 
-    ims, mask, metadata = _mask_images(args, ims, metadata)
-    ims, metadata = _dicom_scaling(args, ims, hdr, metadata)
-    ims, metadata = _hist_norm(args, ims, metadata)
-    ims, metadata = _register(args, ims, metadata)
-    ims, metadata = _zoom(args, ims, metadata)
+    ims, mask, metadata = mask_images(args, ims, metadata)
+    ims, metadata = dicom_scaling(args, ims, hdr, metadata)
+    ims, metadata = hist_norm(args, ims, metadata)
+    ims, metadata = register(args, ims, metadata)
+    ims, metadata = zoom_process(args, ims, metadata)
 
-    ims, ims_mod, metadata = _prescale_process(args, ims, mask, metadata)
-    ims, ims_mod, metadata = _match_scales(args, ims, ims_mod, metadata)
-    ims, metadata = _global_norm(args, ims, ims_mod, metadata)
+    ims, ims_mod, metadata = prescale_process(args, ims, mask, metadata)
+    ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
+    ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
     return ims, metadata
 
