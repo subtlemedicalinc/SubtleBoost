@@ -17,6 +17,7 @@ import time
 import h5py
 import numpy as np
 import tqdm
+from glob import glob
 
 try:
     import pydicom
@@ -47,16 +48,16 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
 
     output = np.squeeze(output)
     output_shape = output.shape
-    
+
     slice_start = in_hdrs[0].SliceLocation
     delta_slice = (in_hdrs[-1].SliceLocation - in_hdrs[0].SliceLocation) / (len(output) - 1)
-    
+
     x_start = in_hdrs[0].ImagePositionPatient[0]
     delta_x = (in_hdrs[-1].ImagePositionPatient[0] - in_hdrs[0].ImagePositionPatient[0]) / (len(output) - 1)
-    
+
     y_start = in_hdrs[0].ImagePositionPatient[1]
     delta_y = (in_hdrs[-1].ImagePositionPatient[1] - in_hdrs[0].ImagePositionPatient[1]) / (len(output) - 1)
-    
+
     z_start = in_hdrs[0].ImagePositionPatient[2]
     delta_z = (in_hdrs[-1].ImagePositionPatient[2] - in_hdrs[0].ImagePositionPatient[2]) / (len(output) - 1)
 
@@ -76,7 +77,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         dicom.StudyDescription = 'SubtleGad:' + dicom.StudyDescription
     except AttributeError:
         pass
-        
+
     try:
         dicom.SeriesDescription = '{} {} {}'.format(series_desc_pre, dicom.SeriesDescription, series_desc_post)
     except AttributeError:
@@ -104,7 +105,6 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
 
 
 def get_dicom_dirs(base_dir, override=False):
-
     ''' Get list of 'pre', 'low' and 'full' contrast dicom dirs
     For a given base directory, get the subdirectories that
     match the zero/low/post contrast series
@@ -120,6 +120,10 @@ def get_dicom_dirs(base_dir, override=False):
     '''
 
     # get list of directories
+    for fname in glob('{}/**/*.dcm'.format(base_dir), recursive=True):
+        base_dir = '/'.join(fname.split('/')[:-2])
+        break
+
     dirs = os.listdir(base_dir)
     dirs_split = np.array([d.split('_') for d in dirs])
     try:
@@ -147,7 +151,7 @@ def get_dicom_dirs(base_dir, override=False):
 
 
 def dicom_files(dicom_dir, normalize=False):
-    
+
     ''' Load dicom files in a given folder
     For a given dicom directory, load the dicom files that are
     housed in the folder.
@@ -157,57 +161,57 @@ def dicom_files(dicom_dir, normalize=False):
     dicom_dir : string
         name of directory to crawl through
     normalize : bool
-        whether or not to normalize between 0 and 1 
+        whether or not to normalize between 0 and 1
     Returns:
     --------
     img_array : int16/float
         3D array of all dicom files (float if normalized)
     header : pydicom dataset
         header of the dicom scans
-        
+
     '''
-        
+
     # build the file list for Dicom images
     lstDCM = []
     for dirName, subdirList, fileList in os.walk(dicom_dir):
         for filename in fileList:
             if ".dcm" in filename.lower() or "mag" in filename.lower():
                 lstDCM.append(os.path.join(dirName,filename))
-    
+
     # sort the list
     lstDCM.sort()
-    
+
     # Preallocation information
-    
+
     # get the reference file from the first Dicom image
     hdr = pydicom.read_file(lstDCM[0])
     # matrix dimensions
     nx = int(hdr.Rows)
     ny = int(hdr.Columns)
     nz = len(lstDCM)
-    
+
     img_array = np.zeros([nz,nx,ny], dtype=hdr.pixel_array.dtype)
-    
+
     #%% loop through the Dicom list
-    
+
     for filename in lstDCM:
         ds = pydicom.read_file(filename)
         img_array[lstDCM.index(filename), :, :] = np.array(ds.pixel_array)
-    
+
     #%% Normalize the array
-    
+
     if normalize is True:
         img_array = img_array/np.amax(img_array)
-        
+
     return np.float32(img_array), hdr
 
-#%% Load dicom files function    
+#%% Load dicom files function
 
 def dicom_header(dicom_dir):
-    
+
     ''' Load dicom header from dicom files in a given folder
     For a given dicom directory, load the dicom header that are
-    housed in the folder. Same function as load_dicom_files 
+    housed in the folder. Same function as load_dicom_files
     but only includes header
     Parameters:
     -----------
@@ -221,7 +225,7 @@ def dicom_header(dicom_dir):
         list of dicom files in folder
     fileOut : list
         list of full locations of all dicoms
-        
+
     '''
 
     # build the file list for Dicom images
@@ -233,16 +237,16 @@ def dicom_header(dicom_dir):
                 lstDCM.append(os.path.join(dirName,filename))
                 fileOut.append(filename)
 
-    
+
     # sort the list
     lstDCM.sort()
     fileOut.sort()
-    
+
     # Preallocation information
-    
+
     # get the reference file from the first Dicom image
     hdr_list = [pydicom.read_file(h) for h in lstDCM]
-        
+
     return hdr_list, lstDCM, fileOut
 
 
@@ -274,7 +278,7 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
         for filename in file_list:
             if '.npy' in filename.lower() and len(npy_list) < max_data_sets:
                 npy_list.append(os.path.join(dir_name, filename))
-    
+
     # sort the list
     npy_list.sort()
 
@@ -317,19 +321,19 @@ def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
     out : list
         list containing all the np arrays
     '''
-        
+
     if npy_list is None:
         npy_list = get_npy_files(data_dir, max_data_sets=max_data_sets)
-    
+
     out = []
-    
+
     # loop through the npy list
-    
+
     for filename in npy_list:
         # transpose into format expected by Keras
         # [ns, nx, ny, 3]
         out.append(load_npy_file(filename))
-        
+
     return out
 
 def get_data_list(data_list_file, data_dir=None, file_ext=None):
