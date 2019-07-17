@@ -25,6 +25,7 @@ import random
 from warnings import warn
 import configargparse as argparse
 
+import h5py
 import numpy as np
 from scipy.ndimage import zoom
 from scipy.ndimage.interpolation import rotate
@@ -38,6 +39,7 @@ import subtle.subtle_generator as sugen
 import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
 import subtle.subtle_preprocess as supre
+import subtle.subtle_metrics as sumetrics
 
 from preprocess import preprocess_chain
 
@@ -216,6 +218,33 @@ if __name__ == '__main__':
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
     suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+
+    if args.stats_file:
+        print('running stats on inference...')
+        stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
+
+
+        x_zero = data[...,0].squeeze()
+        x_low = data[...,1].squeeze()
+        x_full = data[...,2].squeeze()
+        x_pred = Y_prediction.squeeze().astype(np.float32)
+
+        stats['low/nrmse'].append(sumetrics.nrmse(x_full, x_low))
+        stats['low/ssim'].append(sumetrics.ssim(x_full, x_low))
+        stats['low/psnr'].append(sumetrics.psnr(x_full, x_low))
+
+        stats['pred/nrmse'].append(sumetrics.nrmse(x_full, x_pred))
+        stats['pred/ssim'].append(sumetrics.ssim(x_full, x_pred))
+        stats['pred/psnr'].append(sumetrics.psnr(x_full, x_pred))
+
+        if args.verbose:
+            for key in stats.keys():
+                print('{}: {}'.format(key, stats[key]))
+
+        with h5py.File(args.stats_file, 'w') as f:
+            for key in stats.keys():
+                f.create_dataset(key, data=stats[key])
+
+
     toc = time.time()
     print('done predicting ({:.0f} sec)'.format(toc - tic))
-
