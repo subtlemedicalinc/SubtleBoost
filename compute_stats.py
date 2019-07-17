@@ -13,7 +13,7 @@ import subtle.subtle_io as suio
 import subtle.subtle_metrics as sumetrics
 
 usage_str = 'usage: %(prog)s [options]'
-description_str = 'plot ground truth vs prediction'
+description_str = 'compute performance stats from data'
 
 if __name__ == '__main__':
 
