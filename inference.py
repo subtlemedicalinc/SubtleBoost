@@ -131,8 +131,10 @@ if __name__ == '__main__':
 
     Y_predictions = np.zeros((ns, nx, ny, len(slice_axes), args.num_rotations))
 
-    if args.num_rotations > 1:
+    if args.inference_mpr and args.num_rotations > 1:
         angles = np.linspace(0, 90, args.num_rotations, endpoint=False)
+    else:
+        angles = [0]
 
     for rr, angle in enumerate(angles):
         if args.num_rotations > 1 and angle > 0:
@@ -179,7 +181,7 @@ if __name__ == '__main__':
 
                 Y_predictions[..., ii, rr] = _Y_prediction[..., 0]
 
-    if args.verbose:
+    if args.verbose and args.inference_mpr:
         print('averaging each plane')
 
     if 'mean' in args.inference_mpr_avg:
