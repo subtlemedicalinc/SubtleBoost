@@ -1,4 +1,4 @@
-export GPU=1
+export GPU=2
 export DATA_DIR=/raid/jon/data_full_tiantan/data
 export DATA_LIST=data_lists/data_train_tiantan_20190711.txt
 export MAX_DATA_SETS=100
