@@ -27,8 +27,10 @@ if __name__ == '__main__':
             for key in stats.keys():
                 val = np.array(F[key])[0]
                 stats[key].append(val)
-                print('{:>10}: {:10.5f}'.format(key, val))
-        print()
+                if args.all_output:
+                    print('{:>10}: {:10.5f}'.format(key, val))
+        if args.all_output:
+            print()
 
     print('{:>10}\t{:>10}\t{:>10}'.format('STAT', 'MEAN', 'STDEV'))
 
