@@ -36,6 +36,7 @@ def set_keras_memory(limit=0.9):
     from keras.backend.tensorflow_backend import set_session
     config = tf_ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = limit
+    config.gpu_options.allow_growth = True
     set_session(tf_Session(config=config))
 
 def make_image(im):
