@@ -26,72 +26,17 @@ import SimpleITK as sitk
 
 import subtle.subtle_preprocess as sup
 import subtle.subtle_io as suio
+import subtle.subtle_args as sargs
 
-import argparse
+# FIXME: add time stamps, logging
 
 def fetch_args():
     usage_str = 'usage: %(prog)s [options]'
     description_str = 'pre-process data for SubtleGad project'
 
-    # FIXME: add time stamps, logging
-    parser = argparse.ArgumentParser(
-        usage=usage_str, description=description_str,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-
-    parser.add_argument('--path_zero', action='store', dest='path_zero',
-                        type=str, help='path to zero dose dicom dir',
-                        default=None)
-    parser.add_argument('--path_low', action='store', dest='path_low',
-                        type=str, help='path to low dose dicom dir',
-                        default=None)
-    parser.add_argument('--path_full', action='store', dest='path_full',
-                        type=str, help='path to full dose dicom dir',
-                        default=None)
-    parser.add_argument('--path_base', action='store', dest='path_base',
-                        type=str, help='path to base dicom directory containing subdirs', default=None)
+    parser = sargs.parser(usage_str, description_str)
     parser.add_argument('--output', action='store', dest='out_file', type=str,
                         help='output to npy file', default='out.npy')
-    parser.add_argument('--verbose', action='store_true', dest='verbose',
-                        help='verbose')
-    parser.add_argument('--discard_start_percent', action='store', type=float,
-                        dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
-    parser.add_argument('--discard_end_percent', action='store', type=float,
-                        dest='discard_end_percent', help='throw away end X %% of slices', default=0.)
-    parser.add_argument('--mask_threshold', action='store', type=float,
-                        dest='mask_threshold', help='cutoff threshold for mask', default=.08)
-    parser.add_argument('--transform_type', action='store', type=str,
-                        dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
-    parser.add_argument('--normalize', action='store_true', dest='normalize',
-                        help="global scaling", default=False)
-    parser.add_argument('--scale_matching', action='store_true',
-                        dest='scale_matching', help="match scaling of each image to each other", default=False)
-    parser.add_argument('--joint_normalize', action='store_true',
-                        dest='joint_normalize', help="use same global scaling for all images", default=False)
-    parser.add_argument('--global_scale_ref_im0', action='store_true',
-                        dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
-    parser.add_argument('--normalize_fun', action='store',
-                        dest='normalize_fun', type=str, help='normalization fun', default='mean')
-    parser.add_argument('--skip_registration', action='store_true',
-                        dest='skip_registration', help='skip co-registration',
-                        default=False)
-    parser.add_argument('--skip_mask', action='store_true', dest='skip_mask',
-                        help='skip mask', default=False)
-    parser.add_argument('--skip_scale_im', action='store_true',
-                        dest='skip_scale_im', help='skip histogram matching',
-                        default=False)
-    parser.add_argument('--override_dicom_naming', action='store_true',
-                        dest='override', help='dont check dicom names',
-                        default=False)
-    parser.add_argument('--scale_dicom_tags', action='store_true',
-                        dest='scale_dicom_tags', help='use dicom tags for relative scaling', default=False)
-    parser.add_argument('--zoom', action='store', dest='zoom', type=int,
-                        help='zoom to in-plane matrix size', default=None)
-    parser.add_argument('--zoom_order', action='store', dest='zoom_order',
-                        type=int, help='zoom order', default=3)
-    parser.add_argument('--nslices', action='store', dest='nslices', type=int,
-                        help='number of slices for scaling', default=20)
-
     args = parser.parse_args()
     return args
 
