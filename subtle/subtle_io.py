@@ -29,6 +29,7 @@ except:
     pass
 
 import subtle.subtle_preprocess as sup
+import copy
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
@@ -381,25 +382,27 @@ def save_data_npy(output_file, data):
         return -1
 
 def save_data_h5(output_file, data, h5_key='data', compress=False, metadata=None):
-    try:
-        with h5py.File(output_file, 'w') as f:
-            if compress:
-                f.create_dataset(h5_key, data=data, compression='gzip')
+    with h5py.File(output_file, 'w') as f:
+        if compress:
+            f.create_dataset(h5_key, data=data, compression='gzip')
 
-                if metadata:
-                    for key in metadata.keys():
-                        _h5_key = 'metadata/{}'.format(key)
-                        f.create_dataset(_h5_key, data=metadata[key], compression='gzip')
-            else:
-                f.create_dataset(h5_key, data=data)
-                if metadata:
-                    for key in metadata.keys():
-                        _h5_key = 'metadata/{}'.format(key)
+            if metadata:
+                for key in metadata.keys():
+                    _h5_key = 'metadata/{}'.format(key)
+                    f.create_dataset(_h5_key, data=metadata[key], compression='gzip')
+        else:
+            f.create_dataset(h5_key, data=data)
+            if metadata:
+                for key in list(metadata.keys()):
+                    _h5_key = 'metadata/{}'.format(key)
+                    try:
                         f.create_dataset(_h5_key, data=metadata[key])
-        return 0
-    except Exception as e:
-        warn(str(e))
-        return -1
+                    except Exception as e:
+                        warn(str(e))
+                        continue
+            f.close()
+
+    return 0
 
 
 def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': False}):
