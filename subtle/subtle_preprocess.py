@@ -207,7 +207,7 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
 
     key1 = 'scale_global'
     if key1 in  metadata.keys():
-        if metadata['global_scale_ref_im0']:
+        if 'global_scale_ref_im0' in metadata and metadata['global_scale_ref_im0']:
             sc = metadata[key1][0]
         else:
             sc = metadata[key1][0][0]

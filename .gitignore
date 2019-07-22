@@ -9,3 +9,4 @@ sync-up.sh
 tags
 *.swn
 *.ipynv
+.DS_Store
