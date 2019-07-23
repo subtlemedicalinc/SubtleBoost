@@ -154,7 +154,7 @@ if __name__ == '__main__':
                 prediction_generator = sugen.DataGenerator(data_list=[data_file],
                         batch_size=1,
                         shuffle=False,
-                        verbose=args.verbose, 
+                        verbose=args.verbose,
                         residual_mode=args.residual_mode,
                         slices_per_input=args.slices_per_input,
                         resize=args.resize,
@@ -243,6 +243,7 @@ if __name__ == '__main__':
             for key in stats.keys():
                 print('{}: {}'.format(key, stats[key]))
 
+        print('Saving stats to {}'.format(args.stats_file))
         with h5py.File(args.stats_file, 'w') as f:
             for key in stats.keys():
                 f.create_dataset(key, data=stats[key])

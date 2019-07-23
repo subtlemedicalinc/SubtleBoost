@@ -1,1 +1,21 @@
-DATA_RAW=/home/srivathsa/projects/studies/gad/tiantan DATA_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/data DATA_LIST=/home/srivathsa/projects/SubtleGad/data_lists/data_train_tiantan.txt DATA_LIST_TEST=/home/srivathsa/projects/SubtleGad/data_lists/data_test_tiantan.txt GPU=2 LEARN_RESIDUAL=0 SLICES_PER_INPUT=7 NUM_CHANNEL_FIRST=32 checkpoint_file=9e3c51_d51c00.checkpoint LOG_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/logs CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/checkpoints HIST_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/history TB_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/logs_tb ZOOM=0 DESCRIPTION=sri_test SERIES_NUM=999 PREDICT_DIR=/home/srivathsa/projects/studies/gad/tiantan  /home/srivathsa/projects/SubtleGad/scripts/inference.sh
+export DATA_RAW=/home/srivathsa/projects/studies/gad/tiantan
+export DATA_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/data
+export DATA_LIST=/home/srivathsa/projects/SubtleGad/data_lists/data_train_tiantan.txt
+export DATA_LIST_TEST=/home/srivathsa/projects/SubtleGad/data_lists/data_test_tiantan.txt
+export GPU=0
+export LEARN_RESIDUAL=0
+export SLICES_PER_INPUT=7
+export NUM_CHANNEL_FIRST=32
+export checkpoint_file=c43d13_ad82dc.checkpoint
+export LOG_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/logs
+export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/checkpoints
+export HIST_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/history
+export TB_DIR=/home/srivathsa/projects/studies/gad/tiantan_pp/train/logs_tb
+export ZOOM=0
+export DESCRIPTION=sri_test_mpr
+export SERIES_NUM=1002
+export PREDICT_DIR=/home/srivathsa/projects/studies/gad/tiantan
+export INFERENCE_MPR=1
+export INFERENCE_MPR_AVG=mean
+export RESIZE=240
+./scripts/inference.sh
