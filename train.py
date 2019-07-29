@@ -108,6 +108,10 @@ if __name__ == '__main__':
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
 
+    if args.resample_size is not None:
+        nx = args.resample_size
+        ny = args.resample_size
+
     m = sudnn.DeepEncoderDecoder2D(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
@@ -148,12 +152,12 @@ if __name__ == '__main__':
     callbacks.append(m.callback_checkpoint())
     callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
     if args.train_mpr and r > 0:
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 1', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=0, resize=args.resize))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 2', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=2, resize=args.resize))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 3', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=3, resize=args.resize))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 1', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=0, resize=args.resize, resample_size=args.resample_size))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 2', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=2, resize=args.resize, resample_size=args.resample_size))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 3', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=3, resize=args.resize, resample_size=args.resample_size))
     else:
         if r > 0:
-            callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize))
+            callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize, resample_size=args.resample_size))
     #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
@@ -161,96 +165,96 @@ if __name__ == '__main__':
         training_generator_0 = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
-                verbose=args.verbose, 
+                verbose=args.verbose,
                 residual_mode=args.residual_mode,
                 positive_only = args.positive_only,
                 slices_per_input=args.slices_per_input,
                 input_idx=args.input_idx,
                 output_idx=args.output_idx,
                 slice_axis=0,
-                resize=args.resize)
+                resize=args.resize, resample_size=args.resample_size)
         training_generator_2 = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
-                verbose=args.verbose, 
+                verbose=args.verbose,
                 residual_mode=args.residual_mode,
                 positive_only = args.positive_only,
                 slices_per_input=args.slices_per_input,
                 input_idx=args.input_idx,
                 output_idx=args.output_idx,
                 slice_axis=2,
-                resize=args.resize)
+                resize=args.resize, resample_size=args.resample_size)
         training_generator_3 = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
-                verbose=args.verbose, 
+                verbose=args.verbose,
                 residual_mode=args.residual_mode,
                 positive_only = args.positive_only,
                 slices_per_input=args.slices_per_input,
                 input_idx=args.input_idx,
                 output_idx=args.output_idx,
                 slice_axis=3,
-                resize=args.resize)
+                resize=args.resize, resample_size=args.resample_size)
     else:
         training_generator = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
-                verbose=args.verbose, 
+                verbose=args.verbose,
                 residual_mode=args.residual_mode,
                 positive_only = args.positive_only,
                 slices_per_input=args.slices_per_input,
                 input_idx=args.input_idx,
                 output_idx=args.output_idx,
                 slice_axis=args.slice_axis,
-                resize=args.resize)
+                resize=args.resize, resample_size=args.resample_size)
 
     if r > 0:
         if args.train_mpr:
             validation_generator_0 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
-                    verbose=args.verbose, 
+                    verbose=args.verbose,
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input,
                     input_idx=args.input_idx,
                     output_idx=args.output_idx,
                     slice_axis=0,
-                    resize=args.resize)
+                    resize=args.resize, resample_size=args.resample_size)
             validation_generator_2 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
-                    verbose=args.verbose, 
+                    verbose=args.verbose,
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input,
                     input_idx=args.input_idx,
                     output_idx=args.output_idx,
                     slice_axis=2,
-                    resize=args.resize)
+                    resize=args.resize, resample_size=args.resample_size)
             validation_generator_3 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
-                    verbose=args.verbose, 
+                    verbose=args.verbose,
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input,
                     input_idx=args.input_idx,
                     output_idx=args.output_idx,
                     slice_axis=3,
-                    resize=args.resize)
+                    resize=args.resize, resample_size=args.resample_size)
         else:
             validation_generator = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
-                    verbose=args.verbose, 
+                    verbose=args.verbose,
                     residual_mode=args.residual_mode,
                     positive_only = args.positive_only,
                     slices_per_input=args.slices_per_input,
                     input_idx=args.input_idx,
                     output_idx=args.output_idx,
                     slice_axis=args.slice_axis,
-                    resize=args.resize)
+                    resize=args.resize, resample_size=args.resample_size)
     else:
         validation_generator = None
         validation_generator_0 = None

@@ -15,6 +15,7 @@ import time
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
+import cv2
 
 try:
     sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
@@ -246,3 +247,16 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     #         #out[idx,...] = scale_im(im_gt[idx,...], out[idx,...], levels, points, mean_intensity)[...,None]
 
     return out
+
+def resample_slices(slices, resample_size=None):
+    if resample_size is None:
+        return slices
+
+    num_slices, num_cont, _, _ = slices.shape
+    slices_resample = np.zeros((num_slices, num_cont, resample_size, resample_size), dtype=slices.dtype)
+
+    for slice_num in range(num_slices):
+        for cont_num in range(num_cont):
+            slices_resample[slice_num, cont_num, ...] = cv2.resize(slices[slice_num, cont_num], dsize=(resample_size, resample_size), interpolation=cv2.INTER_CUBIC)
+
+    return slices_resample

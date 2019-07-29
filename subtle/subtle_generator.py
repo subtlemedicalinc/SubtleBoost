@@ -30,12 +30,13 @@ except:
     pass
 
 from subtle.subtle_io import *
+from subtle.subtle_preprocess import resample_slices
 
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None):
 
         'Initialization'
         self.data_list = data_list
@@ -48,6 +49,7 @@ class DataGenerator(keras.utils.Sequence):
         self.positive_only = positive_only
         self.slice_axis = slice_axis
         self.resize = resize
+        self.resample_size = resample_size
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis)
         self.slice_list_files = np.array(_slice_list_files)
@@ -133,8 +135,15 @@ class DataGenerator(keras.utils.Sequence):
             elif self.slice_axis == 3:
                 slices = np.transpose(slices, (3, 1, 0, 2))
 
-            if self.resize is not None and (self.resize > slices.shape[-1] or self.resize > slices.shape[-2]):
+            # if self.resize is not None and (self.resize > slices.shape[-1] or self.resize > slices.shape[-2]):
+            if self.resize is not None:
                 slices = sp.util.resize(slices, [slices.shape[0], slices.shape[1], self.resize, self.resize])
+
+            if self.resample_size is not None:
+                if self.verbose > 1:
+                    print('Resampling slices to matrix size', self.resample_size)
+                slices = resample_slices(slices, self.resample_size)
+
 
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
