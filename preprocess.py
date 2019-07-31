@@ -188,13 +188,19 @@ def register(args, ims, metadata):
     if not args.skip_registration:
         metadata['reg'] = 1
         metadata['transform_type'] = args.transform_type
-        ims[:,1,:,:], spars1_reg = sup.register_im(ims[:,0,:,:], ims[:,1,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
+        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
+
+        # clip negative values
+        ims[:, 1, :, :] = np.clip(ims[:, 1, :, :], 0, ims[:, 1, :, :].max())
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
     if not args.skip_registration:
-        ims[:,2,:,:], spars2_reg = sup.register_im(ims[:,0,:,:], ims[:,2,:,:], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
+        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
+
+        # clip negative values
+        ims[:, 2, :, :] = np.clip(ims[:, 2, :, :], 0, ims[:, 2, :, :].max())
 
         if args.verbose:
             print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
