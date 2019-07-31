@@ -45,7 +45,8 @@ INFERENCE_MPR=${INFERENCE_MPR:=0}
 INFERENCE_MPR_AVG=${INFERENCE_MPR_AVG:=0}
 RESIZE=${RESIZE:=0}
 STATS_FILE=${STATS_FILE:="dummy.h5"}
-
+RESAMPLE_SIZE=${RESAMPLE_SIZE:=0}
+NUM_ROTATIONS=${NUM_ROTATIONS:=2}
 
 if [[ ${SERIES_NUM} -eq "0" ]] ; then
 	series_num_str=" "
@@ -150,6 +151,13 @@ else
 
 fi
 
+if [[ ${RESAMPLE_SIZE} -eq "0" ]] ; then
+	resample_size=" "
+else
+	resample_size="--resample_size ${RESAMPLE_SIZE}"
+
+fi
+
 
 cmd="python train.py --data_dir ${DATA_DIR} --data_list ${DATA_LIST} --file_ext ${FILE_EXT} ${steps_per_epoch_str} ${val_steps_per_epoch_str} ${shuffle_str} ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${no_save_best_only_str} ${zoom_str} ${override_str} ${denoise_str} ${series_num_str} --description ${DESCRIPTION} --num_epochs ${NUM_EPOCHS} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --max_data_sets ${MAX_DATA_SETS} --batch_size ${BATCH_SIZE} --validation_split ${VAL_SPLIT} --learning_rate ${LEARNING_RATE} --slices_per_input ${SLICES_PER_INPUT} --random_seed ${RANDOM_SEED} --l1_lambda ${L1_LAMBDA} --ssim_lambda ${SSIM_LAMBDA} --num_channel_first ${NUM_CHANNEL_FIRST}"
 
@@ -160,5 +168,6 @@ log_file=${log_file:="log_inference_${commit}_${job_id}.out"}
 out_dir=${out_dir:="${PREDICT_DIR}/${commit}_${job_id}"}
 
 mkdir -p ${out_dir}
+mkdir -p ${LOG_DIR}/metrics/${DESCRIPTION}
 
-cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${zoom_str} ${override_str} ${denoise_str} ${series_num_str} --description ${DESCRIPTION} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} ${inference_mpr} ${inference_mpr_avg} --num_rotations 2 ${resize} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --stats_file ${LOG_DIR}/metrics/{}.h5 --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1
+cat ${DATA_LIST_TEST} | xargs -n1 -I{} python inference.py --data_preprocess ${DATA_DIR}/{}.${FILE_EXT} --path_base ${DATA_RAW}/{} --path_out ${out_dir}/{}/{}_SubtleGad ${batch_norm_str} ${learn_residual_str} ${positive_only_str} ${split_str} ${multiprocessing_str} ${zoom_str} ${override_str} ${denoise_str} ${series_num_str} --description ${DESCRIPTION} --num_workers ${NUM_WORKERS} --max_queue_size ${QUEUE_SIZE} --verbose --slices_per_input ${SLICES_PER_INPUT} --num_channel_first ${NUM_CHANNEL_FIRST} ${inference_mpr} ${inference_mpr_avg} --num_rotations ${NUM_ROTATIONS} ${resize} ${resample_size} --gpu ${GPU} --checkpoint ${CHECKPOINT_DIR}/${checkpoint_file} --log_dir ${TB_DIR} --stats_file ${LOG_DIR}/metrics/${DESCRIPTION}/{}.h5 --id ${job_id} > ${LOG_DIR}/${log_file} 2>&1

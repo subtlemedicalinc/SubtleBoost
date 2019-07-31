@@ -88,6 +88,12 @@ if __name__ == '__main__':
             print('Denoise mode')
         data[:,1,:,:] = data[:,0,:,:].copy()
 
+    original_data = np.copy(data)
+
+    if args.resample_size is not None:
+        print('Resampling data to {}'.format(args.resample_size))
+        data = supre.resample_slices(data, resample_size=args.resample_size)
+
     ns, _, nx, ny = data.shape
 
     sudnn.clear_keras_memory()
@@ -195,6 +201,7 @@ if __name__ == '__main__':
 
 
     data = data.transpose((0, 2, 3, 1))
+    original_data = original_data.transpose((0, 2, 3, 1))
 
     # if residual mode is on, we need to add the original contrast back in
     if args.residual_mode:
@@ -211,6 +218,11 @@ if __name__ == '__main__':
             tocz = time.time()
             print('unzoom done: {} s'.format(tocz-ticz))
 
+    if args.resample_size and original_data.shape[2] != args.resample_size:
+        Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
+        Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
+        Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
+
     if args.predict_dir:
         # save raw data
         data_file_base = os.path.basename(data_file)
@@ -226,9 +238,9 @@ if __name__ == '__main__':
         stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
 
 
-        x_zero = data[...,0].squeeze()
-        x_low = data[...,1].squeeze()
-        x_full = data[...,2].squeeze()
+        x_zero = original_data[...,0].squeeze()
+        x_low = original_data[...,1].squeeze()
+        x_full = original_data[...,2].squeeze()
         x_pred = Y_prediction.squeeze().astype(np.float32)
 
         stats['low/nrmse'].append(sumetrics.nrmse(x_full, x_low))
