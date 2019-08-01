@@ -95,6 +95,11 @@ def parser(usage_str, description_str):
     parser.add_argument('--checkpoint_slice_axis_3', action='store', dest='checkpoint_file_3', type=str, help='checkpoint file for MPR 3', default=None)
     parser.add_argument('--inference_mpr_avg', action='store', dest='inference_mpr_avg', type=str, help='type of MPR averaging', default='mean')
     parser.add_argument('--num_rotations', action='store', dest='num_rotations', type=int, help='number of rotations to average', default=1)
+    parser.add_argument('--fsl_mask', action='store_true', dest='fsl_mask',
+                        help='Extract brain using FSL BET', default=False)
+    parser.add_argument('--fsl_threshold', action='store', type=float,
+                        dest='fsl_threshold', help='Fraction parameter for FSL BET', default=0.5)
+    parser.add_argument('--fsl_area_threshold_cm2', action='store', type=float,
+                        dest='fsl_area_threshold_cm2', help='Reject slices which have extracted brain area (in cm2) lower than the threshold. If argument is not given, all slices will be included', default=None)
 
     return parser
-

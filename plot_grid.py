@@ -29,10 +29,11 @@ if __name__ == '__main__':
     parser.add_argument('--slice', action='store', dest='idx', type=int, help='show this slice (Default -- middle)', default=None)
     parser.add_argument('--input', action='store', dest='input', type=str, help='input npy file')
     parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
+    parser.add_argument('--h5_key', action='store', dest='h5_key', type=str, help='H5 key to get the images from, for plotting', default='data')
 
     args = parser.parse_args()
-    
-    data = suio.load_file(args.input)
+
+    data = suio.load_file(args.input, params={'h5_key': args.h5_key})
 
     if args.idx is None:
         args.idx = data.shape[0] // 2

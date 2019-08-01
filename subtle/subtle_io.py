@@ -381,7 +381,7 @@ def save_data_npy(output_file, data):
     except:
         return -1
 
-def save_data_h5(output_file, data, h5_key='data', compress=False, metadata=None):
+def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=False, metadata=None):
     with h5py.File(output_file, 'w') as f:
         if compress:
             f.create_dataset(h5_key, data=data, compression='gzip')
@@ -392,6 +392,11 @@ def save_data_h5(output_file, data, h5_key='data', compress=False, metadata=None
                     f.create_dataset(_h5_key, data=metadata[key], compression='gzip')
         else:
             f.create_dataset(h5_key, data=data)
+
+            if data_mask is not None:
+                print('writing data mask')
+                f.create_dataset('data_mask', data=data_mask)
+
             if metadata:
                 for key in list(metadata.keys()):
                     _h5_key = 'metadata/{}'.format(key)

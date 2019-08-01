@@ -16,6 +16,11 @@ import time
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 import cv2
+from dicom2nifti.convert_dicom import dicom_series_to_nifti
+import nibabel as nib
+import pydicom
+from skimage.measure import regionprops
+from glob import glob
 
 try:
     sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
@@ -260,3 +265,30 @@ def resample_slices(slices, resample_size=None):
             slices_resample[slice_num, cont_num, ...] = cv2.resize(slices[slice_num, cont_num], dsize=(resample_size, resample_size), interpolation=cv2.INTER_CUBIC)
 
     return slices_resample
+
+def dcm2nii(dcmdir, out_dir):
+    out_file = '{}/{}_bet.nii'.format(out_dir, dcmdir.split('/')[-1])
+    dicom_series_to_nifti(dcmdir, out_file, reorient_nifti=False)
+    return out_file
+
+def nii2npy(fpath_nii, transpose=True):
+    nii_img = nib.load(fpath_nii)
+    img = nii_img.get_fdata()
+
+    if transpose:
+        img = np.transpose(img, (2, 1, 0))
+
+    return img
+
+def get_brain_area_cm2(dirpath_series, mask):
+    fpath_dcm = [fpath for fpath in glob('{}/**/*.dcm'.format(dirpath_series), recursive=True)][0]
+    dcm_meta = pydicom.dcmread(fpath_dcm)
+    spacing_x, spacing_y = np.array(dcm_meta.PixelSpacing, dtype=np.float32)
+    binary_mask = np.copy(mask).astype(np.int8)
+
+    props = regionprops(binary_mask)
+    if not props:
+        return 0.0
+
+    area_cm2 = (props[0].area * spacing_x * spacing_y) / 1e3
+    return area_cm2

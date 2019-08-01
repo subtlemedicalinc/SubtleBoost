@@ -15,11 +15,13 @@ import sys
 
 import numpy as np
 import os
+import tempfile
 
 import datetime
 import time
 
 from scipy.ndimage import zoom
+from nipype.interfaces import fsl
 
 sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
@@ -37,6 +39,7 @@ def fetch_args():
     parser = sargs.parser(usage_str, description_str)
     parser.add_argument('--output', action='store', dest='out_file', type=str,
                         help='output to npy file', default='out.npy')
+
     args = parser.parse_args()
     return args
 
@@ -353,10 +356,56 @@ def global_norm(args, ims, ims_mod, metadata):
 
     return ims, metadata
 
+def _mask_nii(fpath_nii, outdir, fsl_threshold):
+    bet_out_name = '{}_bet'.format(fpath_nii.split('/')[-1].replace('.nii', ''))
+    bet_outfile = '{}/{}.nii'.format(outdir, bet_out_name)
+
+    bet_node = fsl.BET(frac=fsl_threshold, reduce_bias=False, mask=True)
+
+    bet_node.inputs.in_file = fpath_nii
+    bet_node.inputs.out_file = bet_outfile
+
+    bet_node.run()
+
+    mask = sup.nii2npy('{}/{}_mask.nii'.format(outdir, bet_out_name))
+
+    return mask
+
+def fsl_brain_mask(args):
+    mask = None
+
+    if args.fsl_mask:
+        print('Extracting brain regions using FSL...')
+        with tempfile.TemporaryDirectory() as tmp:
+            out_file = sup.dcm2nii(args.path_zero, tmp)
+            mask = _mask_nii(out_file, tmp, args.fsl_threshold)
+
+    return mask
+
+def apply_fsl_mask(args, ims, fsl_mask):
+    ims_mask = None
+    if args.fsl_mask:
+        print('Applying computed FSL mask on images')
+        ims_mask = np.zeros_like(ims)
+        for cont in range(ims.shape[1]):
+            ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
+
+    if args.fsl_area_threshold_cm2 is not None:
+        print('Removing slices where brain area is less than {}cm2'.format(args.fsl_area_threshold_cm2))
+        mask_areas = np.array([sup.get_brain_area_cm2(args.path_zero, mask_slice) for mask_slice in fsl_mask])
+
+        ims_mask = ims_mask[mask_areas >= args.fsl_area_threshold_cm2]
+
+        print('{} of {} slices retained'.format(ims_mask.shape[0], ims.shape[0]))
+
+    return ims_mask
+
+
 def preprocess_chain(args):
     metadata = {}
 
     ims, hdr, metadata = get_images(args, metadata)
+    fsl_mask = fsl_brain_mask(args)
 
     ims, mask, metadata = mask_images(args, ims, metadata)
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
@@ -368,9 +417,10 @@ def preprocess_chain(args):
     ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
-    return ims, metadata
+    ims_mask = apply_fsl_mask(args, ims, fsl_mask)
+    return ims, ims_mask, metadata
 
 if __name__ == '__main__':
     args = fetch_args()
-    ims, metadata = preprocess_chain(args)
-    suio.save_data_h5(args.out_file, data=ims, h5_key='data', metadata=metadata)
+    ims, ims_mask, metadata = preprocess_chain(args)
+    suio.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
