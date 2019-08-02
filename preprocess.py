@@ -19,6 +19,7 @@ import tempfile
 
 import datetime
 import time
+import pydicom
 
 from scipy.ndimage import zoom
 from nipype.interfaces import fsl
@@ -30,7 +31,9 @@ import subtle.subtle_preprocess as sup
 import subtle.subtle_io as suio
 import subtle.subtle_args as sargs
 
-# FIXME: add time stamps, logging
+
+from glob import glob
+from scipy.ndimage.interpolation import zoom
 
 def fetch_args():
     usage_str = 'usage: %(prog)s [options]'
@@ -140,7 +143,7 @@ def mask_images(args, ims, metadata):
 def dicom_scaling(args, ims, hdr, metadata):
     hdr_zero, hdr_low, hdr_full = hdr
 
-    if args.scale_dicom_tags:
+    if args.scale_dicom_tags and 'RescaleSlope' in hdr_zero:
         if args.verbose:
             print('using dicom tags for scaling')
         rs0 = float(hdr_zero.RescaleSlope)
@@ -400,6 +403,48 @@ def apply_fsl_mask(args, ims, fsl_mask):
 
     return ims_mask
 
+def resample_isotropic(args, ims, metadata):
+    if args.resample_isotropic:
+        print('Resampling images to 1mm isotropic...')
+        print('Current image shapes...', ims[:, 0, ...].shape)
+        new_spacing = [1., 1., 1.]
+
+        fpath_dicom = [fpath for fpath in glob('{}/**/*.dcm'.format(args.path_zero), recursive=True)][0]
+
+        dicom = pydicom.dcmread(fpath_dicom)
+        spacing = np.array([
+            float(dicom.SliceThickness),
+            float(dicom.PixelSpacing[0]),
+            float(dicom.PixelSpacing[1])
+        ])
+
+        resize_factor = spacing / new_spacing
+
+        ims_zero, ims_low, ims_full = np.transpose(np.copy(ims), (1, 0, 2, 3))
+
+        new_shape = np.round(ims_zero.shape * resize_factor)
+        real_resize_factor = new_shape / ims_zero.shape
+        new_spacing = spacing / real_resize_factor
+
+        print('New spacing...', new_spacing)
+
+        print('Resampling zero dose...')
+        ims_zero = zoom(ims_zero, real_resize_factor)
+
+        print('Resampling low dose...')
+        ims_low = zoom(ims_low, real_resize_factor)
+
+        print('Resampling full dose...')
+        ims_full = zoom(ims_full, real_resize_factor)
+
+        print('New image shape', ims_zero.shape)
+
+        return np.transpose(
+            np.array([ims_zero, ims_low, ims_full]),
+            (1, 0, 2, 3)
+        )
+
+    return ims
 
 def preprocess_chain(args):
     metadata = {}
@@ -418,6 +463,9 @@ def preprocess_chain(args):
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
     ims_mask = apply_fsl_mask(args, ims, fsl_mask)
+
+    ims = resample_isotropic(args, ims, metadata)
+
     return ims, ims_mask, metadata
 
 if __name__ == '__main__':
