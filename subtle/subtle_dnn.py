@@ -57,7 +57,7 @@ def make_image(im):
                          encoded_image_string=image_string)
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -82,6 +82,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.resize = resize
         self.slice_axis = slice_axis
         self.resample_size = resample_size
+        self.brain_only = brain_only
 
         self._init_generator()
 
@@ -99,7 +100,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     predict=False,
                     resize=self.resize,
                     resample_size=self.resample_size,
-                    slice_axis=self.slice_axis)
+                    slice_axis=self.slice_axis,
+                    brain_only=self.brain_only)
 
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()
@@ -203,7 +205,7 @@ class DeepEncoderDecoder2D:
         else:
             return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
 
-    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None):
+    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -228,7 +230,8 @@ class DeepEncoderDecoder2D:
                 output_idx=output_idx,
                 slice_axis=slice_axis,
                 resize=resize,
-                resample_size=resample_size)
+                resample_size=resample_size,
+                brain_only=brain_only)
 
     def load_weights(self, filename=None):
         if filename is not None:

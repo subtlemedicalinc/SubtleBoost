@@ -36,7 +36,7 @@ from subtle.subtle_preprocess import resample_slices
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None):
 
         'Initialization'
         self.data_list = data_list
@@ -50,12 +50,21 @@ class DataGenerator(keras.utils.Sequence):
         self.slice_axis = slice_axis
         self.resize = resize
         self.resample_size = resample_size
+        self.brain_only = brain_only
+        self.h5_key = 'data_mask' if self.brain_only else 'data'
 
-        _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis)
+        _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
         self.slice_list_files = np.array(_slice_list_files)
         self.slice_list_indexes = np.array(_slice_list_indexes)
 
-        self.slices_per_file_dict = {data_file: get_num_slices(data_file, axis=self.slice_axis) for data_file in self.data_list}
+        self.slices_per_file_dict = {
+            data_file: get_num_slices(
+                data_file,
+                axis=self.slice_axis,
+                params={'h5_key': self.h5_key}
+            )
+            for data_file in self.data_list
+        }
         self.num_slices = len(self.slice_list_files)
 
         self.input_idx = input_idx
@@ -124,7 +133,9 @@ class DataGenerator(keras.utils.Sequence):
             # FIXME: don't train on slices with very little brain signal. Can remove them by checking mask size relative to image size
 
             tic = time.time()
-            slices = load_slices(input_file=f, slices=idxs, dim=self.slice_axis) # [c, 3, ny, nz]
+
+            h5_key = 'data_mask' if self.brain_only else 'data'
+            slices = load_slices(input_file=f, slices=idxs, dim=self.slice_axis, params={'h5_key': h5_key}) # [c, 3, ny, nz]
 
             if self.slice_axis == 0:
                 pass
