@@ -11,3 +11,5 @@ tensorflow-tensorboard
 sigpy
 configargparse
 ipywidgets
+opencv-python
+dicom2nifti
