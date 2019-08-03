@@ -23,6 +23,8 @@ import pydicom
 
 from scipy.ndimage import zoom
 from nipype.interfaces import fsl
+fsl.FSLCommand.set_default_output_type('NIFTI')
+
 
 sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
@@ -368,8 +370,9 @@ def _mask_nii(fpath_nii, outdir, fsl_threshold):
     bet_node.inputs.in_file = fpath_nii
     bet_node.inputs.out_file = bet_outfile
 
-    bet_node.run()
+    res = bet_node.run()
 
+    # FIXME: use res.outputs.mask_file ?
     mask = sup.nii2npy('{}/{}_mask.nii'.format(outdir, bet_out_name))
 
     return mask
