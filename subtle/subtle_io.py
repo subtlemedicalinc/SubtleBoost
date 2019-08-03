@@ -404,6 +404,8 @@ def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=Fals
                         f.create_dataset(_h5_key, data=metadata[key])
                     except Exception as e:
                         warn(str(e))
+                        print(key)
+                        print(metadata[key])
                         continue
             f.close()
 
