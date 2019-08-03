@@ -267,7 +267,7 @@ def resample_slices(slices, resample_size=None):
     return slices_resample
 
 def dcm2nii(dcmdir, out_dir):
-    out_file = '{}/{}_bet.nii'.format(out_dir, dcmdir.split('/')[-1])
+    out_file = '{}/{}.nii'.format(out_dir, dcmdir.split('/')[-1])
     dicom_series_to_nifti(dcmdir, out_file, reorient_nifti=False)
     return out_file
 
