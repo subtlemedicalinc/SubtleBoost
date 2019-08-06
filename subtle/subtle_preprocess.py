@@ -197,8 +197,22 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     param_map_out = ef.GetTransformParameterMap()
 
     im_out = sitk.GetArrayFromImage(sim_out)
+    im_out = np.clip(im_out, 0, im_out.max())
 
     return im_out, param_map_out
+
+def apply_reg_transform(img, spacing, transform_params):
+    transform_filter = sitk.TransformixImageFilter()
+
+    simg = sitk.GetImageFromArray(img)
+    simg.SetSpacing(spacing)
+
+    params = transform_params[0]
+    params["ResampleInterpolator"] = ["FinalNearestNeighborInterpolator"]
+
+    simg_trans = sitk.Transformix(simg, transform_params[0])
+    simg_arr = sitk.GetArrayFromImage(simg_trans)
+    return simg_arr
 
 def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     ''' Applies the inverse of the scaling/normalization from preprocessing.
@@ -254,7 +268,7 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     return out
 
 def resample_slices(slices, resample_size=None):
-    if resample_size is None:
+    if resample_size is None or resample_size == slices.shape[2]:
         return slices
 
     num_slices, num_cont, _, _ = slices.shape
@@ -280,10 +294,8 @@ def nii2npy(fpath_nii, transpose=True):
 
     return img
 
-def get_brain_area_cm2(dirpath_series, mask):
-    fpath_dcm = [fpath for fpath in glob('{}/**/*.dcm'.format(dirpath_series), recursive=True)][0]
-    dcm_meta = pydicom.dcmread(fpath_dcm)
-    spacing_x, spacing_y = np.array(dcm_meta.PixelSpacing, dtype=np.float32)
+def get_brain_area_cm2(mask, spacing=[1., 1., 1.]):
+    spacing_x, spacing_y = np.array(spacing[1:], dtype=np.float32)
     binary_mask = np.copy(mask).astype(np.int8)
 
     props = regionprops(binary_mask)

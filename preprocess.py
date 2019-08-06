@@ -35,7 +35,7 @@ import subtle.subtle_args as sargs
 
 
 from glob import glob
-from scipy.ndimage.interpolation import zoom
+from scipy.ndimage.interpolation import zoom as zoom_interp
 
 def fetch_args():
     usage_str = 'usage: %(prog)s [options]'
@@ -137,6 +137,10 @@ def mask_images(args, ims, metadata):
         metadata['mask'] = 1
         metadata['mask_threshold'] = args.mask_threshold
         ims *= mask
+        metadata['lambda'].append({
+            'name': 'mask_images',
+            'fn': lambda images: images * sup.mask_im(images, threshold=args.mask_threshold)
+        })
     else:
         metadata['mask'] = 0
 
@@ -169,9 +173,19 @@ def dicom_scaling(args, ims, hdr, metadata):
             print(ri0, ri1, ri2)
             print(ss0, ss1, ss2)
 
-        ims[:,0,:,:] = sup.scale_slope_intercept(ims[:,0,:,:], rs0, ri0, ss0)
-        ims[:,1,:,:] = sup.scale_slope_intercept(ims[:,1,:,:], rs1, ri1, ss1)
-        ims[:,2,:,:] = sup.scale_slope_intercept(ims[:,2,:,:], rs2, ri2, ss2)
+        rs = [rs0, rs1, rs2]
+        ri = [ri0, ri1, ri2]
+        ss = [ss0, ss1, ss2]
+
+        ssi = lambda idx: (lambda images: sup.scale_slope_intercept(images[:,idx,:,:], rs[idx], ri[idx], ss[idx]))
+
+        for cont in np.arange(3):
+            ims[:, cont, :, :] = ssi(cont)(ims)
+
+        metadata['lambda'].append({
+            'name': 'dicom_scaling',
+            'fn': [ssi(idx) for idx in np.arange(3)]
+        })
 
     return ims, metadata
 
@@ -183,8 +197,17 @@ def hist_norm(args, ims, metadata):
         points=50
         mean_intensity=True
 
-        ims[:,1,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,1,:,:], levels, points, mean_intensity)
-        ims[:,2,:,:] = sup.scale_im(ims[:,0,:,:], ims[:,2,:,], levels, points, mean_intensity)
+        hnorm = lambda idx: (lambda images: sup.scale_im(images[:, 0, :, :], images[:, idx, :, :], levels, points, mean_intensity))
+
+        eye = lambda images: images[:, 0, :, :]
+
+        ims[:,1,:,:] = hnorm(1)(ims)
+        ims[:,2,:,:] = hnorm(2)(ims)
+
+        metadata['lambda'].append({
+            'name': 'hist_norm',
+            'fn': [eye, hnorm(1), hnorm(2)]
+        })
     else:
         metadata['hist_norm'] = 0
 
@@ -198,17 +221,22 @@ def register(args, ims, metadata):
         metadata['transform_type'] = args.transform_type
         ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
 
-        # clip negative values
-        ims[:, 1, :, :] = np.clip(ims[:, 1, :, :], 0, ims[:, 1, :, :].max())
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
-    if not args.skip_registration:
         ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
 
-        # clip negative values
-        ims[:, 2, :, :] = np.clip(ims[:, 2, :, :], 0, ims[:, 2, :, :].max())
+        reg_params = [spars1_reg, spars2_reg]
+
+        reg_transform = lambda idx: (lambda images: sup.apply_reg_transform(images[:, idx, :, :], metadata['pixel_spacing_zero'], reg_params[idx]))
+
+        eye = lambda images: images[:, 0, :, :]
+
+        metadata['lambda'].append({
+            'name': 'register',
+            'fn': [eye, reg_transform(0), reg_transform(1)]
+        })
 
         if args.verbose:
             print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
@@ -220,30 +248,26 @@ def register(args, ims, metadata):
 def zoom_process(args, ims, metadata):
     if args.zoom:
         ims_shape = ims.shape
-        if args.verbose:
-            print('zooming to {}'.format(args.zoom))
-        if args.verbose:
-            ticz = time.time()
-            print('zoom 0')
+        print('Zoom processing...')
+
         ims_zoom_0 = zoom(ims[:,0,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims.shape[3]), order=args.zoom_order)
-        if args.verbose:
-            tocz = time.time()
-            print('zoom 0 done: {} s'.format(tocz-ticz))
-            ticz = time.time()
-            print('zoom 1')
+
         ims_zoom_1 = zoom(ims[:,1,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims_shape[3]), order=args.zoom_order)
-        if args.verbose:
-            tocz = time.time()
-            print('zoom 1 done: {} s'.format(tocz-ticz))
-            ticz = time.time()
-            print('zoom 2')
+
         ims_zoom_2 = zoom(ims[:,2,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/ims_shape[3]), order=args.zoom_order)
-        if args.verbose:
-            tocz = time.time()
-            print('zoom 2 done: {} s'.format(tocz-ticz))
-        ims = np.concatenate((ims_zoom_0[:,None,...], ims_zoom_1[:,None,...], ims_zoom_2[:,None,...]), axis=1)
+
+        imzoom = lambda idx: (lambda images: zoom(images[:,idx,:,:].squeeze(), zoom=(1., args.zoom/ims_shape[2], args.zoom/images.shape[3]), order=args.zoom_order))
+
+        ims = np.concatenate((imzoom(0)(ims), imzoom(1)(ims), imzoom(2)(ims)), axis=1)
+
+        metadata['lambda'].append({
+            'name': 'zoom_process',
+            'fn': [imzoom(idx) for idx in np.arange(3)]
+        })
+
         if args.verbose:
             print(ims.shape)
+
         ns, nc, nx, ny = ims.shape
         metadata['zoom_dims'] = ims_shape
         metadata['zoom'] = args.zoom
@@ -299,11 +323,21 @@ def match_scales(args, ims, ims_mod, metadata):
             print('scale full:', scale_full)
             print('done scaling data ({:.2f} s)'.format(ntoc - ntic))
 
-        ims[:,1,:,:] = ims[:,1,:,:] * scale_low
-        ims[:,2,:,:] = ims[:,2,:,:] * scale_full
+        scales = [1, scale_low, scale_full]
+
+        imscale = lambda idx: (lambda images: images[:, idx, :, :] * scales[idx])
+
+        ims[:,0,:,:] = imscale(0)(ims)
+        ims[:,1,:,:] = imscale(1)(ims)
+        ims[:,2,:,:] = imscale(2)(ims)
 
         ims_mod[:,1] = ims_mod[:,1] * scale_low
         ims_mod[:,2] = ims_mod[:,2] * scale_full
+
+        metadata['lambda'].append({
+            'name': 'match_scales',
+            'fn': [imscale(idx) for idx in np.arange(3)]
+        })
 
         if args.verbose:
             print('intensity after scaling:')
@@ -349,8 +383,16 @@ def global_norm(args, ims, ims_mod, metadata):
 
         if args.global_scale_ref_im0:
             ims = ims / scale_global[:,None,None,None]
+            metadata['lambda'].append({
+                'name': 'global_norm',
+                'fn': lambda images: images / scale_global[:, None, None, None]
+            })
         else:
             ims = ims / scale_global[:,:,None,None]
+            metadata['lambda'].append({
+                'name': 'global_norm',
+                'fn': lambda images: images / scale_global[:, :, None, None]
+            })
         ims_mod = ims_mod / scale_global
 
         if args.verbose:
@@ -389,22 +431,27 @@ def fsl_brain_mask(args):
     return mask
 
 def apply_fsl_mask(args, ims, fsl_mask):
-    ims_mask = None
+    ims_mask = np.copy(ims)
+
     if args.fsl_mask:
         print('Applying computed FSL mask on images')
         ims_mask = np.zeros_like(ims)
         for cont in range(ims.shape[1]):
             ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
 
+    return ims_mask
+
+def fsl_reject_slices(args, ims, fsl_mask, metadata):
     if args.fsl_area_threshold_cm2 is not None:
         print('Removing slices where brain area is less than {}cm2'.format(args.fsl_area_threshold_cm2))
-        mask_areas = np.array([sup.get_brain_area_cm2(args.path_zero, mask_slice) for mask_slice in fsl_mask])
+        mask_areas = np.array([sup.get_brain_area_cm2(mask_slice, metadata['new_spacing']) for mask_slice in fsl_mask])
 
-        ims_mask = ims_mask[mask_areas >= args.fsl_area_threshold_cm2]
+        good_slice_idx = (mask_areas >= args.fsl_area_threshold_cm2)
 
-        print('{} of {} slices retained'.format(ims_mask.shape[0], ims.shape[0]))
+        ims = ims[good_slice_idx]
+        print('{} slices retained'.format(ims.shape[0]))
 
-    return ims_mask
+    return ims
 
 def resample_isotropic(args, ims, metadata):
     if args.resample_isotropic:
@@ -429,16 +476,18 @@ def resample_isotropic(args, ims, metadata):
         real_resize_factor = new_shape / ims_zero.shape
         new_spacing = spacing / real_resize_factor
 
+        metadata['new_spacing'] = new_spacing
+
         print('New spacing...', new_spacing)
 
         print('Resampling zero dose...')
-        ims_zero = zoom(ims_zero, real_resize_factor)
+        ims_zero = zoom_interp(ims_zero, real_resize_factor)
 
         print('Resampling low dose...')
-        ims_low = zoom(ims_low, real_resize_factor)
+        ims_low = zoom_interp(ims_low, real_resize_factor)
 
         print('Resampling full dose...')
-        ims_full = zoom(ims_full, real_resize_factor)
+        ims_full = zoom_interp(ims_full, real_resize_factor)
 
         print('New image shape', ims_zero.shape)
 
@@ -480,15 +529,19 @@ def apply_preprocess(unmasked_ims, metadata):
         else:
             continue
 
-
     del metadata['lambda']
     return unmasked_ims, metadata
 
 def preprocess_chain(args):
-    metadata = {}
+    metadata = {
+        'lambda': []
+    }
 
     ims, hdr, metadata = get_images(args, metadata)
+    unmasked_ims = np.copy(ims)
+
     fsl_mask = fsl_brain_mask(args)
+    ims = apply_fsl_mask(args, ims, fsl_mask)
 
     ims, mask, metadata = mask_images(args, ims, metadata)
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
@@ -500,11 +553,15 @@ def preprocess_chain(args):
     ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
-    ims_mask = apply_fsl_mask(args, ims, fsl_mask)
+    unmasked_ims, metadata = apply_preprocess(unmasked_ims, metadata)
 
     ims = resample_isotropic(args, ims, metadata)
+    unmasked_ims = resample_isotropic(args, unmasked_ims, metadata)
+    fsl_mask = reshape_fsl_mask(args, fsl_mask, metadata)
 
-    return ims, ims_mask, metadata
+    ims = fsl_reject_slices(args, ims, fsl_mask, metadata)
+
+    return unmasked_ims, ims, metadata
 
 if __name__ == '__main__':
     args = fetch_args()
