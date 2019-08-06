@@ -1,0 +1,23 @@
+export DATA_RAW=/home/srivathsa/projects/studies/gad/all/data
+export DATA_DIR=/home/srivathsa/projects/studies/gad/all/preprocess/data
+export DATA_LIST=/home/srivathsa/projects/SubtleGad/data_lists/data_train_super_model.txt
+export DATA_LIST_TEST=/home/srivathsa/projects/SubtleGad/data_lists/data_test_super_model.txt
+export GPU=0
+export LEARN_RESIDUAL=0
+export SLICES_PER_INPUT=5
+export NUM_CHANNEL_FIRST=32
+export checkpoint_file=all_mpr_fsl.checkpoint
+export LOG_DIR=/home/srivathsa/projects/studies/gad/all/inference
+export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/all/train/checkpoints
+export HIST_DIR=/home/srivathsa/projects/studies/gad/all/train/history
+export TB_DIR=/home/srivathsa/projects/studies/gad/all/train/tb
+export ZOOM=0
+export DESCRIPTION=all_mpr_5r_fsl
+export SERIES_NUM=1002
+export INFERENCE_MPR=1
+export INFERENCE_MPR_AVG=mean
+export RESAMPLE_SIZE=240
+export RESIZE=240
+export NUM_ROTATIONS=5
+export PREDICT_DIR=/home/srivathsa/projects/studies/gad/all/data
+/home/srivathsa/projects/SubtleGad/scripts/inference.sh
