@@ -391,6 +391,10 @@ def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=Fals
         h5_params['data'] = data
         f.create_dataset(h5_key, **h5_params)
 
+        if data_mask is not None:
+            h5_params['data'] = data_mask
+            f.create_dataset('data_mask', **h5_params)
+        
         if metadata:
             for key in metadata.keys():
                 _h5_key = 'metadata/{}'.format(key)

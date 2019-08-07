@@ -449,6 +449,41 @@ def resample_isotropic(args, ims, metadata):
 
     return ims
 
+def reshape_fsl_mask(args, fsl_mask, metadata):
+    fsl_reshape = np.copy(fsl_mask)
+
+    if args.fsl_mask and args.resample_isotropic:
+        print('reshaping fsl mask')
+        fsl_mask_ims = np.zeros((fsl_mask.shape[0], 3, fsl_mask.shape[1], fsl_mask.shape[2]))
+
+        fsl_mask_ims[:, 0, ...] = np.copy(fsl_mask)
+        fsl_mask_ims[:, 1, ...] = np.copy(fsl_mask)
+        fsl_mask_ims[:, 2, ...] = np.copy(fsl_mask)
+
+        fsl_reshape = resample_isotropic(args, fsl_mask_ims, metadata)[:, 0, ...]
+        fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
+    return fsl_reshape
+
+def apply_preprocess(unmasked_ims, metadata):
+    if not args.fsl_mask:
+        return unmasked_ims
+
+    print('Applying all preprocessing steps on unmasked images...')
+
+    for step in metadata['lambda']:
+        print('Applying {} on unmasked images...'.format(step['name']))
+        if callable(step['fn']):
+            unmasked_ims = step['fn'](unmasked_ims)
+        elif isinstance(step['fn'], list):
+            for idx, fn in enumerate(step['fn']):
+                unmasked_ims[:, idx, :, :] = fn(unmasked_ims)
+        else:
+            continue
+
+
+    del metadata['lambda']
+    return unmasked_ims, metadata
+
 def preprocess_chain(args):
     metadata = {}
 
