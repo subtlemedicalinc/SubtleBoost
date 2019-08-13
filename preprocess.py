@@ -424,6 +424,7 @@ def fsl_brain_mask(args):
 
     if args.fsl_mask:
         print('Extracting brain regions using FSL...')
+
         with tempfile.TemporaryDirectory() as tmp:
             out_file = sup.dcm2nii(args.path_zero, tmp)
             mask = _mask_nii(out_file, tmp, args.fsl_threshold)
@@ -432,9 +433,8 @@ def fsl_brain_mask(args):
 
 def apply_fsl_mask(args, ims, fsl_mask):
     ims_mask = np.copy(ims)
-
     if args.fsl_mask:
-        print('Applying computed FSL mask on images')
+        print('Applying computed FSL masks on images')
         ims_mask = np.zeros_like(ims)
         for cont in range(ims.shape[1]):
             ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
@@ -444,11 +444,15 @@ def apply_fsl_mask(args, ims, fsl_mask):
 def fsl_reject_slices(args, ims, fsl_mask, metadata):
     if args.fsl_area_threshold_cm2 is not None:
         print('Removing slices where brain area is less than {}cm2'.format(args.fsl_area_threshold_cm2))
-        mask_areas = np.array([sup.get_brain_area_cm2(mask_slice, metadata['new_spacing']) for mask_slice in fsl_mask])
+
+        dicom_spacing = metadata['new_spacing'] if 'new_spacing' in metadata else metadata['pixel_spacing_zero']
+
+        mask_areas = np.array([sup.get_brain_area_cm2(mask_slice, dicom_spacing) for mask_slice in fsl_mask])
 
         good_slice_idx = (mask_areas >= args.fsl_area_threshold_cm2)
 
         ims = ims[good_slice_idx]
+        metadata['good_slice_indices'] = good_slice_idx
         print('{} slices retained'.format(ims.shape[0]))
 
     return ims
@@ -513,9 +517,10 @@ def reshape_fsl_mask(args, fsl_mask, metadata):
         fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
     return fsl_reshape
 
-def apply_preprocess(unmasked_ims, metadata):
+def apply_preprocess(ims, unmasked_ims, metadata):
     if not args.fsl_mask:
-        return unmasked_ims
+        del metadata['lambda']
+        return ims, metadata
 
     print('Applying all preprocessing steps on unmasked images...')
 
@@ -540,20 +545,20 @@ def preprocess_chain(args):
     ims, hdr, metadata = get_images(args, metadata)
     unmasked_ims = np.copy(ims)
 
-    fsl_mask = fsl_brain_mask(args)
-    ims = apply_fsl_mask(args, ims, fsl_mask)
-
     ims, mask, metadata = mask_images(args, ims, metadata)
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
     ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = register(args, ims, metadata)
     ims, metadata = zoom_process(args, ims, metadata)
 
+    fsl_mask = fsl_brain_mask(args)
+    ims = apply_fsl_mask(args, ims, fsl_mask)
+
     ims, ims_mod, metadata = prescale_process(args, ims, mask, metadata)
     ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
-    unmasked_ims, metadata = apply_preprocess(unmasked_ims, metadata)
+    unmasked_ims, metadata = apply_preprocess(ims, unmasked_ims, metadata)
 
     ims = resample_isotropic(args, ims, metadata)
     unmasked_ims = resample_isotropic(args, unmasked_ims, metadata)
