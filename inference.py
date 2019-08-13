@@ -69,7 +69,10 @@ if __name__ == '__main__':
     if args.data_preprocess:
         if args.verbose:
             print('loading preprocessed data from', args.data_preprocess)
-        data = suio.load_file(args.data_preprocess)
+
+        data = suio.load_file(args.data_preprocess, params={'h5_key': 'data'})
+        data_mask = suio.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}) if suio.has_h5_key(args.data_preprocess, 'data_mask') else None
+
         metadata = suio.load_h5_metadata(args.data_preprocess)
         args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
     else:
@@ -79,7 +82,6 @@ if __name__ == '__main__':
         if args.verbose:
             print('done')
 
-
     # get ground-truth for testing (e.g. hist re-normalization)
     im_gt, hdr_gt = suio.dicom_files(args.path_full, normalize=False)
 
@@ -87,12 +89,15 @@ if __name__ == '__main__':
         if args.verbose:
             print('Denoise mode')
         data[:,1,:,:] = data[:,0,:,:].copy()
+        if data_mask is not None:
+            data_mask[:,1,:,:] = data_mask[:,0,:,:].copy()
 
     original_data = np.copy(data)
 
     if args.resample_size is not None:
         print('Resampling data to {}'.format(args.resample_size))
         data = supre.resample_slices(data, resample_size=args.resample_size)
+        data_mask = supre.resample_slices(data_mask, resample_size=args.resample_size)
 
     ns, _, nx, ny = data.shape
 
@@ -147,16 +152,33 @@ if __name__ == '__main__':
             if args.verbose:
                 print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
             data_rot = rotate(data, angle, reshape=False, axes=(0, 2))
+            if data_mask is not None:
+                data_mask_rot = rotate(data_mask, angle, reshape=False, axes=(0, 2))
+            else:
+                data_mask_rot = None
         else:
             data_rot = data
+            data_mask_rot = data_mask
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-
             data_file = '{}/data.h5'.format(tmpdirname)
-            suio.save_data_h5(data_file, data=data_rot, h5_key='data', metadata=metadata)
+            original_scale = (data_rot.min(), data_rot.max())
+
+            if args.match_scales_fsl:
+                print('match scales...')
+                print(original_scale)
+                data_rot = np.interp(data_rot, original_scale, (data_mask_rot.min(), data_mask_rot.max()))
+                print(data_rot.min(), data_rot.max())
+
+            params = {
+                'metadata': metadata,
+                'data': data_rot,
+                'data_mask': data_mask_rot,
+                'h5_key': 'data'
+            }
+            suio.save_data_h5(data_file, **params)
 
             for ii, slice_axis in enumerate(slice_axes):
-
                 prediction_generator = sugen.DataGenerator(data_list=[data_file],
                         batch_size=1,
                         shuffle=False,
@@ -164,12 +186,17 @@ if __name__ == '__main__':
                         residual_mode=args.residual_mode,
                         slices_per_input=args.slices_per_input,
                         resize=args.resize,
-                        slice_axis=slice_axis)
+                        slice_axis=slice_axis,
+                        brain_only=args.brain_only)
 
                 if checkpoint_files[ii]:
                     m.load_weights(checkpoint_files[ii])
 
                 _Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
+                # N, x, y, 1
+
+                if args.match_scales_fsl:
+                    _Y_prediction = np.interp(_Y_prediction, (_Y_prediction.min(), _Y_prediction.max()), original_scale)
 
                 if slice_axis == 0:
                     pass
@@ -184,7 +211,6 @@ if __name__ == '__main__':
                 if args.num_rotations > 1 and angle > 0:
                     _Y_prediction = rotate(_Y_prediction, -angle, reshape=False, axes=(0, 1))
 
-
                 Y_predictions[..., ii, rr] = _Y_prediction[..., 0]
 
     if args.verbose and args.inference_mpr:
@@ -198,7 +224,6 @@ if __name__ == '__main__':
         # FIXME need to apply median along non-zero values only. Something like this:
         #out = np.apply_along_axis(lambda v: np.median(v[np.nonzero(v)]), 0, x123)
         Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
-
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
@@ -231,6 +256,7 @@ if __name__ == '__main__':
         suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
+
     suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
     if args.stats_file:
