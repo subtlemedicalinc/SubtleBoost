@@ -57,7 +57,7 @@ def make_image(im):
                          encoded_image_string=image_string)
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -83,6 +83,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.slice_axis = slice_axis
         self.resample_size = resample_size
         self.brain_only = brain_only
+        self.brain_only_mode = brain_only_mode
 
         self._init_generator()
 
@@ -91,7 +92,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             self.generator =  sugen.DataGenerator(data_list=self.data_list,
                     batch_size=1,
                     shuffle=self.shuffle,
-                    verbose=self.verbose, 
+                    verbose=self.verbose,
                     residual_mode=self.residual_mode,
                     positive_only = self.positive_only,
                     slices_per_input=self.slices_per_input,
@@ -101,7 +102,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     resize=self.resize,
                     resample_size=self.resample_size,
                     slice_axis=self.slice_axis,
-                    brain_only=self.brain_only)
+                    brain_only=self.brain_only,
+                    brain_only_mode=self.brain_only_mode)
 
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()
@@ -110,12 +112,14 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             tag = '{}_{}'.format(self.tag, ii)
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
-            X, Y = self.generator.__getitem__(ii)
+
+            X, Y = self.generator.__getitem__(ii, enforce_raw_data=(ii >= 5))
             Y_prediction = self.model.predict_on_batch(X)
             #print(X.shape, Y.shape, Y_prediction.shape)
             # separate 2.5D and N
             X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
             h = self.slices_per_input // 2
+
             X_center = X[...,h,:] # [1, nx, ny, N]
             if self.gen_type == 'legacy' and self.residual_mode and len(self.input_idx) == 2:
                 Y_prediction = X_center[..., 0] + Y_prediction
@@ -135,7 +139,7 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
         super().__init__(**kwargs)
         self.log_every = log_every
         self.counter = 0
-    
+
     def on_batch_end(self, batch, logs=None):
         self.counter+=1
         if self.counter%self.log_every==0:
@@ -148,13 +152,13 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
                 summary_value.tag = name
                 self.writer.add_summary(summary, self.counter)
             self.writer.flush()
-        
+
         super().on_batch_end(batch, logs)
 
 # based on u-net and v-net
 class DeepEncoderDecoder2D:
     def __init__(self,
-            num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, 
+            num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128,
             num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
@@ -187,10 +191,10 @@ class DeepEncoderDecoder2D:
         #return self.model
 
     def callback_checkpoint(self, filename=None):
-        
+
         if filename is not None:
             self.checkpoint_file = filename
-        
+
         return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=self.save_best_only)
 
     def callback_tensorbaord(self, log_dir=None, log_every=None):
@@ -205,7 +209,7 @@ class DeepEncoderDecoder2D:
         else:
             return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
 
-    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None):
+    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -231,7 +235,8 @@ class DeepEncoderDecoder2D:
                 slice_axis=slice_axis,
                 resize=resize,
                 resample_size=resample_size,
-                brain_only=brain_only)
+                brain_only=brain_only,
+                brain_only_mode=brain_only_mode)
 
     def load_weights(self, filename=None):
         if filename is not None:
@@ -244,6 +249,7 @@ class DeepEncoderDecoder2D:
             warn(str(e))
 
     def _build_model(self):
+        print('build model', self.final_activation)
 
         # batch norm
         if self.batch_norm:
@@ -254,7 +260,7 @@ class DeepEncoderDecoder2D:
         # layers
         # 2D input is (rows, cols, channels)
 
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input))  
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input))
 
         if self.verbose:
             print(inputs)
@@ -265,7 +271,7 @@ class DeepEncoderDecoder2D:
         for i in range(self.num_conv_per_pooling):
 
             conv1 = Conv2D(filters=self.num_channel_first, kernel_size=(3, 3), padding="same", activation="relu")(conv1)
-            conv1 = lambda_bn(conv1)    
+            conv1 = lambda_bn(conv1)
 
         pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
@@ -287,7 +293,7 @@ class DeepEncoderDecoder2D:
             for j in range(self.num_conv_per_pooling):
 
                 conv_encoder = Conv2D(filters=num_channel, kernel_size=(3, 3), padding="same", activation="relu")(conv_encoder)
-                conv_encoder = lambda_bn(conv_encoder)    
+                conv_encoder = lambda_bn(conv_encoder)
 
             pool_encoder = MaxPooling2D(pool_size=(2, 2))(conv_encoder)
 
@@ -301,7 +307,7 @@ class DeepEncoderDecoder2D:
         # center connection
         conv_center = Conv2D(filters=list_num_features[-1], kernel_size=(3, 3), padding="same", activation="relu",
                 kernel_initializer='zeros',
-                bias_initializer='zeros')(pools[-1])     
+                bias_initializer='zeros')(pools[-1])
 
         # residual connection
         conv_center = keras_add([pools[-1], conv_center])
@@ -325,33 +331,33 @@ class DeepEncoderDecoder2D:
 
                 conv_decoder = Conv2D(filters=list_num_features[-i], kernel_size=(3, 3),
                         padding="same", activation="relu")(conv_decoder)
-                conv_decoder = lambda_bn(conv_decoder)     
+                conv_decoder = lambda_bn(conv_decoder)
 
             conv_decoders.append(conv_decoder)
 
             if self.verbose:
-                    print(conv_decoder, up_decoder)        
+                    print(conv_decoder, up_decoder)
 
         # output layer
 
         conv_decoder = conv_decoders[-1]
 
-        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(conv_decoder)    
+        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(conv_decoder)
 
         if self.verbose:
             print(conv_output)
-        
+
         # model
         model = keras.models.Model(inputs=inputs, outputs=conv_output)
 
         if self.verbose:
             print(model)
-        
+
         # fit
         if self.lr_init is not None:
             optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:
             optimizer = self.optimizer_fun()
         model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
-        
+
         self.model = model

@@ -1,4 +1,4 @@
-export GPU=2
+export GPU=0
 export DATA_DIR=/home/srivathsa/projects/studies/gad/stanford/preprocess/data
 export DATA_LIST=data_lists/data_train_stanford_sri.txt
 export LEARNING_RATE=.001
@@ -9,15 +9,17 @@ export QUEUE_SIZE=4
 export SLICES_PER_INPUT=5
 export SHUFFLE=1
 export FILE_EXT=h5
-export VAL_SPLIT=0.2
+export VAL_SPLIT=0.25
 export LOG_DIR=/home/srivathsa/projects/studies/gad/stanford/train/logs
 export TB_DIR=/home/srivathsa/projects/studies/gad/stanford/train/tb
 export HIST_DIR=/home/srivathsa/projects/studies/gad/stanford/train/history
 export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/stanford/train/checkpoints
+export CHECKPOINT_FILE=512mpr_fsl_wip.checkpoint
 export L1_LAMBDA=.8
 export SSIM_LAMBDA=.2
 export NO_SAVE_BEST_ONLY=1
 export TRAIN_MPR=1
 export RESIZE=512
 export BRAIN_ONLY=1
+export BRAIN_ONLY_MODE=pure
 ./scripts/train.sh

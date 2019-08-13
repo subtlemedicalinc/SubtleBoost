@@ -52,7 +52,7 @@ if __name__ == '__main__':
     print(parser.format_help())
     print("----------")
     print(parser.format_values())
-    
+
     assert args.data_list_file is not None, 'must specify data list'
 
 
@@ -112,6 +112,11 @@ if __name__ == '__main__':
         nx = args.resample_size
         ny = args.resample_size
 
+    if os.path.isfile(args.checkpoint_file):
+        print('Using existing checkpoint at {}'.format(args.checkpoint_file))
+    else:
+        print('Creating new checkpoint at {}'.format(args.checkpoint_file))
+    
     m = sudnn.DeepEncoderDecoder2D(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
@@ -153,14 +158,14 @@ if __name__ == '__main__':
     callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
     if args.train_mpr and r > 0:
         callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 1', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=0, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only))
+        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
         callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 2', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=2, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only))
+        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
         callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 3', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=3, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only))
+        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
     else:
         if r > 0:
-            callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only))
+            callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
     #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
 
@@ -177,7 +182,8 @@ if __name__ == '__main__':
                 slice_axis=0,
                 resize=args.resize,
                 resample_size=args.resample_size,
-                brain_only=args.brain_only)
+                brain_only=args.brain_only,
+                brain_only_mode=args.brain_only_mode)
         training_generator_2 = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
@@ -190,7 +196,8 @@ if __name__ == '__main__':
                 slice_axis=2,
                 resize=args.resize,
                 resample_size=args.resample_size,
-                brain_only=args.brain_only)
+                brain_only=args.brain_only,
+                brain_only_mode=args.brain_only_mode)
         training_generator_3 = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
                 shuffle=args.shuffle,
@@ -203,7 +210,8 @@ if __name__ == '__main__':
                 slice_axis=3,
                 resize=args.resize,
                 resample_size=args.resample_size,
-                brain_only=args.brain_only)
+                brain_only=args.brain_only,
+                brain_only_mode=args.brain_only_mode)
     else:
         training_generator = sugen.DataGenerator(data_list=data_train_list,
                 batch_size=args.batch_size,
@@ -217,7 +225,8 @@ if __name__ == '__main__':
                 slice_axis=args.slice_axis,
                 resize=args.resize,
                 resample_size=args.resample_size,
-                brain_only=args.brain_only)
+                brain_only=args.brain_only,
+                brain_only_mode=args.brain_only_mode)
 
     if r > 0:
         if args.train_mpr:
@@ -233,7 +242,8 @@ if __name__ == '__main__':
                     slice_axis=0,
                     resize=args.resize,
                     resample_size=args.resample_size,
-                    brain_only=args.brain_only)
+                    brain_only=args.brain_only,
+                    brain_only_mode=args.brain_only_mode)
             validation_generator_2 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
@@ -246,7 +256,8 @@ if __name__ == '__main__':
                     slice_axis=2,
                     resize=args.resize,
                     resample_size=args.resample_size,
-                    brain_only=args.brain_only)
+                    brain_only=args.brain_only,
+                    brain_only_mode=args.brain_only_mode)
             validation_generator_3 = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
                     shuffle=False,
@@ -259,7 +270,8 @@ if __name__ == '__main__':
                     slice_axis=3,
                     resize=args.resize,
                     resample_size=args.resample_size,
-                    brain_only=args.brain_only)
+                    brain_only=args.brain_only,
+                    brain_only_mode=args.brain_only_mode)
         else:
             validation_generator = sugen.DataGenerator(data_list=data_val_list,
                     batch_size=args.batch_size,
@@ -273,7 +285,8 @@ if __name__ == '__main__':
                     slice_axis=args.slice_axis,
                     resize=args.resize,
                     resample_size=args.resample_size,
-                    brain_only=args.brain_only)
+                    brain_only=args.brain_only,
+                    brain_only_mode=args.brain_only_mode)
     else:
         validation_generator = None
         validation_generator_0 = None

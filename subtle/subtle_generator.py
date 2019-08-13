@@ -36,7 +36,7 @@ from subtle.subtle_preprocess import resample_slices
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
 
         'Initialization'
         self.data_list = data_list
@@ -51,6 +51,7 @@ class DataGenerator(keras.utils.Sequence):
         self.resize = resize
         self.resample_size = resample_size
         self.brain_only = brain_only
+        self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
@@ -76,7 +77,7 @@ class DataGenerator(keras.utils.Sequence):
         'Denotes the number of batches per epoch'
         return int(np.floor(self.num_slices / self.batch_size))
 
-    def __getitem__(self, index):
+    def __getitem__(self, index, enforce_raw_data=False):
         'Generate one batch of data'
 
         if self.verbose > 1:
@@ -92,11 +93,11 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         if self.predict:
-            X = self.__data_generation(file_list, slice_list)
+            X = self.__data_generation(file_list, slice_list, enforce_raw_data)
             return X
         else:
             tic = time.time()
-            X, Y = self.__data_generation(file_list, slice_list)
+            X, Y = self.__data_generation(file_list, slice_list, enforce_raw_data)
             if self.verbose > 1:
                 print('generated batch in {} s'.format(time.time() - tic))
             return X, Y
@@ -107,8 +108,8 @@ class DataGenerator(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
-    def __data_generation(self, slice_list_files, slice_list_indexes):
-        'Generates data containing batch_size samples' 
+    def __data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False):
+        'Generates data containing batch_size samples'
 
         # load volumes
         # each element of the data_list contains 3 sets of 3D
@@ -120,7 +121,7 @@ class DataGenerator(keras.utils.Sequence):
         if not self.predict:
             data_list_Y = []
 
-        for f, c in zip(slice_list_files, slice_list_indexes):
+        for i, (f, c) in enumerate(zip(slice_list_files, slice_list_indexes)):
             num_slices = self.slices_per_file_dict[f]
             h = self.slices_per_input // 2
 
@@ -135,6 +136,9 @@ class DataGenerator(keras.utils.Sequence):
             tic = time.time()
 
             h5_key = 'data_mask' if self.brain_only else 'data'
+            if enforce_raw_data or (self.brain_only_mode == 'mixed' and i >= 5):
+                h5_key = 'data'
+
             slices = load_slices(input_file=f, slices=idxs, dim=self.slice_axis, params={'h5_key': h5_key}) # [c, 3, ny, nz]
 
             if self.slice_axis == 0:
@@ -165,7 +169,7 @@ class DataGenerator(keras.utils.Sequence):
             if not self.predict:
                 slices_Y = slices[h, self.output_idx, :, :][None,None,...]
                 data_list_Y.append(slices_Y)
-            
+
         tic = time.time()
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
@@ -219,5 +223,3 @@ class DataGenerator(keras.utils.Sequence):
             return X
         else:
             return X, Y
-
-

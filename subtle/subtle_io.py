@@ -394,7 +394,7 @@ def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=Fals
         if data_mask is not None:
             h5_params['data'] = data_mask
             f.create_dataset('data_mask', **h5_params)
-        
+
         if metadata:
             for key in metadata.keys():
                 _h5_key = 'metadata/{}'.format(key)
@@ -606,3 +606,10 @@ def build_slice_list(data_list, params={'h5_key': 'data'}, slice_axis=0):
 # https://stackoverflow.com/questions/15722324/sliding-window-in-numpy
 def window_stack(a, stepsize=1, width=3):
     return np.hstack( a[i:1+i-width or None:stepsize] for i in range(0,width) )
+
+def has_h5_key(fpath_h5, key):
+    h5_file = h5py.File(fpath_h5, 'r')
+    has_key = key in h5_file
+    h5_file.close()
+
+    return has_key
