@@ -133,13 +133,13 @@ def mask_images(args, ims, metadata):
 
     ### MASKING ###
     if not args.skip_mask:
-        mask = sup.mask_im(ims, threshold=args.mask_threshold)
+        mask = sup.mask_im(ims, threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)
         metadata['mask'] = 1
         metadata['mask_threshold'] = args.mask_threshold
         ims *= mask
         metadata['lambda'].append({
             'name': 'mask_images',
-            'fn': lambda images: images * sup.mask_im(images, threshold=args.mask_threshold)
+            'fn': lambda images: images * sup.mask_im(images, threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)
         })
     else:
         metadata['mask'] = 0

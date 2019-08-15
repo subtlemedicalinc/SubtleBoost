@@ -15,6 +15,8 @@ import time
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
+from skimage.morphology import binary_erosion, rectangle
+from scipy.ndimage import label as cc_label
 import cv2
 from dicom2nifti.convert_dicom import dicom_series_to_nifti
 import nibabel as nib
@@ -36,7 +38,7 @@ def rescale_slope_intercept(im, rs, ri, ss):
 
 
 # FIXME: do differently for each image
-def mask_im(im, threshold=.08):
+def mask_im(im, threshold=.08, noise_mask_area=False):
     '''
     Image masking
     Masks an image set based on max val compared to threshold.
@@ -46,6 +48,19 @@ def mask_im(im, threshold=.08):
     mask = im > (threshold * np.amax(im, axis=(2,3))[:,:,None,None])
     # fill holes in mask
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
+
+    if noise_mask_area:
+        mask = binary_erosion(mask.reshape((n*N*nx, ny)), selem=rectangle(7, 4)).reshape((N, n, nx, ny))
+
+        for cont in np.arange(n):
+            mask_cont = cc_label(mask[:, cont, ...])[0]
+            reg_areas = [reg.area for reg in regionprops(mask_cont)]
+            for l in np.unique(mask_cont):
+                if l != 0:
+                    mask_label = (mask_cont == l)
+                    if np.sum(mask_label) == np.max(reg_areas):
+                        mask[:, cont, ...] = (mask_cont == l)
+                        break
     return mask
 
 def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), nslices=5):
