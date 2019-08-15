@@ -14,12 +14,11 @@ export LOG_DIR=/home/srivathsa/projects/studies/gad/stanford/train/logs
 export TB_DIR=/home/srivathsa/projects/studies/gad/stanford/train/tb
 export HIST_DIR=/home/srivathsa/projects/studies/gad/stanford/train/history
 export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/stanford/train/checkpoints
-export CHECKPOINT_FILE=512mpr_fsl_wip.checkpoint
 export L1_LAMBDA=.8
 export SSIM_LAMBDA=.2
 export NO_SAVE_BEST_ONLY=1
 export TRAIN_MPR=1
 export RESIZE=512
 export BRAIN_ONLY=1
-export BRAIN_ONLY_MODE=pure
+export BRAIN_ONLY_MODE=mixed
 ./scripts/train.sh
