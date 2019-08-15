@@ -1,0 +1,23 @@
+export DATA_RAW=/home/srivathsa/projects/studies/gad/sford_siemens/data
+export DATA_DIR=/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/data
+export DATA_LIST=/home/srivathsa/projects/SubtleGad/data_lists/data_full_stanford_siemens.txt
+export DATA_LIST_TEST=/home/srivathsa/projects/SubtleGad/data_lists/data_full_stanford_siemens.txt
+export GPU=1
+export LEARN_RESIDUAL=0
+export SLICES_PER_INPUT=5
+export NUM_CHANNEL_FIRST=32
+export checkpoint_file=hoag-mpr.checkpoint
+export LOG_DIR=/home/srivathsa/projects/studies/gad/sford_siemens/inference
+export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/hoag/train/checkpoints
+export HIST_DIR=/home/srivathsa/projects/studies/gad/hoag/train/history
+export TB_DIR=/home/srivathsa/projects/studies/gad/hoag/train/tb
+export ZOOM=0
+export DESCRIPTION=hoag_mpr
+export SERIES_NUM=1002
+export PREDICT_DIR=/home/srivathsa/projects/studies/gad/sford_siemens/data
+export INFERENCE_MPR=1
+export INFERENCE_MPR_AVG=mean
+export NUM_ROTATIONS=5
+export RESIZE=512
+export RESAMPLE_SIZE=512
+/home/srivathsa/projects/SubtleGad/scripts/inference.sh
