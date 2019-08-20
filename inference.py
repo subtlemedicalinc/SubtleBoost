@@ -28,7 +28,7 @@ import configargparse as argparse
 import h5py
 import numpy as np
 from scipy.ndimage import zoom
-from scipy.ndimage.interpolation import rotate
+from scipy.ndimage.morphology import binary_fill_holes
 import sigpy as sp
 
 import keras.callbacks
@@ -260,6 +260,7 @@ if __name__ == '__main__':
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
+    original_data_mask = original_data_mask.transpose((0, 2, 3, 1))
 
     # if residual mode is on, we need to add the original contrast back in
     if args.residual_mode:
@@ -293,18 +294,33 @@ if __name__ == '__main__':
         data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
         suio.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
+
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
 
     suio.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+
+    if args.brain_only:
+        data_zero = original_data[..., 0]
+        brain_mask = binary_fill_holes(original_data_mask[..., 0] > 0.1)
+
+        y_pred = (data_zero - (data_zero * brain_mask)) + Y_prediction[..., 0]
+        Y_prediction_stitch = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
+
+        suio.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
+
 
     if args.stats_file:
         print('running stats on inference...')
         stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
 
+        data_metrics = original_data_mask if args.brain_only else original_data
+        print(data_metrics.shape)
 
-        x_zero = original_data[...,0].squeeze()
-        x_low = original_data[...,1].squeeze()
-        x_full = original_data[...,2].squeeze()
+        x_zero = data_metrics[...,0].squeeze()
+        x_low = data_metrics[...,1].squeeze()
+        x_full = data_metrics[...,2].squeeze()
         x_pred = Y_prediction.squeeze().astype(np.float32)
 
         stats['low/nrmse'].append(sumetrics.nrmse(x_full, x_low))

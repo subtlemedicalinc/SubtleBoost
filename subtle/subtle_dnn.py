@@ -242,15 +242,14 @@ class DeepEncoderDecoder2D:
         if filename is not None:
             self.checkpoint_file = filename
         try:
-            print('loading weights from', self.checkpoint_file)
+            if self.verbose:
+                print('loading weights from', self.checkpoint_file)
             self.model.load_weights(self.checkpoint_file)
         except Exception as e:
             warn('failed to load weights. training from scratch')
             warn(str(e))
 
     def _build_model(self):
-        print('build model', self.final_activation)
-
         # batch norm
         if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
@@ -324,7 +323,8 @@ class DeepEncoderDecoder2D:
             #print(UpSampling2D(size=(2, 2))(conv_center))
             #print(convs[-i])
 
-            up_decoder = concatenate([UpSampling2D(size=(2, 2))(conv_decoders[-1]), convs[-i]])
+            decoder_upsample = UpSampling2D(size=(2, 2))(conv_decoders[-1])
+            up_decoder = concatenate([decoder_upsample, convs[-i]])
             conv_decoder = up_decoder
 
             for j in range(self.num_conv_per_pooling):
