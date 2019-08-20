@@ -451,7 +451,6 @@ def fsl_reject_slices(args, ims, fsl_mask, metadata):
 
         good_slice_idx = (mask_areas >= args.fsl_area_threshold_cm2)
 
-        ims = ims[good_slice_idx]
         metadata['good_slice_indices'] = good_slice_idx
         print('{} slices retained'.format(ims.shape[0]))
 
