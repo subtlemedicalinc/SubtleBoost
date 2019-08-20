@@ -16,12 +16,13 @@ import time
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import binary_erosion, rectangle
+from scipy.ndimage.interpolation import zoom as zoom_interp
 from scipy.ndimage import label as cc_label
 import cv2
 from dicom2nifti.convert_dicom import dicom_series_to_nifti
 import nibabel as nib
 import pydicom
-from skimage.measure import regionprops
+from skimage.measure import label, regionprops
 from glob import glob
 
 try:
@@ -319,3 +320,88 @@ def get_brain_area_cm2(mask, spacing=[1., 1., 1.]):
 
     area_cm2 = (props[0].area * spacing_x * spacing_y) / 1e3
     return area_cm2
+
+def get_brain_portion(img, threshold=0):
+    center_mask = binary_fill_holes(img[img.shape[0] // 2] > threshold)
+
+    regions = regionprops(label(center_mask))
+    if len(regions) == 1:
+        bbox = regions[0].bbox
+    else:
+        sorted_regions = sorted(regions, key=lambda r: r.bbox_area)
+        bbox = sorted_regions[-1].bbox
+
+    (x1, y1, x2, y2) = bbox
+    cropped_img = img[:, x1:x2, y1:y2]
+
+    return cropped_img, bbox
+
+def _get_crop_range(shape_num):
+    if shape_num % 2 == 0:
+        start = end = shape_num // 2
+    else:
+        start = (shape_num + 1) // 2
+        end = (shape_num - 1) // 2
+
+    return (start, end)
+
+def center_position_brain(img, threshold=0):
+    cropped_img, bbox = get_brain_portion(img, threshold)
+
+    x_start, x_end = _get_crop_range(img.shape[1] - cropped_img.shape[1])
+    y_start, y_end = _get_crop_range(img.shape[2] - cropped_img.shape[2])
+
+    new_img = np.zeros_like(img)
+    new_img[:, x_start:-x_end, y_start:-y_end] = cropped_img
+
+    return new_img, bbox
+
+def center_crop(img, ref_img):
+    s = []
+    e = []
+
+    for i, sh in enumerate(img.shape):
+        if sh > ref_img.shape[i]:
+            start, end = _get_crop_range(sh - ref_img.shape[i])
+            s.append(start)
+            e.append(-end)
+        else:
+            s.append(0)
+            e.append(sh)
+    new_img = img[s[0]:e[0], s[1]:e[1], s[2]:e[2]]
+
+    if new_img.shape[1] != new_img.shape[2]:
+        new_img = zoom_interp(new_img, [1, ref_img.shape[1]/new_img.shape[1], ref_img.shape[2]/new_img.shape[2]])
+
+    return new_img
+
+def zero_pad_for_dnn(img, num_poolings=3):
+    mod_check = (2 ** num_poolings)
+    mod_filter = [(s % mod_check != 0) for s in img.shape]
+
+    if not np.any(mod_filter):
+        return img
+
+    npad = []
+    for i, sh in enumerate(img.shape):
+        if sh % mod_check == 0 or i == 1:
+            npad.append((0, 0))
+        else:
+            new_shape = sh + (sh % mod_check)
+            if new_shape % mod_check != 0:
+                new_shape = sh + (mod_check - (sh % mod_check))
+            npad.append(_get_crop_range(new_shape - sh))
+    return np.pad(img, pad_width=npad, mode='constant', constant_values=0)
+
+
+def undo_brain_center(img, bbox, threshold=0):
+    cropped_img, _ = get_brain_portion(img, threshold)
+
+    (x1, y1, x2, y2) = bbox
+    _, x_shape, y_shape = cropped_img.shape
+
+    new_img = np.zeros_like(img)
+
+    new_img[:, x1:x1+cropped_img.shape[1], y1:y1+cropped_img.shape[2]] = cropped_img
+
+    return new_img

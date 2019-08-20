@@ -36,6 +36,7 @@ import keras.callbacks
 import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
+from scipy.ndimage.interpolation import rotate
 import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
 import subtle.subtle_preprocess as supre
@@ -49,8 +50,6 @@ usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
 
 if __name__ == '__main__':
-
-
     parser = sargs.parser(usage_str, description_str)
     args = parser.parse_args()
 
@@ -93,11 +92,23 @@ if __name__ == '__main__':
             data_mask[:,1,:,:] = data_mask[:,0,:,:].copy()
 
     original_data = np.copy(data)
+    original_data_mask = np.copy(data_mask)
 
     if args.resample_size is not None:
         print('Resampling data to {}'.format(args.resample_size))
         data = supre.resample_slices(data, resample_size=args.resample_size)
         data_mask = supre.resample_slices(data_mask, resample_size=args.resample_size)
+
+    # Center position
+    if not args.brain_only:
+        bbox_arr = []
+        data_mod = []
+        for cont in np.arange(data.shape[1]):
+            data_cont, bbox = supre.center_position_brain(data[:, cont, ...], threshold=0.1)
+            data_mod.append(data_cont)
+            bbox_arr.append(bbox)
+
+        data = np.array(data_mod).transpose(1, 0, 2, 3)
 
     ns, _, nx, ny = data.shape
 
@@ -247,6 +258,11 @@ if __name__ == '__main__':
         Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
         Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
         Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
+
+    if not args.brain_only:
+        y_pred = Y_prediction[..., 0]
+        y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
+        Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
     if args.predict_dir:
         # save raw data
