@@ -96,6 +96,8 @@ def parser(usage_str, description_str):
     parser.add_argument('--checkpoint_slice_axis_2', action='store', dest='checkpoint_file_2', type=str, help='checkpoint file for MPR 2', default=None)
     parser.add_argument('--checkpoint_slice_axis_3', action='store', dest='checkpoint_file_3', type=str, help='checkpoint file for MPR 3', default=None)
     parser.add_argument('--inference_mpr_avg', action='store', dest='inference_mpr_avg', type=str, help='type of MPR averaging', default='mean')
+    parser.add_argument('--reshape_for_mpr_rotate', action='store_true',
+    dest='reshape_for_mpr_rotate', help='If True, angle rotation is done without cropping, thus making the model input different for each angle', default=False)
     parser.add_argument('--num_rotations', action='store', dest='num_rotations', type=int, help='number of rotations to average', default=1)
 
     parser.add_argument('--fsl_mask', action='store_true', dest='fsl_mask',

@@ -162,22 +162,23 @@ if __name__ == '__main__':
         if args.num_rotations > 1 and angle > 0:
             if args.verbose:
                 print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
-            data_rot = rotate(data, angle, reshape=False, axes=(0, 2))
+            data_rot = rotate(data, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
+            data_rot = supre.zero_pad_for_dnn(data_rot)
+
             if data_mask is not None:
-                data_mask_rot = rotate(data_mask, angle, reshape=False, axes=(0, 2))
+                data_mask_rot = rotate(data_mask, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
+                data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot)
             else:
                 data_mask_rot = None
         else:
-            data_rot = data
-            data_mask_rot = data_mask
+            data_rot = supre.zero_pad_for_dnn(data)
+            data_mask_rot = supre.zero_pad_for_dnn(data_mask)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             data_file = '{}/data.h5'.format(tmpdirname)
             original_scale = (data_rot.min(), data_rot.max())
 
             if args.match_scales_fsl:
-                print('match scales...')
-                print(original_scale)
                 data_rot = np.interp(data_rot, original_scale, (data_mask_rot.min(), data_mask_rot.max()))
                 print(data_rot.min(), data_rot.max())
 
@@ -203,6 +204,19 @@ if __name__ == '__main__':
                 if checkpoint_files[ii]:
                     m.load_weights(checkpoint_files[ii])
 
+                data_ref = np.zeros_like(data_rot)
+                if slice_axis == 2:
+                    data_ref = np.transpose(data_ref, (2, 1, 0, 3))
+                elif slice_axis == 3:
+                    data_ref = np.transpose(data_ref, (3, 1, 0, 2))
+
+                if args.reshape_for_mpr_rotate:
+                    m.img_rows = data_ref.shape[2]
+                    m.img_cols = data_ref.shape[3]
+                    m.verbose = False
+                    m._build_model()
+                    m.load_weights()
+
                 _Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
                 # N, x, y, 1
 
@@ -219,8 +233,16 @@ if __name__ == '__main__':
                 if args.resize:
                     _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
 
+                pred_rotated = False
+
                 if args.num_rotations > 1 and angle > 0:
-                    _Y_prediction = rotate(_Y_prediction, -angle, reshape=False, axes=(0, 1))
+                    pred_rotated = True
+                    _Y_prediction = rotate(_Y_prediction, -angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 1))
+
+                if pred_rotated or _Y_prediction.shape[0] != data.shape[0]:
+                    y_pred = _Y_prediction[..., 0]
+                    y_pred = supre.center_crop(y_pred, data[:, 0, ...])
+                    _Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
 
                 Y_predictions[..., ii, rr] = _Y_prediction[..., 0]
 
