@@ -86,6 +86,9 @@ class DataGenerator(keras.utils.Sequence):
         file_list = self.slice_list_files[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
         slice_list = self.slice_list_indexes[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
 
+        self._current_file_list = file_list
+        self._current_slice_list = slice_list
+
         if self.verbose > 1:
             print('list of files and slices:')
             print(file_list)

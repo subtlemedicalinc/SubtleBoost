@@ -115,6 +115,15 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
 
             X, Y = self.generator.__getitem__(ii, enforce_raw_data=(ii >= 5))
             Y_prediction = self.model.predict_on_batch(X)
+
+            if self.generator._current_file_list:
+                current_fpath = self.generator._current_file_list[0]
+                case_num = current_fpath.split('/')[-1].replace('.h5', '')
+                slice_idx = self.generator._current_slice_list[0]
+                print('slice idx', slice_idx)
+                tag = '{} ({}: slice={})'.format(tag, case_num, slice_idx)
+                print('tag....', tag)
+
             #print(X.shape, Y.shape, Y_prediction.shape)
             # separate 2.5D and N
             X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
