@@ -16,8 +16,12 @@ import argparse
 def tile(ims):
     return np.stack(ims, axis=2)
 
-def imshowtile(x, cmap='gray'):
-    plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)),cmap=cmap)
+def imshowtile(x, cmap='gray', vmin=None, vmax=None):
+    print(vmin, vmax)
+    if not vmax:
+        vmin = x.min()
+        vmax = x.max()
+    plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)), cmap=cmap, vmin=vmin, vmax=vmax)
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'plot grid of images from dataset'
@@ -44,7 +48,7 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(20,20))
     plt.subplot(3,1,1)
-    imshowtile(tile((X0, X1, X2)))
+    imshowtile(tile((X0, X1, X2)), vmin=X0.min(), vmax=X0.max())
     plt.colorbar()
 
     X1mX0 = X1 - X0
@@ -59,7 +63,7 @@ if __name__ == '__main__':
     plt.colorbar()
 
     plt.subplot(3,1,3)
-    imshowtile(tile((X0, X0 + X1mX0, X0 + X2mX0)))
+    imshowtile(tile((X0, X0 + X1mX0, X0 + X2mX0)), vmin=X0.min(), vmax=X0.max())
     plt.colorbar()
 
     if args.output is None:
