@@ -224,9 +224,8 @@ def apply_reg_transform(img, spacing, transform_params):
     simg.SetSpacing(spacing)
 
     params = transform_params[0]
-    params["ResampleInterpolator"] = ["FinalNearestNeighborInterpolator"]
 
-    simg_trans = sitk.Transformix(simg, transform_params[0])
+    simg_trans = sitk.Transformix(simg, params)
     simg_arr = sitk.GetArrayFromImage(simg_trans)
     return simg_arr
 
