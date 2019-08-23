@@ -24,13 +24,16 @@ function preprocess() {
      errfile=${log_dir}/${sub_dir_no_spaces}.err
      outfile=${out_dir}/${sub_dir_no_spaces}.h5
      outfile_png=${out_dir_plots}/${sub_dir_no_spaces}.png
+     outfile_full_png=${out_dir_plots}/${sub_dir_no_spaces}_full.png
 
      echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --mask_threshold .04 --scale_matching --fsl_mask
 
-     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --mask_threshold .04 --scale_matching --fsl_mask --fsl_area_threshold_cm2 5.0 > ${logfile} 2>${errfile}
+     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --mask_threshold .04 --scale_matching --fsl_mask > ${logfile} 2>${errfile}
 
 
      python ${plot_grid_bin} --input $outfile --output ${outfile_png} --h5_key data_mask
+
+     python ${plot_grid_bin} --input $outfile --output ${outfile_full_png} --h5_key data
 
 }
 
