@@ -113,7 +113,10 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
 
-            X, Y = self.generator.__getitem__(ii, enforce_raw_data=(ii >= 5))
+            raw_data=False
+            # enforce_raw_data=(ii >= 5) [uncomment when using masked + full head mixed model]
+            
+            X, Y = self.generator.__getitem__(ii, enforce_raw_data=raw_data)
             Y_prediction = self.model.predict_on_batch(X)
 
             if self.generator._current_file_list:
