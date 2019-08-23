@@ -219,6 +219,7 @@ def register(args, ims, metadata):
     if not args.skip_registration:
         metadata['reg'] = 1
         metadata['transform_type'] = args.transform_type
+
         ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
 
 
@@ -523,7 +524,6 @@ def apply_preprocess(ims, unmasked_ims, metadata):
         return ims, metadata
 
     print('Applying all preprocessing steps on unmasked images...')
-
     for step in metadata['lambda']:
         print('Applying {} on unmasked images...'.format(step['name']))
         if callable(step['fn']):
@@ -547,8 +547,8 @@ def preprocess_chain(args):
 
     ims, mask, metadata = mask_images(args, ims, metadata)
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
-    ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = register(args, ims, metadata)
+    ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = zoom_process(args, ims, metadata)
 
     fsl_mask = fsl_brain_mask(args)
