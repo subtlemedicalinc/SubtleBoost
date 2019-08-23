@@ -227,15 +227,16 @@ def register(args, ims, metadata):
 
         ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
 
-        reg_params = [spars1_reg, spars2_reg]
+        reg_params = [None, spars1_reg, spars2_reg]
+        spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
 
-        reg_transform = lambda idx: (lambda images: sup.apply_reg_transform(images[:, idx, :, :], metadata['pixel_spacing_zero'], reg_params[idx]))
+        reg_transform = lambda idx: (lambda images: sup.apply_reg_transform(images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx]))
 
         eye = lambda images: images[:, 0, :, :]
 
         metadata['lambda'].append({
             'name': 'register',
-            'fn': [eye, reg_transform(0), reg_transform(1)]
+            'fn': [eye, reg_transform(1), reg_transform(2)]
         })
 
         if args.verbose:
