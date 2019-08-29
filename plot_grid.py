@@ -17,7 +17,6 @@ def tile(ims):
     return np.stack(ims, axis=2)
 
 def imshowtile(x, cmap='gray', vmin=None, vmax=None):
-    print(vmin, vmax)
     if not vmax:
         vmin = x.min()
         vmax = x.max()
