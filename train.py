@@ -55,7 +55,6 @@ if __name__ == '__main__':
 
     assert args.data_list_file is not None, 'must specify data list'
 
-
     if args.log_dir is not None:
         try:
             os.mkdir(args.log_dir)
@@ -116,7 +115,7 @@ if __name__ == '__main__':
         print('Using existing checkpoint at {}'.format(args.checkpoint_file))
     else:
         print('Creating new checkpoint at {}'.format(args.checkpoint_file))
-    
+
     m = sudnn.DeepEncoderDecoder2D(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
@@ -129,7 +128,8 @@ if __name__ == '__main__':
             checkpoint_file=args.checkpoint_file,
             log_dir=log_tb_dir,
             job_id=args.job_id,
-            save_best_only=args.save_best_only)
+            save_best_only=args.save_best_only,
+            use_respath=args.use_respath)
 
     m.load_weights()
 
@@ -167,7 +167,6 @@ if __name__ == '__main__':
         if r > 0:
             callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
     #cb_tensorboard = m.callback_tensorbaord(log_every=1)
-
 
     if args.train_mpr:
         training_generator_0 = sugen.DataGenerator(data_list=data_train_list,

@@ -10,7 +10,7 @@ Created on 2018/05/25
 
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate
+from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate, Activation, LeakyReLU, Flatten
 import keras.callbacks
 from keras.layers.merge import add as keras_add
 from keras.optimizers import Adam
@@ -165,6 +165,77 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
 
         super().on_batch_end(batch, logs)
 
+class Discriminator:
+    def __init__(
+        self, num_channel_input=1, img_rows=128, img_cols=128, num_channel_first=32, num_poolings=3,
+        batch_norm=True, verbose=True, compile_model=True
+    ):
+        self.num_channel_input = num_channel_input
+        self.img_rows = img_rows
+        self.img_cols = img_cols
+        self.num_channel_first = num_channel_first
+        self.num_poolings = num_poolings
+        self.batch_norm = batch_norm
+        self.verbose = verbose
+        self.compile_model = True
+
+        self.model = None
+
+        self._build_discriminator()
+
+    def _conv_block(self, input, filters, strides=1, bnorm=True):
+        d_out = Conv2D(filters=filters, kernel_size=(3, 3), strides=strides, padding='same')(input)
+        d_out = LeakyReLU(alpha=0.2)(d_out)
+
+        if bnorm:
+            d_out = BatchNormalization(momentum=0.8)(d_out)
+
+        return d_out
+
+    def _build_discriminator(self):
+
+        input = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input))
+
+        nc = self.num_channel_first
+
+        d_out = self._conv_block(input, nc, bnorm=False)
+        d_out = self._conv_block(d_out, nc, strides=2)
+        if self.verbose:
+            print(d_out)
+
+        d_out = self._conv_block(d_out, nc * 2)
+        d_out = self._conv_block(d_out, nc * 2, strides=2)
+        if self.verbose:
+            print(d_out)
+
+        d_out = self._conv_block(d_out, nc * 4)
+        d_out = self._conv_block(d_out, nc * 4, strides=2)
+        if self.verbose:
+            print(d_out)
+
+        d_out = self._conv_block(d_out, nc * 8)
+        d_out = self._conv_block(d_out, nc * 8, strides=2)
+        if self.verbose:
+            print(d_out)
+
+        fc = Flatten()(d_out)
+        fc = LeakyReLU(alpha=0.2)(Dense(nc * 16)(fc))
+
+        val = Dense(1, activation='sigmoid')(fc)
+
+        if self.verbose:
+            print(fc)
+            print(val)
+
+        model = keras.models.Model(inputs=input, outputs=val)
+
+        if self.compile_model:
+            model.compile(
+                loss='binary_crossentropy', optimizer=Adam(0.0002, 0.5), metrics=['accuracy']
+            )
+
+        self.model = model
+
 # based on u-net and v-net
 class DeepEncoderDecoder2D:
     def __init__(self,
@@ -173,7 +244,7 @@ class DeepEncoderDecoder2D:
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
             num_poolings=3, num_conv_per_pooling=3,
-            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True):
+            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, use_respath=False, compile_model=True):
 
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -193,9 +264,15 @@ class DeepEncoderDecoder2D:
         self.log_dir = log_dir
         self.job_id = job_id
         self.save_best_only = save_best_only
+        self.use_respath = use_respath
+        self.compile_model = compile_model
 
         self.model = None # to be assigned by _build_model()
-        self._build_model()
+
+        if self.use_respath:
+            self._build_model_respath()
+        else:
+            self._build_model()
 
     #def get_model(self):
         #return self.model
@@ -259,7 +336,161 @@ class DeepEncoderDecoder2D:
             warn('failed to load weights. training from scratch')
             warn(str(e))
 
+
+    def _conv_bn(self, input, params):
+        x = Conv2D(**params)(input)
+
+        if self.batch_norm:
+            x = BatchNormalization()(x)
+        return x
+
+    def _res_block(self, num_channels, input, alpha=1.67):
+        nc = alpha * num_channels
+
+        conv_params = {
+            'kernel_size': (3, 3),
+            'padding': 'same',
+            'activation': 'relu'
+        }
+        shortcut = input
+
+        c1 = int(nc * (1/6))
+        c2 = int(nc * (1/3))
+        c3 = int(nc * (1/2))
+
+        ct = (c1 + c2 + c3)
+
+        conv_params['kernel_size'] = (1, 1)
+        conv_params['filters'] = ct
+        shortcut = self._conv_bn(shortcut, conv_params)
+
+        conv_params['kernel_size'] = (3, 3)
+
+        conv_params['filters'] = c1
+        conv_a = self._conv_bn(input, conv_params)
+
+        conv_params['filters'] = c2
+        conv_b = self._conv_bn(input, conv_params)
+
+        conv_params['filters'] = c3
+        conv_c = self._conv_bn(input, conv_params)
+
+        out = concatenate([conv_a, conv_b, conv_c])
+
+        if self.batch_norm:
+            out = BatchNormalization()(out)
+
+        out = keras_add([shortcut, out])
+        out = Activation('relu')(out)
+
+        if self.batch_norm:
+            out = BatchNormalization()(out)
+
+        return out
+
+
+    def _res_path(self, num_channels, length, input):
+        shortcut = input
+
+        conv_params = {
+            'kernel_size': (1, 1),
+            'padding': 'same',
+            'activation': None
+        }
+
+        conv_params['filters'] = num_channels
+        shortcut = self._conv_bn(shortcut, conv_params)
+
+        conv_params['kernel_size'] = (3, 3)
+        conv_params['activation'] = 'relu'
+        out = self._conv_bn(input, conv_params)
+
+        out = keras_add([shortcut, out])
+        out = Activation('relu')(out)
+
+        if self.batch_norm:
+            out = BatchNormalization()(out)
+
+        for i in np.arange(length - 1):
+            shortcut = out
+
+            conv_params['kernel_size'] = (1, 1)
+            conv_params['activation'] = None
+            shortcut = self._conv_bn(shortcut, conv_params)
+
+            conv_params['kernel_size'] = (3, 3)
+            conv_params['activation'] = 'relu'
+            out = self._conv_bn(out, conv_params)
+
+            out = keras_add([shortcut, out])
+            out = Activation('relu')(out)
+
+            if self.batch_norm:
+                out = BatchNormalization()(out)
+
+        return out
+
+    def _build_model_respath(self):
+        print('Building respath model...')
+
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input))
+
+        nc = self.num_channel_first
+
+        # encoder
+        rb1 = self._res_block(nc, inputs)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(rb1)
+        rb1 = self._res_path(nc, 3, rb1)
+
+        rb2 = self._res_block(nc * 2, pool1)
+        pool2 = MaxPooling2D(pool_size=(2, 2))(rb2)
+        rb2 = self._res_path(nc * 2, 2, rb2)
+
+        rb3 = self._res_block(nc * 4, pool2)
+        pool3 = MaxPooling2D(pool_size=(2, 2))(rb3)
+        rb3 = self._res_path(nc * 4, 1, rb3)
+
+        # bottleneck
+        rb4 = self._res_block(nc * 4, pool3)
+
+        # decoder
+        upsample = UpSampling2D(size=(2, 2))
+
+        up3 = concatenate([upsample(rb4), rb3])
+        rb5 = self._res_block(nc * 4, up3)
+
+        up4 = concatenate([upsample(rb5), rb2])
+        rb6 = self._res_block(nc * 2, up4)
+
+        up5 = concatenate([upsample(rb6), rb1])
+        rb7 = self._res_block(nc, up5)
+
+        # model output
+        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(rb7)
+
+        if self.verbose:
+            print(conv_output)
+
+        # model
+        model = keras.models.Model(inputs=inputs, outputs=conv_output)
+
+        if self.verbose:
+            print(model)
+
+        # fit
+        if self.lr_init is not None:
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
+        else:
+            optimizer = self.optimizer_fun()
+
+        if self.compile_model:
+            model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
+
+        self.model = model
+
+
     def _build_model(self):
+        print('Building standard model...')
         # batch norm
         if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
@@ -368,6 +599,8 @@ class DeepEncoderDecoder2D:
             optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:
             optimizer = self.optimizer_fun()
-        model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
+
+        if self.compile_model:
+            model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
 
         self.model = model
