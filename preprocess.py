@@ -35,7 +35,6 @@ import subtle.subtle_args as sargs
 
 
 from glob import glob
-from scipy.ndimage.interpolation import zoom as zoom_interp
 
 def fetch_args():
     usage_str = 'usage: %(prog)s [options]'

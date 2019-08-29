@@ -421,3 +421,12 @@ def undo_brain_center(img, bbox, threshold=0):
     new_img[:, x1:x1+cropped_img.shape[1], y1:y1+cropped_img.shape[2]] = cropped_img
 
     return new_img
+
+def zoom_iso(dcm_vol, spacing, new_spacing):
+    resize_factor = spacing / new_spacing
+    new_shape = np.round(dcm_vol.shape * resize_factor)
+
+    real_resize_factor = new_shape / dcm_vol.shape
+    new_spacing = spacing / real_resize_factor
+
+    return zoom_interp(dcm_vol, real_resize_factor), new_spacing
