@@ -392,6 +392,23 @@ def zero_pad_for_dnn(img, num_poolings=3):
             npad.append(_get_crop_range(new_shape - sh))
     return np.pad(img, pad_width=npad, mode='constant', constant_values=0)
 
+def zero_pad(img, target_size=256):
+    if img.shape[2] >= target_size:
+        return img
+    npad = []
+
+    if img.ndim == 4:
+        diff1 = (target_size - img.shape[2]) // 2
+        diff2 = (target_size - img.shape[3]) // 2
+        npad = [(0, 0), (0, 0), (diff1, diff1), (diff2, diff2)]
+    elif img.ndim == 3:
+        diff1 = (target_size - img.shape[1]) // 2
+        diff2 = (target_size - img.shape[2]) // 2
+        npad = [(0, 0), (diff1, diff1), (diff2, diff2)]
+    else:
+        return img
+
+    return np.pad(img, pad_width=npad, mode='constant', constant_values=0)
 
 def undo_brain_center(img, bbox, threshold=0):
     cropped_img, _ = get_brain_portion(img, threshold)

@@ -138,7 +138,8 @@ if __name__ == '__main__':
         data_mask = supre.resample_slices(data_mask, resample_size=args.resample_size)
 
     # Center position
-    if not args.brain_only:
+
+    if not args.brain_only and args.brain_centering:
         bbox_arr = []
         data_mod = []
         for cont in np.arange(data.shape[1]):
@@ -165,7 +166,8 @@ if __name__ == '__main__':
             batch_norm=args.batch_norm,
             verbose=args.verbose,
             checkpoint_file=args.checkpoint_file,
-            job_id=args.job_id)
+            job_id=args.job_id,
+            use_respath=args.use_respath)
 
     m.load_weights()
 
@@ -325,7 +327,9 @@ if __name__ == '__main__':
         Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
         Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
 
-    if not args.brain_only:
+    # undo brain center
+
+    if not args.brain_only and args.brain_centering:
         y_pred = Y_prediction[..., 0]
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)

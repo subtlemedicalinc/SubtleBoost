@@ -458,43 +458,50 @@ def fsl_reject_slices(args, ims, fsl_mask, metadata):
 
     return ims
 
+def _get_spacing_from_dicom(dirpath_dicom):
+    fpath_dicom = [fpath for fpath in glob('{}/**/*.dcm'.format(dirpath_dicom), recursive=True)][0]
+
+    dicom = pydicom.dcmread(fpath_dicom)
+    return np.array([
+        float(dicom.SliceThickness),
+        float(dicom.PixelSpacing[0]),
+        float(dicom.PixelSpacing[1])
+    ])
+
 def resample_isotropic(args, ims, metadata):
+    metadata['original_size'] = (ims.shape[2], ims.shape[3])
+
     if args.resample_isotropic:
         print('Resampling images to 1mm isotropic...')
         print('Current image shapes...', ims[:, 0, ...].shape)
         new_spacing = [1., 1., 1.]
 
-        fpath_dicom = [fpath for fpath in glob('{}/**/*.dcm'.format(args.path_zero), recursive=True)][0]
+        spacing_zero = _get_spacing_from_dicom(args.path_zero)
+        spacing_low = _get_spacing_from_dicom(args.path_low)
+        spacing_full = _get_spacing_from_dicom(args.path_full)
 
-        dicom = pydicom.dcmread(fpath_dicom)
-        spacing = np.array([
-            float(dicom.SliceThickness),
-            float(dicom.PixelSpacing[0]),
-            float(dicom.PixelSpacing[1])
-        ])
-
-        resize_factor = spacing / new_spacing
+        metadata['old_spacing_zero'] = spacing_zero
+        metadata['old_spacing_low'] = spacing_low
+        metadata['old_spacing_full'] = spacing_full
 
         ims_zero, ims_low, ims_full = np.transpose(np.copy(ims), (1, 0, 2, 3))
-
-        new_shape = np.round(ims_zero.shape * resize_factor)
-        real_resize_factor = new_shape / ims_zero.shape
-        new_spacing = spacing / real_resize_factor
 
         metadata['new_spacing'] = new_spacing
 
         print('New spacing...', new_spacing)
 
         print('Resampling zero dose...')
-        ims_zero = zoom_interp(ims_zero, real_resize_factor)
+        ims_zero, new_spacing = sup.zoom_iso(ims_zero, spacing_zero, new_spacing)
+        metadata['new_spacing'] = new_spacing
 
         print('Resampling low dose...')
-        ims_low = zoom_interp(ims_low, real_resize_factor)
+        ims_low, _ = sup.zoom_iso(ims_low, spacing_low, new_spacing)
 
         print('Resampling full dose...')
-        ims_full = zoom_interp(ims_full, real_resize_factor)
+        ims_full, _ = sup.zoom_iso(ims_full, spacing_full, new_spacing)
 
         print('New image shape', ims_zero.shape)
+        metadata['resampled_size'] = (ims_zero.shape[1], ims_zero.shape[2])
 
         return np.transpose(
             np.array([ims_zero, ims_low, ims_full]),
@@ -537,6 +544,16 @@ def apply_preprocess(ims, unmasked_ims, metadata):
     del metadata['lambda']
     return unmasked_ims, metadata
 
+def zero_pad(args, ims, metadata):
+    if not args.pad_for_size or ims.shape[2] >= args.pad_for_size:
+        return ims
+
+    ims_pad = sup.zero_pad(ims, target_size=args.pad_for_size)
+    print('Shape after zero padding...', ims_pad.shape)
+    metadata['zero_pad_size'] = (ims_pad.shape[2], ims_pad.shape[3])
+
+    return ims_pad
+
 def preprocess_chain(args):
     metadata = {
         'lambda': []
@@ -565,6 +582,9 @@ def preprocess_chain(args):
     fsl_mask = reshape_fsl_mask(args, fsl_mask, metadata)
 
     ims = fsl_reject_slices(args, ims, fsl_mask, metadata)
+
+    ims = zero_pad(args, ims, metadata)
+    unmasked_ims = zero_pad(args, unmasked_ims, metadata)
 
     return unmasked_ims, ims, metadata
 

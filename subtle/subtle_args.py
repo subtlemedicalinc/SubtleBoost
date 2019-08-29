@@ -109,5 +109,8 @@ def parser(usage_str, description_str):
     parser.add_argument('--brain_only', action='store_true', dest='brain_only', help='Use FSL extracted brain data to train (preprocess should have been run with this option: H5 file should have "data_mask" key)', default=False)
     parser.add_argument('--brain_only_mode', action='store', dest='brain_only_mode', type=str, help='pure or mixed - whether to train only on FSL masked images only or include a fraction of the full brain images too', default=None)
     parser.add_argument('--match_scales_fsl', action='store_true', dest='match_scales_fsl', help='If True, the full head image dynamic range is matched with the FSL extracted dynamic range. This should be set to True, only when the model checkpoint used here was trained with only the FSL masked brain region', default=False)
+    parser.add_argument('--pad_for_size', action='store', type=int,
+    dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
+    parser.add_argument('--brain_centering', action='store_true', dest='brain_centering', help='Vertical and horizontal centering of the brain', default=False)
 
     return parser
