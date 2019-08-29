@@ -49,6 +49,18 @@ import subtle.subtle_args as sargs
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
 
+
+def resample_unisotropic(ims, metadata):
+    print('undoing resample isotropic...')
+    uniso_zero, _ = supre.zoom_iso(ims[:, 0, ...], [1., 1., 1.], metadata['old_spacing_zero'])
+    uniso_low, _ = supre.zoom_iso(ims[:, 1, ...], [1., 1., 1.], metadata['old_spacing_low'])
+    uniso_full, _ = supre.zoom_iso(ims[:, 2, ...], [1., 1., 1.], metadata['old_spacing_full'])
+
+    data_uniso = np.array([uniso_zero, uniso_low, uniso_full]).transpose(1, 0, 2, 3)
+    print('Data after undoing isotropic', data_uniso.shape)
+
+    return data_uniso
+
 if __name__ == '__main__':
     parser = sargs.parser(usage_str, description_str)
     args = parser.parse_args()
@@ -63,7 +75,6 @@ if __name__ == '__main__':
     if args.gpu_device is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
-
 
     if args.data_preprocess:
         if args.verbose:
@@ -91,8 +102,35 @@ if __name__ == '__main__':
         if data_mask is not None:
             data_mask[:,1,:,:] = data_mask[:,0,:,:].copy()
 
+    if 'zero_pad_size' in metadata:
+        print('Undoing zero padding...')
+        if 'resampled_size' in metadata:
+            crop_size = metadata['resampled_size'][0]
+        else:
+            crop_size = metadata['original_size'][0]
+
+        ref_img = np.zeros((data.shape[0], crop_size, crop_size))
+
+        new_data = np.zeros((data.shape[0], 3, crop_size, crop_size))
+        new_data_mask = np.zeros((data.shape[0], 3, crop_size, crop_size))
+
+        for cnt in np.arange(3):
+            print('Center cropping {}'.format(cnt))
+            new_data[:, cnt, ...] = supre.center_crop(data[:, cnt, ...], ref_img)
+            new_data_mask[:, cnt, ...] = supre.center_crop(data_mask[:, cnt, ...], ref_img)
+
+        data = new_data
+        data_mask = new_data_mask
+
+        print('Data shape after center cropping', data.shape)
+
+    if 'resampled_size' in metadata:
+        # isotropic resampling has been done in preprocess, so need to unresample to original spacing before running inference
+        data = resample_unisotropic(data, metadata)
+        data_mask = resample_unisotropic(data_mask, metadata)
+
     original_data = np.copy(data)
-    original_data_mask = np.copy(data_mask)
+    original_data_mask = np.copy(data_mask) if data_mask is not None else None
 
     if args.resample_size is not None:
         print('Resampling data to {}'.format(args.resample_size))
@@ -172,7 +210,10 @@ if __name__ == '__main__':
                 data_mask_rot = None
         else:
             data_rot = supre.zero_pad_for_dnn(data)
-            data_mask_rot = supre.zero_pad_for_dnn(data_mask)
+            if data_mask is not None:
+                data_mask_rot = supre.zero_pad_for_dnn(data_mask)
+            else:
+                data_mask_rot = None
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             data_file = '{}/data.h5'.format(tmpdirname)
@@ -260,7 +301,9 @@ if __name__ == '__main__':
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
-    original_data_mask = original_data_mask.transpose((0, 2, 3, 1))
+
+    if np.any(original_data_mask):
+        original_data_mask = original_data_mask.transpose((0, 2, 3, 1))
 
     # if residual mode is on, we need to add the original contrast back in
     if args.residual_mode:
