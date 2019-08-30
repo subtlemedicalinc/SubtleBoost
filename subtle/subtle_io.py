@@ -573,7 +573,7 @@ def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'})
     return data_shape[axis]
 
 
-def build_slice_list(data_list, params={'h5_key': 'data'}, slice_axis=0):
+def build_slice_list(data_list, params={'h5_key': 'data'}, slice_axis=[0]):
     ''' Builds two lists where the index is the
     slice number and the value is the file name / slice index.
     The length of the list is the total number of slices
@@ -596,10 +596,12 @@ def build_slice_list(data_list, params={'h5_key': 'data'}, slice_axis=0):
     slice_list_files = []
     slice_list_indexes = []
 
-    for data_file in data_list:
-        num_slices = get_num_slices(data_file, params=params, axis=slice_axis)
-        slice_list_files.extend([data_file] * num_slices)
-        slice_list_indexes.extend(range(num_slices))
+    for ax in slice_axis:
+        for data_file in data_list:
+            num_slices = get_num_slices(data_file, params=params, axis=ax)
+            slice_list_files.extend([data_file] * num_slices)
+            indices = [{'index': idx, 'axis': ax} for idx in range(num_slices)]
+            slice_list_indexes.extend(indices)
 
     return slice_list_files, slice_list_indexes
 

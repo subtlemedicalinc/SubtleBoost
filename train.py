@@ -156,150 +156,52 @@ if __name__ == '__main__':
     callbacks = []
     callbacks.append(m.callback_checkpoint())
     callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
-    if args.train_mpr and r > 0:
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 1', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=0, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 2', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=2, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation Dir 3', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=3, resize=args.resize, resample_size=args.resample_size,
-        brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
-    else:
-        if r > 0:
-            callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=args.slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
-    #cb_tensorboard = m.callback_tensorbaord(log_every=1)
+
+    slice_axis = [0]
+    num_epochs = args.num_epochs
 
     if args.train_mpr:
-        training_generator_0 = sugen.DataGenerator(data_list=data_train_list,
-                batch_size=args.batch_size,
-                shuffle=args.shuffle,
-                verbose=args.verbose,
-                residual_mode=args.residual_mode,
-                positive_only = args.positive_only,
-                slices_per_input=args.slices_per_input,
-                input_idx=args.input_idx,
-                output_idx=args.output_idx,
-                slice_axis=0,
-                resize=args.resize,
-                resample_size=args.resample_size,
-                brain_only=args.brain_only,
-                brain_only_mode=args.brain_only_mode)
-        training_generator_2 = sugen.DataGenerator(data_list=data_train_list,
-                batch_size=args.batch_size,
-                shuffle=args.shuffle,
-                verbose=args.verbose,
-                residual_mode=args.residual_mode,
-                positive_only = args.positive_only,
-                slices_per_input=args.slices_per_input,
-                input_idx=args.input_idx,
-                output_idx=args.output_idx,
-                slice_axis=2,
-                resize=args.resize,
-                resample_size=args.resample_size,
-                brain_only=args.brain_only,
-                brain_only_mode=args.brain_only_mode)
-        training_generator_3 = sugen.DataGenerator(data_list=data_train_list,
-                batch_size=args.batch_size,
-                shuffle=args.shuffle,
-                verbose=args.verbose,
-                residual_mode=args.residual_mode,
-                positive_only = args.positive_only,
-                slices_per_input=args.slices_per_input,
-                input_idx=args.input_idx,
-                output_idx=args.output_idx,
-                slice_axis=3,
-                resize=args.resize,
-                resample_size=args.resample_size,
-                brain_only=args.brain_only,
-                brain_only_mode=args.brain_only_mode)
-    else:
-        training_generator = sugen.DataGenerator(data_list=data_train_list,
-                batch_size=args.batch_size,
-                shuffle=args.shuffle,
-                verbose=args.verbose,
-                residual_mode=args.residual_mode,
-                positive_only = args.positive_only,
-                slices_per_input=args.slices_per_input,
-                input_idx=args.input_idx,
-                output_idx=args.output_idx,
-                slice_axis=args.slice_axis,
-                resize=args.resize,
-                resample_size=args.resample_size,
-                brain_only=args.brain_only,
-                brain_only_mode=args.brain_only_mode)
+        slice_axis = [0, 2, 3]
+        num_epochs = args.num_epochs // len(slice_axis)
+        print('Training in MPR mode: {} epochs'.format(num_epochs))
 
     if r > 0:
-        if args.train_mpr:
-            validation_generator_0 = sugen.DataGenerator(data_list=data_val_list,
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    verbose=args.verbose,
-                    residual_mode=args.residual_mode,
-                    positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input,
-                    input_idx=args.input_idx,
-                    output_idx=args.output_idx,
-                    slice_axis=0,
-                    resize=args.resize,
-                    resample_size=args.resample_size,
-                    brain_only=args.brain_only,
-                    brain_only_mode=args.brain_only_mode)
-            validation_generator_2 = sugen.DataGenerator(data_list=data_val_list,
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    verbose=args.verbose,
-                    residual_mode=args.residual_mode,
-                    positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input,
-                    input_idx=args.input_idx,
-                    output_idx=args.output_idx,
-                    slice_axis=2,
-                    resize=args.resize,
-                    resample_size=args.resample_size,
-                    brain_only=args.brain_only,
-                    brain_only_mode=args.brain_only_mode)
-            validation_generator_3 = sugen.DataGenerator(data_list=data_val_list,
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    verbose=args.verbose,
-                    residual_mode=args.residual_mode,
-                    positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input,
-                    input_idx=args.input_idx,
-                    output_idx=args.output_idx,
-                    slice_axis=3,
-                    resize=args.resize,
-                    resample_size=args.resample_size,
-                    brain_only=args.brain_only,
-                    brain_only_mode=args.brain_only_mode)
-        else:
-            validation_generator = sugen.DataGenerator(data_list=data_val_list,
-                    batch_size=args.batch_size,
-                    shuffle=False,
-                    verbose=args.verbose,
-                    residual_mode=args.residual_mode,
-                    positive_only = args.positive_only,
-                    slices_per_input=args.slices_per_input,
-                    input_idx=args.input_idx,
-                    output_idx=args.output_idx,
-                    slice_axis=args.slice_axis,
-                    resize=args.resize,
-                    resample_size=args.resample_size,
-                    brain_only=args.brain_only,
-                    brain_only_mode=args.brain_only_mode)
-    else:
-        validation_generator = None
-        validation_generator_0 = None
-        validation_generator_2 = None
-        validation_generator_3 = None
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
+    #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
-    if args.train_mpr:
-        for i in range(0, args.num_epochs, 3):
-            print('##### EPOCH {} OF {} #####'.format(i+1, args.num_epochs))
-            history = m.model.fit_generator(generator=training_generator_0, validation_data=validation_generator_0, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+1, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i)
-            history = m.model.fit_generator(generator=training_generator_2, validation_data=validation_generator_2, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+2, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+1)
-            history = m.model.fit_generator(generator=training_generator_3, validation_data=validation_generator_3, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=i+3, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=i+2)
-    else:
-        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=args.num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
+    training_generator = sugen.DataGenerator(data_list=data_train_list,
+            batch_size=args.batch_size,
+            shuffle=args.shuffle,
+            verbose=args.verbose,
+            residual_mode=args.residual_mode,
+            positive_only = args.positive_only,
+            slices_per_input=args.slices_per_input,
+            input_idx=args.input_idx,
+            output_idx=args.output_idx,
+            slice_axis=slice_axis,
+            resize=args.resize,
+            resample_size=args.resample_size,
+            brain_only=args.brain_only,
+            brain_only_mode=args.brain_only_mode)
+
+    if r > 0:
+        validation_generator = sugen.DataGenerator(data_list=data_val_list,
+                batch_size=args.batch_size,
+                shuffle=False,
+                verbose=args.verbose,
+                residual_mode=args.residual_mode,
+                positive_only = args.positive_only,
+                slices_per_input=args.slices_per_input,
+                input_idx=args.input_idx,
+                output_idx=args.output_idx,
+                slice_axis=slice_axis,
+                resize=args.resize,
+                resample_size=args.resample_size,
+                brain_only=args.brain_only,
+                brain_only_mode=args.brain_only_mode)
+
+
+    history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
 
     toc = time.time()
     print('done training ({:.0f} sec)'.format(toc - tic))

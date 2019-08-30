@@ -241,7 +241,7 @@ if __name__ == '__main__':
                         residual_mode=args.residual_mode,
                         slices_per_input=args.slices_per_input,
                         resize=args.resize,
-                        slice_axis=slice_axis,
+                        slice_axis=[slice_axis],
                         brain_only=args.brain_only)
 
                 if checkpoint_files[ii]:

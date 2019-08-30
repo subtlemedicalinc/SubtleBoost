@@ -57,7 +57,7 @@ def make_image(im):
                          encoded_image_string=image_string)
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -105,10 +105,12 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     brain_only=self.brain_only,
                     brain_only_mode=self.brain_only_mode)
 
+            self.img_indices = np.random.choice(range(self.generator.__len__()), size=self.batch_size, replace=False)
+
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()
         writer = tf.summary.FileWriter(self.log_dir)
-        for ii in range(self.batch_size):
+        for ii in self.img_indices:
             tag = '{}_{}'.format(self.tag, ii)
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
@@ -123,7 +125,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 current_fpath = self.generator._current_file_list[0]
                 case_num = current_fpath.split('/')[-1].replace('.h5', '')
                 slice_idx = self.generator._current_slice_list[0]
-                tag = '{} ({}: slice={})'.format(tag, case_num, slice_idx)
+                tag = '{} ({}: slice={}_{})'.format(tag, case_num, slice_idx['axis'], slice_idx['index'])
 
             #print(X.shape, Y.shape, Y_prediction.shape)
             # separate 2.5D and N

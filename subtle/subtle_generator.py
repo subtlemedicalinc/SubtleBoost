@@ -57,17 +57,19 @@ class DataGenerator(keras.utils.Sequence):
         self.adv_mode = adv_mode
 
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
+
         self.slice_list_files = np.array(_slice_list_files)
         self.slice_list_indexes = np.array(_slice_list_indexes)
 
         self.slices_per_file_dict = {
-            data_file: get_num_slices(
+            data_file: [get_num_slices(
                 data_file,
-                axis=self.slice_axis,
+                axis=sl_axis,
                 params={'h5_key': self.h5_key}
-            )
+            ) for sl_axis in self.slice_axis]
             for data_file in self.data_list
         }
+
         self.num_slices = len(self.slice_list_files)
 
         self.input_idx = input_idx
@@ -137,8 +139,12 @@ class DataGenerator(keras.utils.Sequence):
         if not self.predict:
             data_list_Y = []
 
-        for i, (f, c) in enumerate(zip(slice_list_files, slice_list_indexes)):
-            num_slices = self.slices_per_file_dict[f]
+        for i, (f, idx_dict) in enumerate(zip(slice_list_files, slice_list_indexes)):
+            c = idx_dict['index']
+            ax = idx_dict['axis']
+            ax_pos = self.slice_axis.index(ax)
+
+            num_slices = [num for i, num in enumerate(self.slices_per_file_dict[f]) if i == ax_pos][0]
             h = self.slices_per_input // 2
 
             # 2.5d
@@ -155,15 +161,15 @@ class DataGenerator(keras.utils.Sequence):
             if enforce_raw_data or (self.brain_only_mode == 'mixed' and i >= 5):
                 h5_key = 'data'
 
-            slices = load_slices(input_file=f, slices=idxs, dim=self.slice_axis, params={'h5_key': h5_key}) # [c, 3, ny, nz]
+            slices = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': h5_key}) # [c, 3, ny, nz]
 
-            if self.slice_axis == 0:
+            if ax == 0:
                 pass
-            if self.slice_axis == 1:
-                assert False, 'invalid slice axis!, {}'.format(self.slice_axis)
-            elif self.slice_axis == 2:
+            if ax == 1:
+                assert False, 'invalid slice axis!, {}'.format(ax)
+            elif ax == 2:
                 slices = np.transpose(slices, (2, 1, 0, 3))
-            elif self.slice_axis == 3:
+            elif ax == 3:
                 slices = np.transpose(slices, (3, 1, 0, 2))
 
             # if self.resize is not None and (self.resize > slices.shape[-1] or self.resize > slices.shape[-2]):
