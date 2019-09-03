@@ -113,5 +113,7 @@ def parser(usage_str, description_str):
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
     parser.add_argument('--use_respath', action='store_true', dest='use_respath', help='If True, multi resolution blocks are used instead of standard 3x3 convolutions and residual paths are used instead of simple concatenate', default=False)
     parser.add_argument('--brain_centering', action='store_true', dest='brain_centering', help='Vertical and horizontal centering of the brain', default=False)
+    parser.add_argument('--gan_mode', action='store_true', dest='gan_mode', help='If True, network will be trained in GAN mode with adversarial loss', default=False)
+    parser.add_argument('--num_disc_steps', action='store', dest='num_disc_steps', type=int, help='Number of steps to train Discriminator for, for every generator epoch', default=5)
 
     return parser

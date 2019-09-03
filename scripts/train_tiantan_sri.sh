@@ -20,4 +20,5 @@ export NO_SAVE_BEST_ONLY=1
 export TRAIN_MPR=1
 export RESIZE=240
 export USE_RESPATH=1
+export GAN_MODE=1
 ./scripts/train.sh

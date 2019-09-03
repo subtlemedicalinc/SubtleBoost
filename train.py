@@ -23,10 +23,12 @@ import time
 import random
 from warnings import warn
 import configargparse as argparse
+from tqdm import tqdm
 
 import numpy as np
 
 import keras.callbacks
+from keras.optimizers import Adam
 
 import subtle.subtle_dnn as sudnn
 import subtle.subtle_io as suio
@@ -116,6 +118,7 @@ if __name__ == '__main__':
     else:
         print('Creating new checkpoint at {}'.format(args.checkpoint_file))
 
+    compile_model = (not args.gan_mode)
     m = sudnn.DeepEncoderDecoder2D(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
@@ -129,7 +132,8 @@ if __name__ == '__main__':
             log_dir=log_tb_dir,
             job_id=args.job_id,
             save_best_only=args.save_best_only,
-            use_respath=args.use_respath)
+            use_respath=args.use_respath,
+            compile_model=compile_model)
 
     m.load_weights()
 
@@ -199,9 +203,99 @@ if __name__ == '__main__':
                 resample_size=args.resample_size,
                 brain_only=args.brain_only,
                 brain_only_mode=args.brain_only_mode)
+    else:
+        validation_generator = None
 
+    if args.gan_mode:
+        history_objects = []
+        gen = m.model
+        disc_m = sudnn.Discriminator(
+            img_rows=nx, img_cols=ny,
+            compile_model=compile_model
+        )
+        disc = disc_m.model
 
-    history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
+        gan = sudnn.gan_model(gen, disc, (nx, ny, args.slices_per_input * 2))
+
+        disc.trainable = True
+        disc_m._compile_model()
+        disc.trainable = False
+
+        gan.compile(loss=[loss_function, 'binary_crossentropy'], optimizer=Adam())
+        disc.trainable = True
+
+        data_len = training_generator.__len__()
+        val_len = validation_generator.__len__()
+
+        print('Pre-fetching validation data')
+
+        X_val = []
+        Y_val = []
+
+        for val_idx in tqdm(range(val_len), total=val_len):
+            xv, yv = validation_generator.__getitem__(val_idx)
+            X_val.extend(xv)
+            Y_val.extend(yv)
+
+        X_val = np.array(X_val)
+        Y_val = np.array(Y_val)
+        real_val = np.ones((X_val.shape[0], 1))
+
+        real = np.ones((args.batch_size, 1))
+        fake = np.zeros((args.batch_size, 1))
+
+        for epoch in range(num_epochs):
+            print('EPOCH #{}/{}'.format(epoch + 1, num_epochs))
+            indices = np.random.permutation(data_len)
+
+            for idx in tqdm(indices, total=data_len):
+                X, Y = training_generator.__getitem__(idx)
+
+                gen_imgs = gen.predict(X, batch_size=args.batch_size)
+
+                dis_inp = np.concatenate([Y, gen_imgs])
+                dis_out = np.concatenate([real, fake])
+
+                history_objects.append(
+                    disc.fit(
+                        dis_inp, dis_out,
+                        batch_size=args.batch_size,
+                        epochs=1,
+                        verbose=0,
+                        callbacks=callbacks[:-1]
+                    )
+                )
+
+                disc.trainable = False
+                history_objects.append(
+                    gan.fit(
+                        X, [Y, real],
+                        epochs=1,
+                        batch_size=args.batch_size,
+                        verbose=0,
+                        callbacks=callbacks[:-1]
+                    )
+                )
+                disc.trainable = True
+
+            print('Evaluating...')
+            history_objects.append(
+                gan.evaluate(
+                    X_val, [Y_val, real_val],
+                    batch_size=args.batch_size,
+                    verbose=1
+                )
+            )
+
+            epoch_loss = history_objects[-1]
+            print('Validation losses:\n')
+            print('loss: {}'.format(epoch_loss[0]))
+            print('model_1_loss: {}'.format(epoch_loss[1]))
+            print('model_2_loss: {}'.format(epoch_loss[2]))
+            print('End of EPOCH #{}'.format(epoch + 1))
+
+    else:
+        history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
 
     toc = time.time()
     print('done training ({:.0f} sec)'.format(toc - tic))

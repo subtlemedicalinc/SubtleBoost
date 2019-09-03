@@ -55,6 +55,13 @@ def make_image(im):
     return tf.Summary.Image(height=nx,
                          width=ny,
                          encoded_image_string=image_string)
+def gan_model(gen, dis, input_shape):
+    inputs = Input(shape=input_shape)
+    gen_img = gen(inputs)
+    outputs = dis(gen_img)
+
+    model = keras.models.Model(inputs=inputs, outputs=[gen_img, outputs])
+    return model
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
     def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None):
@@ -230,13 +237,15 @@ class Discriminator:
             print(val)
 
         model = keras.models.Model(inputs=input, outputs=val)
+        self.model = model
 
         if self.compile_model:
-            model.compile(
-                loss='binary_crossentropy', optimizer=Adam(0.0002, 0.5), metrics=['accuracy']
-            )
+            self._compile_model()
 
-        self.model = model
+    def _compile_model(self):
+        self.model.compile(
+            loss='binary_crossentropy', optimizer=Adam(), metrics=['accuracy']
+        )
 
 # based on u-net and v-net
 class DeepEncoderDecoder2D:
@@ -479,17 +488,18 @@ class DeepEncoderDecoder2D:
         if self.verbose:
             print(model)
 
-        # fit
+        self.model = model
+        
+        if self.compile_model:
+            self._compile_model()
+
+    def _compile_model(self):
         if self.lr_init is not None:
             optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:
             optimizer = self.optimizer_fun()
 
-        if self.compile_model:
-            model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
-
-        self.model = model
-
+        self.model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
 
     def _build_model(self):
         print('Building standard model...')
@@ -596,13 +606,15 @@ class DeepEncoderDecoder2D:
         if self.verbose:
             print(model)
 
-        # fit
+        self.model = model
+
+        if self.compile_model:
+            self._compile_model()
+
+    def _compile_model():
         if self.lr_init is not None:
             optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:
             optimizer = self.optimizer_fun()
 
-        if self.compile_model:
-            model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
-
-        self.model = model
+        self.model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
