@@ -10,10 +10,12 @@ Created on 2018/05/25
 
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate, Activation, LeakyReLU, Flatten
+from keras.models import Sequential
+from keras.layers import Input, merge, Conv2D, Conv2DTranspose, BatchNormalization, Convolution2D, MaxPooling2D, UpSampling2D, Dense, concatenate, Activation, LeakyReLU, Flatten, Dropout, ZeroPadding2D
 import keras.callbacks
 from keras.layers.merge import add as keras_add
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
+from SpectralNormalizationKeras import ConvSN2D
 
 from warnings import warn
 import numpy as np
@@ -193,7 +195,7 @@ class Discriminator:
         self._build_discriminator()
 
     def _conv_block(self, input, filters, strides=1, bnorm=True):
-        d_out = Conv2D(filters=filters, kernel_size=(3, 3), strides=strides, padding='same')(input)
+        d_out = ConvSN2D(filters=filters, kernel_size=(3, 3), strides=strides, padding='same')(input)
         d_out = LeakyReLU(alpha=0.2)(d_out)
 
         if bnorm:
@@ -223,20 +225,17 @@ class Discriminator:
             print(d_out)
 
         d_out = self._conv_block(d_out, nc * 8)
-        d_out = self._conv_block(d_out, nc * 8, strides=2)
+        d_out = self._conv_block(d_out, nc * 8, strides=1)
         if self.verbose:
             print(d_out)
 
-        fc = Flatten()(d_out)
-        fc = LeakyReLU(alpha=0.2)(Dense(nc * 16)(fc))
-
-        val = Dense(1, activation='sigmoid')(fc)
+        val = self._conv_block(d_out, 1)
 
         if self.verbose:
-            print(fc)
             print(val)
 
         model = keras.models.Model(inputs=input, outputs=val)
+        model.summary()
         self.model = model
 
         if self.compile_model:
@@ -244,7 +243,7 @@ class Discriminator:
 
     def _compile_model(self):
         self.model.compile(
-            loss='binary_crossentropy', optimizer=Adam(), metrics=['accuracy']
+            loss='mse', optimizer=Adam(2e-3, 0.5)
         )
 
 # based on u-net and v-net
@@ -356,7 +355,8 @@ class DeepEncoderDecoder2D:
         return x
 
     def _res_block(self, num_channels, input, alpha=1.67):
-        nc = alpha * num_channels
+        #nc = alpha * num_channels
+        nc = num_channels
 
         conv_params = {
             'kernel_size': (3, 3),
@@ -365,9 +365,10 @@ class DeepEncoderDecoder2D:
         }
         shortcut = input
 
-        c1 = int(nc * (1/6))
-        c2 = int(nc * (1/3))
-        c3 = int(nc * (1/2))
+        # c1 = int(nc * (1/6))
+        # c2 = int(nc * (1/3))
+        # c3 = int(nc * (1/2))
+        c1 = c2 = c3 = nc
 
         ct = (c1 + c2 + c3)
 
@@ -451,15 +452,15 @@ class DeepEncoderDecoder2D:
         # encoder
         rb1 = self._res_block(nc, inputs)
         pool1 = MaxPooling2D(pool_size=(2, 2))(rb1)
-        rb1 = self._res_path(nc, 3, rb1)
+        rb1 = self._res_path(nc, 4, rb1)
 
         rb2 = self._res_block(nc * 2, pool1)
         pool2 = MaxPooling2D(pool_size=(2, 2))(rb2)
-        rb2 = self._res_path(nc * 2, 2, rb2)
+        rb2 = self._res_path(nc * 2, 4, rb2)
 
         rb3 = self._res_block(nc * 4, pool2)
         pool3 = MaxPooling2D(pool_size=(2, 2))(rb3)
-        rb3 = self._res_path(nc * 4, 1, rb3)
+        rb3 = self._res_path(nc * 4, 4, rb3)
 
         # bottleneck
         rb4 = self._res_block(nc * 4, pool3)
@@ -488,18 +489,11 @@ class DeepEncoderDecoder2D:
         if self.verbose:
             print(model)
 
+        model.summary()
         self.model = model
-        
+
         if self.compile_model:
             self._compile_model()
-
-    def _compile_model(self):
-        if self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
-        else:
-            optimizer = self.optimizer_fun()
-
-        self.model.compile(loss=self.loss_function, optimizer=optimizer, metrics=self.metrics_monitor)
 
     def _build_model(self):
         print('Building standard model...')
@@ -571,11 +565,6 @@ class DeepEncoderDecoder2D:
         conv_decoders = [conv_center]
 
         for i in range(1, self.num_poolings + 1):
-
-            #print('decoder', i, convs, pools)
-            #print(UpSampling2D(size=(2, 2))(conv_center))
-            #print(convs[-i])
-
             decoder_upsample = UpSampling2D(size=(2, 2))(conv_decoders[-1])
             up_decoder = concatenate([decoder_upsample, convs[-i]])
             conv_decoder = up_decoder
@@ -611,7 +600,7 @@ class DeepEncoderDecoder2D:
         if self.compile_model:
             self._compile_model()
 
-    def _compile_model():
+    def _compile_model(self):
         if self.lr_init is not None:
             optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
         else:

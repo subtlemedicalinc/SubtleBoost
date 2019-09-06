@@ -1,4 +1,4 @@
-export GPU=2
+export GPU=3
 export DATA_DIR=/home/srivathsa/projects/studies/gad/tiantan/preprocess/data
 export DATA_LIST=data_lists/data_train_tiantan_sri.txt
 export LEARNING_RATE=.001
@@ -19,5 +19,5 @@ export SSIM_LAMBDA=.2
 export NO_SAVE_BEST_ONLY=1
 export RESIZE=240
 export USE_RESPATH=1
-export TRAIN_MPR=1
+export GAN_MODE=1
 ./scripts/train.sh

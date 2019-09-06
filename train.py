@@ -43,6 +43,21 @@ description_str = 'Train SubtleGrad network on pre-processed data.'
 # FIXME: add time stamps, logging
 # FIXME: data augmentation
 
+import matplotlib.pyplot as plt
+plt.set_cmap('gray')
+
+def save_img(img, fname):
+    plt.imshow(img)
+    plt.colorbar()
+    plt.savefig('/home/srivathsa/projects/studies/gad/tiantan/train/logs/test/{}.png'.format(fname))
+    plt.clf()
+
+def plot_losses(losses, fname):
+    plt.plot(np.arange(len(losses)), losses)
+    plt.xlabel('Iteration')
+    plt.ylabel('Loss')
+    plt.savefig('/home/srivathsa/projects/studies/gad/tiantan/train/logs/test/{}.png'.format(fname))
+    plt.clf()
 
 if __name__ == '__main__':
 
@@ -207,6 +222,22 @@ if __name__ == '__main__':
         validation_generator = None
 
     if args.gan_mode:
+
+        ### TEMP CODE
+        fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO29.h5'
+
+        pred_gen = sugen.DataGenerator(
+            data_list=[fpath_h5],
+            batch_size=8,
+            shuffle=False,
+            verbose=0,
+            residual_mode=False,
+            slices_per_input=7,
+            slice_axis=[0]
+        )
+
+        ### TEMP CODE
+
         history_objects = []
         gen = m.model
         disc_m = sudnn.Discriminator(
@@ -239,44 +270,64 @@ if __name__ == '__main__':
 
         X_val = np.array(X_val)
         Y_val = np.array(Y_val)
-        real_val = np.ones((X_val.shape[0], 1))
+        real_val = np.ones((X_val.shape[0], 30, 30, 1))
 
-        real = np.ones((args.batch_size, 1))
-        fake = np.zeros((args.batch_size, 1))
+        #real = np.random.uniform(low=0.95, high=1.05, size=(args.batch_size, 1))
+        real = np.ones((args.batch_size, 30, 30, 1))
+        #fake = np.random.uniform(low=0, high=0.1, size=(args.batch_size, 1))
+        fake = np.zeros((args.batch_size, 30, 30, 1))
 
-        for epoch in range(num_epochs):
+        real_full = np.ones((data_len * args.batch_size, 30, 30, 1))
+
+        # for epoch in range(num_epochs):
+        for epoch in range(50):
             print('EPOCH #{}/{}'.format(epoch + 1, num_epochs))
             indices = np.random.permutation(data_len)
 
+            X_batch = []
+            Y_batch = []
+
             for idx in tqdm(indices, total=data_len):
                 X, Y = training_generator.__getitem__(idx)
-
                 gen_imgs = gen.predict(X, batch_size=args.batch_size)
 
-                dis_inp = np.concatenate([Y, gen_imgs])
+                X_batch.extend(X)
+                Y_batch.extend(Y)
+
+                gauss1 = np.random.normal(0, 0.1, Y.shape)
+                Y_n = Y + gauss1
+
+                gauss2 = np.random.normal(0, 0.1, gen_imgs.shape)
+                g_n = gen_imgs + gauss2
+
+                dis_inp = np.concatenate([Y_n, g_n])
                 dis_out = np.concatenate([real, fake])
 
                 history_objects.append(
                     disc.fit(
                         dis_inp, dis_out,
                         batch_size=args.batch_size,
-                        epochs=1,
-                        verbose=0,
-                        callbacks=callbacks[:-1]
+                        epochs=3,
+                        verbose=1,
+                        #callbacks=callbacks[:-1],
+                        shuffle=True
                     )
                 )
 
-                disc.trainable = False
-                history_objects.append(
-                    gan.fit(
-                        X, [Y, real],
-                        epochs=1,
-                        batch_size=args.batch_size,
-                        verbose=0,
-                        callbacks=callbacks[:-1]
-                    )
+            X_batch = np.array(X_batch)
+            Y_batch = np.array(Y_batch)
+
+            disc.trainable = False
+            history_objects.append(
+                gan.fit(
+                    X_batch, [Y_batch, real_full],
+                    epochs=1,
+                    batch_size=args.batch_size,
+                    verbose=1,
+                    #callbacks=callbacks[:-1]
                 )
-                disc.trainable = True
+            )
+            disc.trainable = True
 
             print('Evaluating...')
             history_objects.append(
@@ -292,7 +343,25 @@ if __name__ == '__main__':
             print('loss: {}'.format(epoch_loss[0]))
             print('model_1_loss: {}'.format(epoch_loss[1]))
             print('model_2_loss: {}'.format(epoch_loss[2]))
+
+            y_pred = gen.predict_generator(pred_gen)
+            pidx = y_pred.shape[0] // 2
+            print('saving prediction...')
+            save_img(y_pred[pidx, ..., 0], 'epoch_{}'.format(epoch + 1))
+
             print('End of EPOCH #{}'.format(epoch + 1))
+
+        d_losses = []
+        g_losses = []
+        for hist in history_objects:
+            if isinstance(hist, list):
+                g_losses.append(hist[0])
+            elif len(hist.history.keys()) == 1:
+                d_losses.append(hist.history['loss'][0])
+        d_losses = np.clip(d_losses, 0, 1)
+        g_losses = np.clip(g_losses, 0, 2)
+        plot_losses(d_losses, 'd_losses')
+        plot_losses(g_losses, 'g_losses')
 
     else:
         history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
@@ -300,5 +369,5 @@ if __name__ == '__main__':
     toc = time.time()
     print('done training ({:.0f} sec)'.format(toc - tic))
 
-    if args.history_file is not None:
-        np.save(args.history_file, history.history)
+    # if args.history_file is not None:
+    #     np.save(args.history_file, history.history)

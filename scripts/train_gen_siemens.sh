@@ -1,5 +1,5 @@
-export GPU=2
-export DATA_DIR=/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data
+export GPU=0
+export DATA_DIR=/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data_halfmm
 export DATA_LIST=data_lists/data_train_gen_siemens.txt
 export LEARNING_RATE=.001
 export MAX_DATA_SETS=100
@@ -18,5 +18,5 @@ export L1_LAMBDA=.8
 export SSIM_LAMBDA=.2
 export NO_SAVE_BEST_ONLY=1
 export TRAIN_MPR=1
-export RESIZE=256
+export RESIZE=512
 ./scripts/train.sh
