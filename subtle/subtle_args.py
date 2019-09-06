@@ -79,7 +79,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
     parser.add_argument('--zoom', action='store', dest='zoom', type=int, help='zoom to in-plane matrix size', default=None)
     parser.add_argument('--resize', action='store', dest='resize', type=int, help='resize to 3D matrix size', default=None)
-    parser.add_argument('--resample_isotropic', action='store_true', dest='resample_isotropic', help='resample to 1mm isotropic resolution', default=False)
+    parser.add_argument('--resample_isotropic', action='store', type=float, dest='resample_isotropic', help='resample to 1mm isotropic resolution', default=0)
     parser.add_argument('--resample_size', action='store', dest='resample_size', type=int, help='resample 3D matrix (generally used to train models with downsampled images)', default=None)
     parser.add_argument('--zoom_order', action='store', dest='zoom_order', type=int, help='zoom order', default=3)
     parser.add_argument('--nslices', action='store', dest='nslices', type=int, help='number of slices for scaling', default=20)

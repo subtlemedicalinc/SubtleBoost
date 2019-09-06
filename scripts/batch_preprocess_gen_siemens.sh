@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export dicom_data='/home/srivathsa/projects/studies/gad/gen_siemens/data'
-export out_dir='/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data'
-export out_dir_plots='/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots'
+export out_dir='/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data_halfmm'
+export out_dir_plots='/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots_halfmm'
 export data_list='/home/srivathsa/projects/SubtleGad/data_lists/data_full_gen_siemens.txt'
 export log_dir='/home/srivathsa/projects/studies/gad/gen_siemens/preprocess'
 export par_jobs=1
@@ -26,9 +26,9 @@ function preprocess() {
      outfile_png=${out_dir_plots}/${sub_dir_no_spaces}.png
      outfile_full_png=${out_dir_plots}/${sub_dir_no_spaces}_full.png
 
-     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .1 --scale_matching --noise_mask_area --resample_isotropic --scale_dicom_tags --fsl_mask --pad_for_size 256
+     echo python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .1 --scale_matching --noise_mask_area --resample_isotropic 0.5 --scale_dicom_tags --fsl_mask --pad_for_size 512
 
-     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .1 --scale_matching --resample_isotropic --scale_dicom_tags --fsl_mask --pad_for_size 256 > ${logfile} 2>${errfile}
+     python $preprocess_bin --path_base "${dicom_data}/${sub_dir}" --verbose --output "${outfile}" --discard_start_percent 0 --discard_end_percent 0 --normalize --normalize_fun mean --joint_normalize --transform_type "affine" --skip_scale_im --mask_threshold .1 --scale_matching --resample_isotropic 0.5 --scale_dicom_tags --fsl_mask --pad_for_size 512 > ${logfile} 2>${errfile}
 
      python ${plot_grid_bin} --input $outfile --output ${outfile_png} --h5_key data_mask
 

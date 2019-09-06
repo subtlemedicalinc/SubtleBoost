@@ -470,10 +470,10 @@ def _get_spacing_from_dicom(dirpath_dicom):
 def resample_isotropic(args, ims, metadata):
     metadata['original_size'] = (ims.shape[2], ims.shape[3])
 
-    if args.resample_isotropic:
-        print('Resampling images to 1mm isotropic...')
+    if args.resample_isotropic > 0:
+        print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
-        new_spacing = [1., 1., 1.]
+        new_spacing = [args.resample_isotropic] * 3
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)
@@ -512,7 +512,7 @@ def resample_isotropic(args, ims, metadata):
 def reshape_fsl_mask(args, fsl_mask, metadata):
     fsl_reshape = np.copy(fsl_mask)
 
-    if args.fsl_mask and args.resample_isotropic:
+    if args.fsl_mask and args.resample_isotropic > 0:
         print('reshaping fsl mask')
         fsl_mask_ims = np.zeros((fsl_mask.shape[0], 3, fsl_mask.shape[1], fsl_mask.shape[2]))
 
