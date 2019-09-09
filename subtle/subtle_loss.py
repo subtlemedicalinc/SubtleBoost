@@ -28,9 +28,12 @@ except:
 try:
     from keras_contrib.backend import extract_image_patches as subtle_extract_image_patches
     bypass_ssim_loss = False
-except:    
+except:
     warnings.warn('import keras_contrib failed, replacing ssim loss with L1 loss')
-    bypass_ssim_loss = True        
+    bypass_ssim_loss = True
+
+from keras.applications.vgg19 import VGG19
+from keras.models import Model
 
 def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
     # bypass with a zero loss
@@ -56,11 +59,11 @@ def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_
     # Get mean
     u_true = K.mean(patches_true, axis=-1)
     u_pred = K.mean(patches_pred, axis=-1)
-    
+
     # Get variance
     var_true = K.var(patches_true, axis=-1)
     var_pred = K.var(patches_pred, axis=-1)
-    
+
     # Get covariance
     covar_true_pred = K.mean(patches_true * patches_pred, axis=-1) - u_true * u_pred
 
@@ -81,6 +84,17 @@ def psnr_loss(y_true, y_pred):
 def l1_loss(y_true, y_pred):
     return keras.losses.mean_absolute_error(y_true, y_pred)
 
-def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0):
-    assert perceptual_lambda == 0., "Perceptual loss not implemented"
+def perceptual_loss(y_true, y_pred, img_shape):
+    # From https://bit.ly/2HTb4t9
+    y_true_3c = K.Concatenate([y_true, y_true, y_true])
+    y_pred_3c = K.Concatenate([y_pred, y_pred, y_pred])
+    
+    vgg = VGG19(include_top=False, weights='imagenet', input_shape=img_shape)
+    loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
+    loss_model.trainable = False
+    return K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
+
+def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, img_shape=(240, 240, 3)):
+    if perceptual_lambda > 0:
+        return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda
     return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda
