@@ -276,14 +276,14 @@ if __name__ == '__main__':
         #out = np.apply_along_axis(lambda v: np.median(v[np.nonzero(v)]), 0, x123)
         Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
-    #if 'resampled_size' in metadata:
+    if 'resampled_size' in metadata:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-    res_iso = [args.resample_isotropic] * 3
-    y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
-    Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+        res_iso = [args.resample_isotropic] * 3
+        y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
 
-    original_data = resample_unisotropic(args, original_data, metadata)
-    original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
+        original_data = resample_unisotropic(args, original_data, metadata)
+        original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
