@@ -50,11 +50,13 @@ usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
 
 
-def resample_unisotropic(ims, metadata):
+def resample_unisotropic(args, ims, metadata):
     print('undoing resample isotropic...')
-    uniso_zero, _ = supre.zoom_iso(ims[:, 0, ...], [1., 1., 1.], metadata['old_spacing_zero'])
-    uniso_low, _ = supre.zoom_iso(ims[:, 1, ...], [1., 1., 1.], metadata['old_spacing_low'])
-    uniso_full, _ = supre.zoom_iso(ims[:, 2, ...], [1., 1., 1.], metadata['old_spacing_full'])
+    res_iso = [args.resample_isotropic] * 3
+
+    uniso_zero, _ = supre.zoom_iso(ims[:, 0, ...], res_iso, metadata['old_spacing_zero'])
+    uniso_low, _ = supre.zoom_iso(ims[:, 1, ...], res_iso, metadata['old_spacing_low'])
+    uniso_full, _ = supre.zoom_iso(ims[:, 2, ...], res_iso, metadata['old_spacing_full'])
 
     data_uniso = np.array([uniso_zero, uniso_low, uniso_full]).transpose(1, 0, 2, 3)
     print('Data after undoing isotropic', data_uniso.shape)
@@ -101,33 +103,6 @@ if __name__ == '__main__':
         data[:,1,:,:] = data[:,0,:,:].copy()
         if data_mask is not None:
             data_mask[:,1,:,:] = data_mask[:,0,:,:].copy()
-
-    if 'zero_pad_size' in metadata:
-        print('Undoing zero padding...')
-        if 'resampled_size' in metadata:
-            crop_size = metadata['resampled_size'][0]
-        else:
-            crop_size = metadata['original_size'][0]
-
-        ref_img = np.zeros((data.shape[0], crop_size, crop_size))
-
-        new_data = np.zeros((data.shape[0], 3, crop_size, crop_size))
-        new_data_mask = np.zeros((data.shape[0], 3, crop_size, crop_size))
-
-        for cnt in np.arange(3):
-            print('Center cropping {}'.format(cnt))
-            new_data[:, cnt, ...] = supre.center_crop(data[:, cnt, ...], ref_img)
-            new_data_mask[:, cnt, ...] = supre.center_crop(data_mask[:, cnt, ...], ref_img)
-
-        data = new_data
-        data_mask = new_data_mask
-
-        print('Data shape after center cropping', data.shape)
-
-    if 'resampled_size' in metadata:
-        # isotropic resampling has been done in preprocess, so need to unresample to original spacing before running inference
-        data = resample_unisotropic(data, metadata)
-        data_mask = resample_unisotropic(data_mask, metadata)
 
     original_data = np.copy(data)
     original_data_mask = np.copy(data_mask) if data_mask is not None else None
@@ -301,6 +276,15 @@ if __name__ == '__main__':
         #out = np.apply_along_axis(lambda v: np.median(v[np.nonzero(v)]), 0, x123)
         Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
+    #if 'resampled_size' in metadata:
+        # isotropic resampling has been done in preprocess, so need to unresample to original spacing
+    res_iso = [args.resample_isotropic] * 3
+    y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
+    Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+    original_data = resample_unisotropic(args, original_data, metadata)
+    original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
+
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
 
@@ -333,6 +317,19 @@ if __name__ == '__main__':
         y_pred = Y_prediction[..., 0]
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
+
+    if 'zero_pad_size' in metadata:
+        if 'resampled_size' in metadata:
+            crop_size = metadata['resampled_size'][0]
+        else:
+            crop_size = metadata['original_size'][0]
+
+        y_pred = Y_prediction[..., 0]
+        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+        y_pred = supre.center_crop(y_pred, ref_img)
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     if args.predict_dir:
         # save raw data
