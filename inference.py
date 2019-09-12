@@ -84,7 +84,17 @@ if __name__ == '__main__':
         data_mask = suio.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}) if suio.has_h5_key(args.data_preprocess, 'data_mask') else None
 
         metadata = suio.load_h5_metadata(args.data_preprocess)
-        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
+        dicom_dirs = suio.get_dicom_dirs(args.path_base, override=args.override)
+
+        args.path_zero = dicom_dirs[0]
+        args.path_low = dicom_dirs[1]
+
+        if len(dicom_dirs) == 3:
+            args.path_full = dicom_dirs[2]
+            metadata['inference_only'] = False
+        else:
+            args.path_full = args.path_low
+            metadata['inference_only'] = True
     else:
         if args.verbose:
             print('pre-processing data')
@@ -357,8 +367,7 @@ if __name__ == '__main__':
 
         suio.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
 
-
-    if args.stats_file:
+    if args.stats_file and not metadata['inference_only']:
         print('running stats on inference...')
         stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
 

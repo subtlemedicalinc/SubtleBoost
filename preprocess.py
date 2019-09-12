@@ -84,7 +84,18 @@ def get_images(args, metadata):
     metadata['use_base_path'] = use_base_path
 
     if use_base_path:
-        args.path_zero, args.path_low, args.path_full = suio.get_dicom_dirs(args.path_base, override=args.override)
+        dicom_dirs = suio.get_dicom_dirs(args.path_base, override=args.override)
+
+        args.path_zero = dicom_dirs[0]
+        args.path_low = dicom_dirs[1]
+
+        if len(dicom_dirs) == 3:
+            args.path_full = dicom_dirs[2]
+            metadata['inference_only'] = False
+        else:
+            args.path_full = args.path_low
+            metadata['inference_only'] = True
+
         if args.verbose:
             print('path_zero = {}'.format(args.path_zero))
             print('path_low = {}'.format(args.path_low))
