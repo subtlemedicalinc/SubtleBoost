@@ -1,4 +1,4 @@
-export GPU=2
+export GPU=0
 export DATA_DIR=/home/srivathsa/projects/studies/gad/tiantan/preprocess/data
 export DATA_LIST=data_lists/data_train_tiantan_sri.txt
 export LEARNING_RATE=.001
@@ -14,8 +14,9 @@ export LOG_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/logs
 export TB_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/tb
 export HIST_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/history
 export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints
-export L1_LAMBDA=.8
-export SSIM_LAMBDA=.2
+export L1_LAMBDA=0.15
+export SSIM_LAMBDA=0.15
+export PERCEPTUAL_LAMBDA=0.7
 export NO_SAVE_BEST_ONLY=1
 export RESIZE=240
 export USE_RESPATH=1

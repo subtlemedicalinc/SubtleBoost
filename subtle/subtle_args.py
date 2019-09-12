@@ -32,6 +32,7 @@ def parser(usage_str, description_str):
     parser.add_argument('--gen_type', action='store', dest='gen_type', type=str, help='generator type (legacy or split)', default='legacy')
     parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)
     parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)
+    parser.add_argument('--perceptual_lambda', action='store', type=float, dest='perceptual_lambda', help='Loss from VGG19 ImageNet model', default=0.)
 
     ## inference args
     parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)
