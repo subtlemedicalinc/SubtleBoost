@@ -350,6 +350,19 @@ if __name__ == '__main__':
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
+    if 'zero_pad_size' in metadata:
+        if 'resampled_size' in metadata:
+            crop_size = metadata['resampled_size'][0]
+        else:
+            crop_size = metadata['original_size'][0]
+
+        y_pred = Y_prediction[..., 0]
+        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+        y_pred = supre.center_crop(y_pred, ref_img)
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
+
     if args.predict_dir:
         # save raw data
         data_file_base = os.path.basename(data_file)

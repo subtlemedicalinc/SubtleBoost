@@ -14,6 +14,7 @@ export LOG_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/logs
 export TB_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/tb
 export HIST_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/history
 export CHECKPOINT_DIR=/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints
+<<<<<<< HEAD
 export L1_LAMBDA=0.15
 export SSIM_LAMBDA=0.15
 export PERCEPTUAL_LAMBDA=0.7
