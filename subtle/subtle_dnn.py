@@ -229,7 +229,8 @@ class Discriminator:
         if self.verbose:
             print(d_out)
 
-        val = self._conv_block(d_out, 1)
+        val = ConvSN2D(filters=1, kernel_size=(3, 3), strides=1, padding='same')(d_out)
+        val = Activation('sigmoid')(val)
 
         if self.verbose:
             print(val)

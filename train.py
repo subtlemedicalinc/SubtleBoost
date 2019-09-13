@@ -270,17 +270,15 @@ if __name__ == '__main__':
 
         X_val = np.array(X_val)
         Y_val = np.array(Y_val)
-        real_val = np.ones((X_val.shape[0], 30, 30, 1))
 
-        #real = np.random.uniform(low=0.95, high=1.05, size=(args.batch_size, 1))
-        real = np.ones((args.batch_size, 30, 30, 1))
-        #fake = np.random.uniform(low=0, high=0.1, size=(args.batch_size, 1))
-        fake = np.zeros((args.batch_size, 30, 30, 1))
+        dc = 30
+        real_val = np.ones((X_val.shape[0], dc, dc, 1))
 
-        real_full = np.ones((data_len * args.batch_size, 30, 30, 1))
+        real = np.ones((args.batch_size, dc, dc, 1))
+        fake = np.zeros((args.batch_size, dc, dc, 1))
+        real_full = np.ones((data_len * args.batch_size, dc, dc, 1))
 
-        # for epoch in range(num_epochs):
-        for epoch in range(50):
+        for epoch in range(num_epochs):
             print('EPOCH #{}/{}'.format(epoch + 1, num_epochs))
             indices = np.random.permutation(data_len)
 
@@ -307,10 +305,11 @@ if __name__ == '__main__':
                     disc.fit(
                         dis_inp, dis_out,
                         batch_size=args.batch_size,
-                        epochs=3,
+                        epochs=1,
                         verbose=1,
                         #callbacks=callbacks[:-1],
-                        shuffle=True
+                        shuffle=False
+
                     )
                 )
 
@@ -324,7 +323,7 @@ if __name__ == '__main__':
                     epochs=1,
                     batch_size=args.batch_size,
                     verbose=1,
-                    #callbacks=callbacks[:-1]
+                    callbacks=callbacks[:-1]
                 )
             )
             disc.trainable = True
