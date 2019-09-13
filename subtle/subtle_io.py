@@ -619,6 +619,7 @@ def has_h5_key(fpath_h5, key):
 
     return has_key
 
+<<<<<<< HEAD
 def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./experiments'):
     class _ExperimentConfig:
         def __init__(self, config_dict):
@@ -656,6 +657,23 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
         del config_dict[subexp_name]
         config_dict = {**config_dict, **subexp_config}
 
+=======
+def get_config(exp_name, config_key='preprocess', dirpath_exp='./experiments'):
+    class _ExperimentConfig:
+        def __init__(self, config_dict):
+            parser = sargs.parser()
+            ns_vars = vars(parser.parse_args())
+
+            config_dict = {**ns_vars, **config_dict}
+            for key, val in config_dict.items():
+                setattr(self, key, val)
+
+    fname = 'config.json'
+    fpath_json = os.path.join(dirpath_exp, exp_name, fname)
+
+    json_str = open(fpath_json, 'r').read()
+    config_dict = json.loads(json_str)[config_key]
+>>>>>>> Preprocess pipeline using experiment configs
     return _ExperimentConfig(config_dict)
 
 def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):
