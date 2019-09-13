@@ -13,6 +13,7 @@ import os # FIXME: transition from os to pathlib
 import pathlib
 from warnings import warn
 import time
+import json
 
 import h5py
 import numpy as np
@@ -29,6 +30,7 @@ except:
     pass
 
 import subtle.subtle_preprocess as sup
+import subtle.subtle_args as sargs
 import copy
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
@@ -615,3 +617,39 @@ def has_h5_key(fpath_h5, key):
     h5_file.close()
 
     return has_key
+
+def get_config(exp_name, config_key='preprocess', dirpath_exp='./experiments'):
+    class _ExperimentConfig:
+        def __init__(self, config_dict):
+            parser = sargs.parser()
+            ns_vars = vars(parser.parse_args())
+
+            config_dict = {**ns_vars, **config_dict}
+            for key, val in config_dict.items():
+                setattr(self, key, val)
+
+    fname = 'config.json'
+    fpath_json = os.path.join(dirpath_exp, exp_name, fname)
+
+    json_str = open(fpath_json, 'r').read()
+    config_dict = json.loads(json_str)[config_key]
+    return _ExperimentConfig(config_dict)
+
+def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):
+    fpath_json = os.path.join(dirpath_exp, exp_name, 'data.json')
+    json_str = open(fpath_json, 'r').read()
+    data_dict = json.loads(json_str)
+
+    train_data = data_dict['train']
+    test_data = data_dict['test']
+
+    data = None
+
+    if dataset == 'train':
+        data = train_data
+    elif dataset == 'test':
+        data = test_data
+    else:
+        data = train_data + test_data
+
+    return data

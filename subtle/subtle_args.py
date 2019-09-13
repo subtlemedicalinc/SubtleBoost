@@ -11,11 +11,12 @@ Created on 2018/12/04
 
 import configargparse as argparse
 
-def parser(usage_str, description_str):
+def parser(usage_str='', description_str=''):
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     ## shared args
     parser.add_argument('--config', is_config_file=True, help='config file path', default=False)
+    parser.add_argument('--experiment', action='store', dest='experiment', type=str, help='Name of the experiment for which preprocess/train/inference is to be run', default=None)
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--gpu', action='store', dest='gpu_device', type=str, help='set GPU', default=None)
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)

@@ -1,0 +1,21 @@
+{
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "verbose": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
+    "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "transform_type": "rigid",
+    "scale_matching": true
+  },
+  "train": {
+
+  },
+  "inference": {
+
+  }
+}

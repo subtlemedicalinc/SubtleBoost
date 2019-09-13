@@ -620,7 +620,10 @@ def preprocess_chain(args):
 
     return unmasked_ims, ims, metadata
 
-if __name__ == '__main__':
-    args = fetch_args()
+def execute_chain(args):
     ims, ims_mask, metadata = preprocess_chain(args)
     suio.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
+
+if __name__ == '__main__':
+    args = fetch_args()
+    execute_chain(args)
