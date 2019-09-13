@@ -87,18 +87,21 @@ def l1_loss(y_true, y_pred):
 def perceptual_loss(y_true, y_pred, img_shape):
     # From https://bit.ly/2HTb4t9
 
-    y_true = vgg_preprocess(y_true)
-    y_pred = vgg_preprocess(y_pred)
+    y_true_3c = K.concatenate([y_true, y_true, y_true])
+    y_pred_3c = K.concatenate([y_pred, y_pred, y_pred])
 
-    y_true_3c = K.Concatenate([y_true, y_true, y_true])
-    y_pred_3c = K.Concatenate([y_pred, y_pred, y_pred])
+    y_true_3c = vgg_preprocess(y_true_3c)
+    y_pred_3c = vgg_preprocess(y_pred_3c)
 
     vgg = VGG19(include_top=False, weights='imagenet', input_shape=img_shape)
     loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
     loss_model.trainable = False
     return K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
 
-def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, img_shape=(240, 240, 3)):
-    if perceptual_lambda > 0:
-        return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda
+def wasserstein_loss(y_true, y_pred):
+    return K.mean(y_true * y_pred)
+
+def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, img_shape=(240, 240, 3)):
+    if perceptual_lambda > 0 or wloss_lambda > 0:
+        return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y)
     return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda

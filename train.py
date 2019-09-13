@@ -121,7 +121,7 @@ if __name__ == '__main__':
     sudnn.clear_keras_memory()
     sudnn.set_keras_memory(args.keras_memory)
 
-    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, img_shape=(nx, ny, 3))
+    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, img_shape=(nx, ny, 3))
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
 
     if args.resample_size is not None:
