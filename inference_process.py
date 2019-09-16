@@ -13,6 +13,8 @@ if __name__ == '__main__':
 
     data_list = suio.get_experiment_data(args.experiment, dataset='test')
 
+    if not os.path.exists()
+
     for case_num in data_list:
         print('\n-------------\n')
         print('*****Running inference for {}*****\n'.format(case_num))
