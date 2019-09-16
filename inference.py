@@ -13,10 +13,6 @@ Created on 2018/11/09
 
 import sys
 
-print('------')
-print(' '.join(sys.argv))
-print('------\n\n\n')
-
 import tempfile
 import os
 import datetime
@@ -72,13 +68,12 @@ def resample_unisotropic(args, ims, metadata):
 
     return data_uniso
 
-if __name__ == '__main__':
-    parser = sargs.parser(usage_str, description_str)
-    args = parser.parse_args()
-
-    if args.gpu_device is not None:
+def inference_process(args):
+    args.gpu = str(args.gpu)
+    
+    if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
     if args.data_preprocess:
         if args.verbose:
@@ -125,7 +120,6 @@ if __name__ == '__main__':
         data_mask = supre.resample_slices(data_mask, resample_size=args.resample_size)
 
     # Center position
-
     if not args.brain_only and args.brain_centering:
         bbox_arr = []
         data_mod = []
