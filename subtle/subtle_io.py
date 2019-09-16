@@ -661,12 +661,18 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
 def get_config(exp_name, config_key='preprocess', dirpath_exp='./experiments'):
     class _ExperimentConfig:
         def __init__(self, config_dict):
+            self.config_dict = config_dict
             parser = sargs.parser()
             ns_vars = vars(parser.parse_args())
 
-            config_dict = {**ns_vars, **config_dict}
-            for key, val in config_dict.items():
+            self.config_dict = {**ns_vars, **self.config_dict}
+            for key, val in self.config_dict.items():
                 setattr(self, key, val)
+
+        def debug_print(self):
+            print('ExperimentConfig...')
+            for key, val in self.config_dict.items():
+                print('{}: {}'.format(key, val))
 
     fname = 'config.json'
     fpath_json = os.path.join(dirpath_exp, exp_name, fname)
