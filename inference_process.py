@@ -13,6 +13,8 @@ if __name__ == '__main__':
 
     data_list = suio.get_experiment_data(args.experiment, dataset='test')
 
+    if not os.path.exists()
+
     for case_num in data_list:
         print('\n-------------\n')
         print('*****Running inference for {}*****\n'.format(case_num))
@@ -23,7 +25,12 @@ if __name__ == '__main__':
         config.data_preprocess = '{}/{}.h5'.format(config.data_dir, case_num)
         config.path_out = '{}/{}/{}/{}_SubtleGad'.format(config.data_raw, config.out_folder, case_num, case_num)
         config.path_base = '{}/{}'.format(config.data_raw, case_num)
-        config.stats_file = '{}/metrics/{}/{}.h5'.format(config.stats_base, args.description, case_num)
+
+        metrics_dir = '{}/metrics/{}'.format(config.stats_base, args.description)
+        if not os.path.exists(metrics_dir):
+            os.makedirs(metrics_dir)
+
+        config.stats_file = '{}/{}.h5'.format(metrics_dir, case_num)
 
         try:
             run_inference(config)
