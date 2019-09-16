@@ -618,7 +618,7 @@ def has_h5_key(fpath_h5, key):
 
     return has_key
 
-def get_config(exp_name, config_key='preprocess', dirpath_exp='./experiments'):
+def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./experiments'):
     class _ExperimentConfig:
         def __init__(self, config_dict):
             self.config_dict = config_dict
@@ -639,6 +639,12 @@ def get_config(exp_name, config_key='preprocess', dirpath_exp='./experiments'):
 
     json_str = open(fpath_json, 'r').read()
     config_dict = json.loads(json_str)[config_key]
+
+    if subexp_name is not None:
+        subexp_config = config_dict[subexp_name]
+        del config_dict[subexp_name]
+        config_dict = {**config_dict, **subexp_config}
+
     return _ExperimentConfig(config_dict)
 
 def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):

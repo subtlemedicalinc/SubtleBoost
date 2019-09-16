@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser = sargs.parser()
     args = parser.parse_args()
 
-    config = suio.get_config(args.experiment, config_key='train')
+    config = suio.get_config(args.experiment, args.sub_experiment, config_key='train')
 
     config.checkpoint = os.path.join(config.checkpoint_dir, '{}.checkpoint'.format(config.checkpoint_name))
 
