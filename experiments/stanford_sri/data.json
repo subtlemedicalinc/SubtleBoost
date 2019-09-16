@@ -1,0 +1,32 @@
+{
+  "train": [
+    "Patient_0102",
+    "Patient_0108",
+    "Patient_0112",
+    "Patient_0113",
+    "Patient_0114",
+    "Patient_0116",
+    "Patient_0118",
+    "Patient_0120",
+    "Patient_0122",
+    "Patient_0124",
+    "Patient_0127",
+    "Patient_0128",
+    "Patient_0132",
+    "Patient_0135",
+    "Patient_0136",
+    "Patient_0137",
+    "Patient_0138",
+    "Patient_0140"
+  ],
+  "test": [
+    "Patient_0101",
+    "Patient_0104",
+    "Patient_0106",
+    "Patient_0109",
+    "Patient_0117",
+    "Patient_0125",
+    "Patient_0134",
+    "Patient_0139"
+  ]
+}
