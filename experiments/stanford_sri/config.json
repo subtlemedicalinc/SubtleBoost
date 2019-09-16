@@ -1,47 +1,117 @@
 {
-  "slices_per_input": 5,
-  "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
-  "gpu": 0,
-  "verbose": 1,
-  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data",
-    "discard_start_percent": 0,
-    "normalize_fun": "mean",
-    "transform_type": "affine",
-    "skip_scale_im": true,
-    "normalize": true,
-    "fsl_mask": true,
-    "mask_threshold": 0.04,
-    "joint_normalize": true,
+    "verbose": 1,
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "transform_type": "affine",
     "scale_matching": true,
-    "discard_end_percent": 0
+    "joint_normalize": true,
+    "skip_scale_im": true,
+    "mask_threshold": 0.04,
+    "fsl_mask": true
   },
   "train": {
-    "val_split": 0.2,
-    "ssim_lambda": 0.2,
+    "gpu": 0,
+    "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+    "learning_rate": 0.001,
+    "max_data_sets": 100,
     "batch_size": 8,
     "num_epochs": 70,
-    "max_data_sets": 100,
-    "log_dir": "/home/srivathsa/projects/studies/gad/stanford/train/tb",
-    "learning_rate": 0.001,
+    "queue_size": 4,
+    "slices_per_input": 5,
     "shuffle": true,
-    "l1_lambda": 0.8,
-    "no_save_best_only": true,
-    "hist_dir": "/home/srivathsa/projects/studies/gad/stanford/train/history",
     "file_ext": "h5",
-    "queue_size": 4
+    "val_split": 0.2,
+    "verbose": 1,
+    "log_dir": "/home/srivathsa/projects/studies/gad/stanford/train/tb",
+    "hist_dir": "/home/srivathsa/projects/studies/gad/stanford/train/history",
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+    "l1_lambda": 0.8,
+    "ssim_lambda": 0.2,
+    "no_save_best_only": true,
+    "320_nompr": {
+      "resize": 320,
+      "train_mpr": false,
+      "checkpoint_name": "320nompr"
+    },
+    "320_mpr": {
+      "resize": 320,
+      "train_mpr": true,
+      "checkpoint_name": "320mpr"
+    },
+    "512_nompr": {
+      "resize": 512,
+      "train_mpr": false,
+      "checkpoint_name": "512nompr"
+    },
+    "512_mpr": {
+      "resize": 512,
+      "train_mpr": true,
+      "checkpoint_name": "512mpr"
+    },
+    "512_mpr_fsl": {
+      "resize": 512,
+      "train_mpr": true,
+      "brain_only": true,
+      "brain_only_mode": "mixed",
+      "checkpoint_name": "512mpr_fsl"
+    }
   },
   "inference": {
-    "inference_mpr_avg": "mean",
-    "predict_dir": "/home/srivathsa/projects/studies/gad/stanford/data",
+    "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/stanford/data",
+    "gpu": 0,
+    "verbose": 1,
     "learn_residual": false,
-    "num_channel_first": 32,
+    "slices_per_input": 5,
     "stats_base": "/home/srivathsa/projects/studies/gad/stanford/inference",
+    "num_channel_first": 32,
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
     "zoom": 0,
     "series_num": 1002,
-    "data_raw": "/home/srivathsa/projects/studies/gad/stanford/data"
+    "predict_dir": "/home/srivathsa/projects/studies/gad/stanford/data",
+    "inference_mpr_avg": "mean",
+    "320_nompr": {
+      "resize": 320,
+      "resample_size": 320,
+      "inference_mpr": false,
+      "checkpoint": "320nompr",
+      "description": "320nompr"
+    },
+    "320_mpr": {
+      "resize": 320,
+      "resample_size": 320,
+      "inference_mpr": true,
+      "checkpoint": "320mpr",
+      "description": "320mpr"
+    },
+    "512_nompr": {
+      "resize": 512,
+      "resample_size": 512,
+      "inference_mpr": false,
+      "checkpoint": "512nompr",
+      "description": "512nompr"
+    },
+    "512_mpr": {
+      "resize": 512,
+      "resample_size": 512,
+      "inference_mpr": true,
+      "checkpoint": "512mpr",
+      "description": "512mpr"
+    },
+    "512_mpr_fsl": {
+      "resize": 512,
+      "resample_size": 512,
+      "inference_mpr": true,
+      "brain_only": true,
+      "brain_only_mode": "mixed",
+      "checkpoint": "512mpr_fsl",
+      "description": "512mpr_fsl"
+    }
   }
 }
