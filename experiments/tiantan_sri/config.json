@@ -4,7 +4,6 @@
     "verbose": true,
     "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
-    "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess",
     "discard_start_percent": 0,
     "discard_end_percent": 0,
     "normalize": true,
@@ -13,7 +12,29 @@
     "scale_matching": true
   },
   "train": {
-
+    "gpu": 0,
+    "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+    "learning_rate": 0.001,
+    "max_data_sets": 100,
+    "batch_size": 8,
+    "num_epochs": 100,
+    "queue_size": 4,
+    "slices_per_input": 7,
+    "shuffle": true,
+    "file_ext": "h5",
+    "val_split": 0.2,
+    "verbose": 1,
+    "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
+    "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+    "checkpoint_name": "config_test",
+    "l1_lambda": 0.15,
+    "ssim_lambda": 0.15,
+    "perceptual_lambda": 0.7,
+    "no_save_best_only": true,
+    "resize": 240,
+    "use_respath": true,
+    "train_mpr": true
   },
   "inference": {
 

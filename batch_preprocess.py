@@ -1,7 +1,5 @@
-import sys
 import os
 import traceback
-import configargparse as argparse
 
 import subtle.subtle_io as suio
 import subtle.subtle_args as sargs

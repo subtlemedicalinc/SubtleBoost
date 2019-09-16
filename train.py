@@ -10,13 +10,6 @@ Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
 
-
-import sys
-
-print('------')
-print(' '.join(sys.argv))
-print('------\n\n\n')
-
 import os
 import datetime
 import time
@@ -62,34 +55,15 @@ def plot_losses(losses, fname):
     plt.savefig('/home/srivathsa/projects/studies/gad/tiantan/train/logs/test/{}.png'.format(fname))
     plt.clf()
 
-if __name__ == '__main__':
-
-    parser = sargs.parser(usage_str, description_str)
-    args = parser.parse_args()
-
-    print(args)
-    print("----------")
-    print(parser.format_help())
-    print("----------")
-    print(parser.format_values())
-
-    assert args.data_list_file is not None, 'must specify data list'
-
-    if args.log_dir is not None:
-        try:
-            os.mkdir(args.log_dir)
-        except Exception as e:
-            warn(str(e))
-            pass
-
+def train_process(args):
     if args.max_data_sets is None:
         max_data_sets = np.inf
     else:
         max_data_sets = args.max_data_sets
 
-    if args.gpu_device is not None:
+    if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_device
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
 
     np.random.seed(args.random_seed)
 
@@ -100,7 +74,8 @@ if __name__ == '__main__':
         print('loading data from {}'.format(args.data_list_file))
     tic = time.time()
 
-    data_list = suio.get_data_list(args.data_list_file, file_ext=args.file_ext, data_dir=args.data_dir)
+    case_nums = suio.get_experiment_data(args.experiment, dataset='train')
+    data_list = ['{}/{}.h5'.format(args.data_dir, cnum) for cnum in case_nums]
 
     # each element of the data_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
@@ -131,10 +106,10 @@ if __name__ == '__main__':
         nx = args.resample_size
         ny = args.resample_size
 
-    if os.path.isfile(args.checkpoint_file):
-        print('Using existing checkpoint at {}'.format(args.checkpoint_file))
+    if os.path.isfile(args.checkpoint):
+        print('Using existing checkpoint at {}'.format(args.checkpoint))
     else:
-        print('Creating new checkpoint at {}'.format(args.checkpoint_file))
+        print('Creating new checkpoint at {}'.format(args.checkpoint))
 
     compile_model = (not args.gan_mode)
     m = sudnn.DeepEncoderDecoder2D(
@@ -146,7 +121,7 @@ if __name__ == '__main__':
             lr_init=args.lr_init,
             batch_norm=args.batch_norm,
             verbose=args.verbose,
-            checkpoint_file=args.checkpoint_file,
+            checkpoint_file=args.checkpoint,
             log_dir=log_tb_dir,
             job_id=args.job_id,
             save_best_only=args.save_best_only,
@@ -156,7 +131,6 @@ if __name__ == '__main__':
     m.load_weights()
 
     tic = time.time()
-    print('training...')
 
     if len(data_list) == 1 or args.validation_split == 0:
         r = 0
@@ -371,5 +345,5 @@ if __name__ == '__main__':
     toc = time.time()
     print('done training ({:.0f} sec)'.format(toc - tic))
 
-    # if args.history_file is not None:
-    #     np.save(args.history_file, history.history)
+    if args.history_file is not None:
+        np.save(args.history_file, history.history)
