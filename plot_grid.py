@@ -66,3 +66,4 @@ if __name__ == '__main__':
     parser.add_argument('--h5_key', action='store', dest='h5_key', type=str, help='H5 key to get the images from, for plotting', default='data')
 
     args = parser.parse_args()
+    plot_h5(args.input, args.output, args.slice, args.h5_key)
