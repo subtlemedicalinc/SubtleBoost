@@ -4,50 +4,111 @@ Gadolinium Contrast Enhancement using Deep Learning
 
 ## Structure
 The `subtle` submodule contains all shared code for I/O, models and generators, data processing, plotting, and command-line arguments.  
-The three main programs that use this submodule are `preprocess.py`, `train.py`, and `inference.py`. Each gets its parameters from `subtle/subtle_args.py`, though not all are used.  
+The three main programs that use this submodule are `preprocess.py`, `train.py`, and `inference.py`. Each gets its parameters from the respective experiment configs and `subtle/subtle_args.py`, though not all are used.
 
 ## Usage
 General workflow:
 1. Preprocess data with `preprocess.py`, so that it is ready for training
-1. Train a model with the pre-processed data using `train.py` 
+1. Train a model with the pre-processed data using `train.py`
 1. Test the result on validation/test data using `inference.py`
 
-In general, the helper shell scripts should be used instead of directly calling the python programs. This helps with batch processing and automatic logging
+In general, the helper shell scripts should be used instead of directly calling the python programs. This helps with batch processing and automatic logging.
+
+## Creating experiment configs
+All the three processes in the workflow depend on experiment configs present in different experiment folders under `experiments`. The params are configured in `config.json` and the data lists are configured in `data.json`.
+
+An example `config.json` would look like
+
+```json
+{
+  "preprocess": {
+    "dicom_data": "/my_dicom/data",
+    "verbose": 1,
+    "out_dir": "/my_data/out_dir",
+    "out_dir_plots": "/my_plots/png",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+  },
+  "train": {
+    "gpu": 1,
+    "data_dir": "/my_data",
+    "learning_rate": 0.001,
+    "batch_size": 8,
+    "num_epochs": 70,
+    "slices_per_input": 5,
+    "val_split": 0,
+    "log_dir": "/my/log/dir",
+    "hist_dir": "/my/hist/dir",
+    "checkpoint_dir": "/my/check/point",
+  },
+  "inference": {
+    "gpu": 0,
+    "data_dir": "/my/data/dir",
+    "data_raw": "/my/data/raw",
+    "slices_per_input": 5,
+    "stats_base": "/my/inference/metdics",
+    "num_channel_first": 32,
+    "checkpoint": "hoag.checkpoint",
+    "checkpoint_dir": "/my/check/point",
+  }
+}
+```
+
+An example `data.json` would look like
+```json
+{
+  "train": [
+    "101_Id_052study",
+    "101_Id_055study",
+    "101_Id_056study",
+    "101_Id_059study",
+    "101_Id_060study",
+    "101_Id_061study",
+    "101_Id_066study"
+  ],
+  "test": [
+    "Id0032Neuro_Brain-16479659",
+    "Id0018Neuro_Brain-16473090",
+    "101_Id_045study"
+  ]
+}
+```
 
 ## Pre-processing
-```bash
-python preprocess.py -h
-python preproccess.py --path_base /home/subtle/Data/Stanford/lowcon/Patient_0121 --verbose --output Patient_0121.npy --discard_start_percent .1 --discard_end_percent .1 --normalize --normalize_fun mean 
+General template of running the preprocess pipeline is
 ```
-See `scripts/batch_preprocess_*.py` for examples of running batch preprocessing on a list of data
+./scripts/batch_preprocess.sh [experiment_name] [log_dir]
+```
+
+Example:
+```bash
+./scripts/batch_preprocess.sh tiantan_sri /mylogs/tiantan_sri_logs/
+```
+
+The logs will be written to `[log_dir]` and the preprocessed data will be saved to `out_dir` present in config/preprocess.
 
 ## Training
-```bash
-python train.py -h
-python train.py --data_dir /raid/jon/data_full_tiantan/data --data_list data_lists/data_train_tiantan_20190612.txt --file_ext h5 --shuffle --resize 240 --slice_axis 3 --num_epochs 100 --verbose --batch_size 8 --validation_split 0.1 --learning_rate .001 --slices_per_input 5 --l1_lambda .6 --ssim_lambda .4 --num_channel_first 32 --gpu 1 --checkpoint /raid/jon/checkpoints/mycheckpoint.checkpoint --log_dir /raid/jon/logs_tb --history_file /raid/jon/history/myhistory.npy --id test
+General template of running the training pipeline is
+```
+./scripts/train.sh [experiment_name] [log_dir]
 ```
 
-or use helper script `scripts/train.sh`:
+Example:
 ```bash
-GPU=0 DATA_LIST=../data_full/data_train_small.txt NYM_EPOCHS=20\ 
-BATCH_SIZE=8 LEARN_RESIDUAL=1 BATCH_NORM=1 \
-LEARNING_RATE=.001 MAX_DATA_SETS=50 NUM_WORKERS=1 ./scripts/train.sh 123xyz
+./scripts/train.sh tiantan_sri /mylogs/tiantan_sri_logs/
 ```
 
-See `scripts/train_*.sh` for examples of running the helper script on different datasets
+The logs will be written to `[log_dir]` and the checkpoint will be saved to `checkpoint_dir` as configured in config/train.
 
 ## Inference
-Note: Currently, the inference script requires dicoms/data from all three contrasts. This is so that the full-dose image can be used for internal testing. However, it is not used in the inference pipeline.
-```bash
-python inference.py -h
-python inference.py --path_base /home/subtle/Data/Stanford/lowcon/Patient_0121 --path_out /raid/jon/predictions/dicoms/Patient_0121 --verbose ... # see all args in subtle/subtle_args.py
+General template of running the inference pipeline is
+```
+./scripts/inference.sh [experiment_name] [log_dir]
 ```
 
-Or use the helper script `scripts/inference.sh`:
+Example:
 ```bash
-GPU=0 DATA_LIST=../data_full/data_train_small.txt NYM_EPOCHS=20\ 
-BATCH_SIZE=8 LEARN_RESIDUAL=1 BATCH_NORM=1 \
-LEARNING_RATE=.001 MAX_DATA_SETS=50 NUM_WORKERS=1 ./scripts/inference.sh 123xyz
+./scripts/inference.sh tiantan_sri /mylogs/tiantan_sri_logs/
 ```
 
-See `scripts/inference_*.sh` for examples of running the helper script on different datasets
+The logs will be written to `[log_dir]` and the dicoms will be written to `data_dir` as configured in config/inference.
