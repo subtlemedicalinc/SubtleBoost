@@ -10,10 +10,16 @@ else
   exp_str="--experiment ${exparg}"
 fi
 
-fcontent=$(cat experiments/${expname}/config.json | python3 -c "import sys, json; print(json.dumps(json.load(sys.stdin)['inference'], sort_keys=True))")
+if [[ $GPU == '' ]]; then
+  gpu_str=""
+else
+  gpu_str="--gpu ${GPU}"
+fi
+
+fcontent=$(python3 ./utils/print_config_json.py experiments/${expname}/config.json train)
 fcontent=${fcontent}--${exparg}
 
 job_id=$(echo ${fcontent} | sha1sum | awk '{print $1}' | cut -c1-6)
 logfile=$2/log_train_${commit}_${job_id}.log
 
-python train_process.py ${exp_str} > ${logfile} 2>${logfile}
+python train_process.py ${exp_str} ${gpu_str} > ${logfile} 2>${logfile}

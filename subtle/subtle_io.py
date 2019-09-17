@@ -31,6 +31,7 @@ except:
 
 import subtle.subtle_preprocess as sup
 import subtle.subtle_args as sargs
+from utils.print_config_json import IGNORE_KEYS as OVERRIDE_CONFIG_KEYS
 import copy
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
@@ -628,6 +629,10 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
             self.config_dict = {**ns_vars, **self.config_dict}
             for key, val in self.config_dict.items():
                 setattr(self, key, val)
+
+            for or_key in OVERRIDE_CONFIG_KEYS:
+                if ns_vars[or_key] is not None:
+                    setattr(self, or_key, ns_vars[or_key])
 
         def debug_print(self):
             print('ExperimentConfig...')
