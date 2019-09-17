@@ -16,6 +16,13 @@ else
   gpu_str="--gpu ${GPU}"
 fi
 
+if test -f experiments/${expname}/config.json; then
+  echo ""
+else
+  echo "Invalid experiment name - ${expname}"
+  exit 1
+fi
+
 fcontent=$(python3 ./utils/print_config_json.py experiments/${expname}/config.json inference)
 fcontent=${fcontent}--${exparg}
 

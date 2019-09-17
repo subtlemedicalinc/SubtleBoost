@@ -642,6 +642,9 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
     fname = 'config.json'
     fpath_json = os.path.join(dirpath_exp, exp_name, fname)
 
+    if not os.path.exists(fpath_json):
+        raise ValueError("Given experiment name {}, is not valid".format(exp_name))
+
     json_str = open(fpath_json, 'r').read()
     config_dict = json.loads(json_str)[config_key]
 
