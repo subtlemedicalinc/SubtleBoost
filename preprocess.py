@@ -438,9 +438,26 @@ def fsl_brain_mask(args):
         print('Extracting brain regions using FSL...')
 
         with tempfile.TemporaryDirectory() as tmp:
-            out_file = sup.dcm2nii(args.path_zero, tmp)
-            mask = _mask_nii(out_file, tmp, args.fsl_threshold)
+            if args.verbose:
+                print('BET Zero')
+            out_zero = sup.dcm2nii(args.path_zero, tmp)
+            mask_zero = _mask_nii(out_zero, tmp, args.fsl_threshold)
 
+            if args.fsl_mask_all_ims:
+                if args.verbose:
+                    print('BET Low')
+                out_low = sup.dcm2nii(args.path_low, tmp)
+                mask_low = _mask_nii(out_low, tmp, args.fsl_threshold)
+
+                if args.verbose:
+                    print('BET Full')
+                out_full = sup.dcm2nii(args.path_full, tmp)
+                mask_full = _mask_nii(out_full, tmp, args.fsl_threshold)
+
+                # union of all masks
+                mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
+            else:
+                mask = mask_zero
     return mask
 
 def apply_fsl_mask(args, ims, fsl_mask):
@@ -572,19 +589,24 @@ def preprocess_chain(args):
     ims, hdr, metadata = get_images(args, metadata)
     unmasked_ims = np.copy(ims)
 
+    # first apply a mask to remove regions with zero signal
     ims, mask, metadata = mask_images(args, ims, metadata)
+
+    # next apply a BET mask to remove non-brain tissue
+    fsl_mask = fsl_brain_mask(args)
+    ims = apply_fsl_mask(args, ims, fsl_mask)
+
+    # scale and register images based on BET images
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
     ims, metadata = register(args, ims, metadata)
     ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = zoom_process(args, ims, metadata)
 
-    fsl_mask = fsl_brain_mask(args)
-    ims = apply_fsl_mask(args, ims, fsl_mask)
-
     ims, ims_mod, metadata = prescale_process(args, ims, mask, metadata)
     ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
+    # reapply the preprocessing chain to the unmasked images
     unmasked_ims, metadata = apply_preprocess(ims, unmasked_ims, metadata)
 
     ims, _ = resample_isotropic(args, ims, metadata) # dont save to metadata on masked ims

@@ -111,6 +111,8 @@ def parser(usage_str, description_str):
                         dest='fsl_threshold', help='Fraction parameter for FSL BET', default=0.5)
     parser.add_argument('--fsl_area_threshold_cm2', action='store', type=float,
                         dest='fsl_area_threshold_cm2', help='Reject slices which have extracted brain area (in cm2) lower than the threshold. If argument is not given, all slices will be included', default=None)
+    parser.add_argument('--fsl_mask_all_ims', action='store_true', dest='fsl_mask_all_ims',
+                        help='If `fsl_mask`, perform FSL BET on all ims and take the union', default=False)
     parser.add_argument('--brain_only', action='store_true', dest='brain_only', help='Use FSL extracted brain data to train (preprocess should have been run with this option: H5 file should have "data_mask" key)', default=False)
     parser.add_argument('--brain_only_mode', action='store', dest='brain_only_mode', type=str, help='pure or mixed - whether to train only on FSL masked images only or include a fraction of the full brain images too', default=None)
     parser.add_argument('--match_scales_fsl', action='store_true', dest='match_scales_fsl', help='If True, the full head image dynamic range is matched with the FSL extracted dynamic range. This should be set to True, only when the model checkpoint used here was trained with only the FSL masked brain region', default=False)
