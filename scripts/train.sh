@@ -6,6 +6,7 @@ if [[ $exparg == *"/"* ]]; then
   subexp="$(cut -d'/' -f2 <<<"$exparg")"
   exp_str="--experiment ${expname} --sub_experiment ${subexp}"
 else
+  expname="${exparg}"
   exp_str="--experiment ${exparg}"
 fi
 
