@@ -17,7 +17,7 @@ if __name__ == '__main__':
         print('\n-------------\n')
         print('*****Processing {}*****\n'.format(case_num))
 
-        config = suio.get_config(args.experiment, config_key='preprocess')
+        config = suio.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
         config.path_base = os.path.join(config.dicom_data, case_num)
         config.out_file = os.path.join(config.out_dir, '{}.h5'.format(case_num))
 
