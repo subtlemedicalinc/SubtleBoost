@@ -112,3 +112,38 @@ Example:
 ```
 
 The logs will be written to `[log_dir]` and the dicoms will be written to `data_dir` as configured in config/inference.
+
+## Note on sub experiments
+All three workflows can have sub-experiments i.e multiple experiments under the same config but with minor changes to only a few params. A sample training sub-experiment config would look like
+
+`experiments/train_tiantan/config.json`
+
+```
+...
+"train": {
+  "gpu": 1,
+  "data_dir": "/my_data",
+  "learning_rate": 0.001,
+  "batch_size": 8,
+  "num_epochs": 70,
+  "slices_per_input": 5,
+  "val_split": 0,
+  "log_dir": "/my/log/dir",
+  "hist_dir": "/my/hist/dir",
+  "checkpoint_dir": "/my/check/point",
+  "without_mpr": {
+    "train_mpr": false
+  },
+  "with_mpr": {
+    "train_mpr": true
+  }
+}
+...
+```
+
+Using the above config we can run the following sub-experiments
+```bash
+./scripts/train.sh tiantan_sri/without_mpr /mylogs/tiantan_sri_logs/
+./scripts/train.sh tiantan_sri/with_mpr /mylogs/tiantan_sri_logs/
+./scripts/train.sh tiantan_sri /mylogs/tiantan_sri_logs/ # runs with default config
+```
