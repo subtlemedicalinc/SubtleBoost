@@ -464,9 +464,9 @@ def fsl_reject_slices(args, ims, fsl_mask, metadata):
         good_slice_idx = (mask_areas >= args.fsl_area_threshold_cm2)
 
         metadata['good_slice_indices'] = good_slice_idx
-        print('{} slices retained'.format(ims.shape[0]))
+        print('{} slices retained'.format(good_slice_idx.sum()))
 
-    return ims
+    return ims, metadata
 
 def _get_spacing_from_dicom(dirpath_dicom):
     fpath_dicom = [fpath for fpath in glob('{}/**/*.dcm'.format(dirpath_dicom), recursive=True)][0]
@@ -518,7 +518,7 @@ def resample_isotropic(args, ims, metadata):
             (1, 0, 2, 3)
         )
 
-    return ims
+    return ims, metadata
 
 def reshape_fsl_mask(args, fsl_mask, metadata):
     fsl_reshape = np.copy(fsl_mask)
@@ -531,7 +531,7 @@ def reshape_fsl_mask(args, fsl_mask, metadata):
         fsl_mask_ims[:, 1, ...] = np.copy(fsl_mask)
         fsl_mask_ims[:, 2, ...] = np.copy(fsl_mask)
 
-        fsl_reshape = resample_isotropic(args, fsl_mask_ims, metadata)[:, 0, ...]
+        fsl_reshape, _ = resample_isotropic(args, fsl_mask_ims, metadata)[:, 0, ...]
         fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
     return fsl_reshape
 
@@ -556,13 +556,13 @@ def apply_preprocess(ims, unmasked_ims, metadata):
 
 def zero_pad(args, ims, metadata):
     if not args.pad_for_size or ims.shape[2] >= args.pad_for_size:
-        return ims
+        return ims, metadata
 
     ims_pad = sup.zero_pad(ims, target_size=args.pad_for_size)
     print('Shape after zero padding...', ims_pad.shape)
     metadata['zero_pad_size'] = (ims_pad.shape[2], ims_pad.shape[3])
 
-    return ims_pad
+    return ims_pad, metadata
 
 def preprocess_chain(args):
     metadata = {
@@ -587,14 +587,14 @@ def preprocess_chain(args):
 
     unmasked_ims, metadata = apply_preprocess(ims, unmasked_ims, metadata)
 
-    ims = resample_isotropic(args, ims, metadata)
-    unmasked_ims = resample_isotropic(args, unmasked_ims, metadata)
+    ims, _ = resample_isotropic(args, ims, metadata) # dont save to metadata on masked ims
+    unmasked_ims, metadata = resample_isotropic(args, unmasked_ims, metadata)
     fsl_mask = reshape_fsl_mask(args, fsl_mask, metadata)
 
-    ims = fsl_reject_slices(args, ims, fsl_mask, metadata)
+    ims, metadata = fsl_reject_slices(args, ims, fsl_mask, metadata)
 
-    ims = zero_pad(args, ims, metadata)
-    unmasked_ims = zero_pad(args, unmasked_ims, metadata)
+    ims, _ = zero_pad(args, ims, metadata) # dont save to metadata on masked ims
+    unmasked_ims, metadata = zero_pad(args, unmasked_ims, metadata)
 
     return unmasked_ims, ims, metadata
 
