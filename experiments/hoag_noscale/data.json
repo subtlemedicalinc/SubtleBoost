@@ -1,0 +1,35 @@
+{
+  "train": [
+    "101_Id_003Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_007Unnamed_-_0",
+    "101_Id_016Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_019Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_022Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_026Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_027Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_031Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_033Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_037Mri_Brain_W_Wo_Contrast_-_0",
+    "101_Id_045study",
+    "101_Id_046study",
+    "101_Id_048study",
+    "101_Id_049study",
+    "101_Id_050study",
+    "101_Id_051study",
+    "101_Id_052study",
+    "101_Id_055study",
+    "101_Id_056study",
+    "101_Id_059study",
+    "101_Id_060study",
+    "101_Id_061study",
+    "101_Id_066study",
+    "Id0018Neuro_Brain_-_16473090",
+    "Id0029Neuro_Brain_-_16464425",
+    "Id0031Neuro_Brain_-_16408269",
+    "Id0032Neuro_Brain_-_16479659",
+    "Id0039Neuro_Brain_-_16491388"
+
+  ],
+  "test": [
+  ]
+}

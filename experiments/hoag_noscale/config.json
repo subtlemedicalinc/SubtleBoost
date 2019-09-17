@@ -1,0 +1,40 @@
+{
+  "preprocess": {
+    "dicom_data": "/home/subtle/Data/SubtleGAD_Hoag",
+    "verbose": 1,
+    "out_dir": "/raid/jon/data_full_hoag_noscale/data",
+    "out_dir_plots": "/raid/jon/data_full_hoag_noscale/plots",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "transform_type": "rigid",
+    "joint_normalize": true,
+    "skip_scale_im": true,
+    "skip_mask": true,
+  },
+  "train": {
+    "gpu": 1,
+    "data_dir": "/raid/jon/data_full_hoag_noscale/data",
+    "learning_rate": 0.001,
+    "max_data_sets": 100,
+    "batch_size": 8,
+    "num_epochs": 70,
+    "queue_size": 4,
+    "slices_per_input": 5,
+    "shuffle": true,
+    "file_ext": "h5",
+    "val_split": 0,
+    "verbose": 1,
+    "log_dir": "/raid/jon/logs_tb",
+    "hist_dir": "/raid/jon/history",
+    "checkpoint_dir": "/raid/jon/checkpoints",
+    "checkpoint_name": "hoag_noscale",
+    "l1_lambda": 0.8,
+    "ssim_lambda": 0.2,
+    "no_save_best_only": true,
+    "train_mpr": true
+  },
+  "inference": {
+  }
+}
