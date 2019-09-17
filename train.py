@@ -56,6 +56,10 @@ def plot_losses(losses, fname):
     plt.clf()
 
 def train_process(args):
+    print('------')
+    print(args.debug_print())
+    print('------\n\n\n')
+
     if args.max_data_sets is None:
         max_data_sets = np.inf
     else:

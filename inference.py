@@ -69,8 +69,12 @@ def resample_unisotropic(args, ims, metadata):
     return data_uniso
 
 def inference_process(args):
-    args.gpu = str(args.gpu)
+    print('------')
+    print(args.debug_print())
+    print('------\n\n\n')
     
+    args.gpu = str(args.gpu)
+
     if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu

@@ -621,6 +621,9 @@ def preprocess_chain(args):
     return unmasked_ims, ims, metadata
 
 def execute_chain(args):
+    print('------')
+    print(args.debug_print())
+    print('------\n\n\n')
     ims, ims_mask, metadata = preprocess_chain(args)
     suio.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
 
