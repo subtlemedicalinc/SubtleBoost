@@ -25,6 +25,7 @@ An example `config.json` would look like
   "hist_dir": "/my/hist/dir",
   "checkpoint_dir": "/my/check/point",
   "data_dir": "/my/data/dir",
+  "gpu": 1,
   "preprocess": {
     "dicom_data": "/my_dicom/data",
     "verbose": 1,
@@ -34,15 +35,18 @@ An example `config.json` would look like
     "discard_end_percent": 0,
   },
   "train": {
-    "gpu": 1,
     "learning_rate": 0.001,
     "batch_size": 8,
     "num_epochs": 70,
     "slices_per_input": 5,
-    "val_split": 0
+    "val_split": 0,
+    "log_dir": "/my/log/dir",
+    "hist_dir": "/my/hist/dir",
+    "checkpoint_dir": "/my/check/point",
   },
   "inference": {
-    "gpu": 0,
+    "data_dir": "/my/data/dir",
+    "data_raw": "/my/data/raw",
     "slices_per_input": 5,
     "stats_base": "/my/inference/metdics",
     "num_channel_first": 32,
