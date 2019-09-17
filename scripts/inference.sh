@@ -3,4 +3,14 @@ job_id=$(cat experiments/$1/config.json | python3 -c "import sys, json; print(js
 out_folder=${commit}_${job_id}
 logfile=$2/log_inference_${out_folder}.log
 
-python inference_process.py --experiment $1 --out_folder ${out_folder} > ${logfile} 2>${logfile}
+exparg=$1
+
+if [[ $exparg == *"/"* ]]; then
+  expname="$(cut -d'/' -f1 <<<"$exparg")"
+  subexp="$(cut -d'/' -f2 <<<"$exparg")"
+  exp_str="--experiment ${expname} --sub_experiment ${subexp}"
+else
+  exp_str="--experiment ${exparg}"
+fi
+
+python inference_process.py ${exp_str} --out_folder ${out_folder} > ${logfile} 2>${logfile}

@@ -19,7 +19,7 @@ if __name__ == '__main__':
         print('\n-------------\n')
         print('*****Running inference for {}*****\n'.format(case_num))
 
-        config = suio.get_config(args.experiment, config_key='inference')
+        config = suio.get_config(args.experiment, args.sub_experiment, config_key='inference')
         config.checkpoint_file = '{}/{}'.format(config.checkpoint_dir, config.checkpoint)
 
         config.data_preprocess = '{}/{}.h5'.format(config.data_dir, case_num)
