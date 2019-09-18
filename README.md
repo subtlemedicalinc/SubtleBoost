@@ -21,6 +21,10 @@ An example `config.json` would look like
 
 ```json
 {
+  "log_dir": "/my/log/dir",
+  "hist_dir": "/my/hist/dir",
+  "checkpoint_dir": "/my/check/point",
+  "data_dir": "/my/data/dir",
   "preprocess": {
     "dicom_data": "/my_dicom/data",
     "verbose": 1,
@@ -31,25 +35,18 @@ An example `config.json` would look like
   },
   "train": {
     "gpu": 1,
-    "data_dir": "/my_data",
     "learning_rate": 0.001,
     "batch_size": 8,
     "num_epochs": 70,
     "slices_per_input": 5,
-    "val_split": 0,
-    "log_dir": "/my/log/dir",
-    "hist_dir": "/my/hist/dir",
-    "checkpoint_dir": "/my/check/point",
+    "val_split": 0
   },
   "inference": {
     "gpu": 0,
-    "data_dir": "/my/data/dir",
-    "data_raw": "/my/data/raw",
     "slices_per_input": 5,
     "stats_base": "/my/inference/metdics",
     "num_channel_first": 32,
     "checkpoint": "hoag.checkpoint",
-    "checkpoint_dir": "/my/check/point",
   }
 }
 ```
