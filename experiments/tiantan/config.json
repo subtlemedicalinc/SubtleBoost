@@ -1,128 +1,49 @@
 {
+  "dicom_data": "/home/subtle/Data/Tiantan",
+  "slices_per_input": 7,
+  "verbose": 1,
+  "gpu": 0,
+  "data_dir": "/raid/jon/data_full_tiantan/data",
+  "checkpoint_dir": "/raid/jon/checkpoints",
   "preprocess": {
-    "verbose": 1,
-    "discard_start_percent": 0,
-    "discard_end_percent": 0,
     "normalize": true,
+    "discard_end_percent": 0,
+    "discard_start_percent": 0,
     "normalize_fun": "mean",
-    "transform_type": "rigid",
-    "dicom_data": "/home/subtle/Data/Tiantan",
-    "joint_normalize": true,
-    "scale_dicom_tags": true,
     "override_dicom_naming": true,
-    "basic": {
-      "out_dir": "/raid/jon/data_full_tiantan/data",
-      "out_dir_plots": "/raid/jon/data_full_tiantan/plots",
-      "global_scale_ref_im0": true,
-      "mask_threshold": 0.05,
-      "nslices": 50
-    },
-    "zoom320": {
-      "out_dir": "/raid/jon/data_full_tiantan_zoom320/data",
-      "out_dir_plots": "/raid/jon/data_full_tiantan_zoom320/plots",
-      "zoom": 320
-    }
+    "scale_dicom_tags": true,
+    "transform_type": "rigid",
+    "joint_normalize": true
   },
   "train": {
-    "data_dir": "/raid/jon/data_full_tiantan/data",
     "batch_size": 8,
     "num_epochs": 100,
     "max_data_sets": 100,
-    "learning_rate": 0.001,
+    "queue_size": 4,
+    "l1_lambda": 0.6,
     "no_save_best_only": true,
     "file_ext": "h5",
+    "val_split": 0.1,
     "checkpoint_name": "tiantan_20190612",
     "num_workers": 4,
-    "gpu": 2,
-    "checkpoint_dir": "/raid/jon/checkpoints",
-    "slices_per_input": 7,
+    "ssim_lambda": 0.4,
     "log_dir": "/raid/jon/logs",
-    "verbose": 1,
     "shuffle": true,
     "multiprocessing": 0,
     "hist_dir": "/raid/jon/history",
     "tb_dir": "/raid/jon/logs_tb",
-    "queue_size": 4,
-    "l1_lambda": 0.6,
-    "ssim_lambda": 0.4,
-    "val_split": 0.1,
-    "ax_20190619": {
-      "slice_axis": 2,
-      "resize": 240
-    },
-    "sag_20190619": {
-      "slice_axis": 0,
-      "resize": 240,
-      "checkpoint_name": "sag_20190619"
-    },
-    "cor_20190619": {
-      "slice_axis": 3,
-      "resize": 240,
-      "checkpoint_name": "cor_20190619",
-    },
-    "mpr_2d_20190705": {
-      "num_epochs": 60,
-      "slices_per_input": 1,
-      "train_mpr": 1,
-      "resize": 240,
-      "checkpoint_name": "mpr_2d_20190705"
-    },
-    "mpr_20190626": {
-      "num_epochs": 60,
-      "train_mpr": 1,
-      "resize": 240,
-      "checkpoint_name": "mpr_20190626"
-    }
+    "learning_rate": 0.001
   },
   "inference": {
-    "data_dir": "/raid/jon/data_full_tiantan/data",
-    "dicom_data": "/home/subtle/Data/Tiantan",
-    "gpu": 0,
-    "verbose": 1,
-    "learn_residual": false,
-    "slices_per_input": 7,
-    "stats_base": "/raid/jon/data_full_tiantan/data/metrics",
-    "num_channel_first": 32,
-    "checkpoint_dir": "/raid/jon/checkpoints",
-    "zoom": 0,
-    "series_num": 1002,
-    "predict_dir": "/raid/jon/data_full_tiantan/data",
-    "inference_mpr": true,
     "inference_mpr_avg": "mean",
+    "predict_dir": "/raid/jon/data_full_tiantan/data",
+    "learn_residual": false,
+    "num_channel_first": 32,
+    "stats_base": "/raid/jon/data_full_tiantan/data/metrics",
     "resize": 240,
+    "zoom": 0,
+    "inference_mpr": true,
     "num_rotations": 5,
-    "ax_20190619": {
-      "slice_axis": 2,
-      "resize": 240,
-      "description": "ax_20190619",
-      "checkpoint_name": "ax_20190619.checkpoint"
-    },
-    "sag_20190619": {
-      "slice_axis": 0,
-      "resize": 240,
-      "description": "sag_20190619",
-      "checkpoint": "sag_20190619.checkpoint"
-    },
-    "cor_20190619": {
-      "slice_axis": 3,
-      "resize": 240,
-      "description": "cor_20190619",
-      "checkpoint": "cor_20190619.checkpoint",
-    },
-    "mpr_2d_20190705": {
-      "num_epochs": 60,
-      "slices_per_input": 1,
-      "train_mpr": 1,
-      "resize": 240,
-      "description": "mpr_2d_20190705",
-      "checkpoint": "mpr_2d_20190705.checkpoint"
-    },
-    "mpr_20190626": {
-      "num_epochs": 60,
-      "train_mpr": 1,
-      "resize": 240,
-      "description": "mpr_20190626",
-      "checkpoint": "mpr_20190626.checkpoint"
-    }
+    "series_num": 1002
   }
 }
