@@ -1,49 +1,34 @@
 {
+  "verbose": 1,
+  "gpu": 0,
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
-    "verbose": 1,
+    "discard_start_percent": 0,
+    "normalize_fun": "mean",
+    "noise_mask_area": true,
+    "transform_type": "affine",
+    "skip_scale_im": true,
+    "normalize": true,
+    "mask_threshold": 0.1,
+    "joint_normalize": true,
     "out_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/data",
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/plots",
-    "discard_start_percent": 0,
-    "discard_end_percent": 0,
-    "normalize": true,
-    "normalize_fun": "mean",
-    "transform_type": "affine",
     "scale_matching": true,
-    "joint_normalize": true,
-    "skip_scale_im": true,
-    "mask_threshold": 0.1,
-    "noise_mask_area": true
+    "discard_end_percent": 0
   },
   "train": {},
   "inference": {
-    "data_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/data",
-    "data_raw": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
-    "gpu": 0,
-    "verbose": 1,
-    "learn_residual": false,
-    "slices_per_input": 5,
-    "stats_base": "/home/srivathsa/projects/studies/gad/sford_siemens/inference",
-    "num_channel_first": 32,
-    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/hoag/train/checkpoints",
-    "zoom": 0,
-    "series_num": 1002,
-    "predict_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
     "inference_mpr_avg": "mean",
+    "data_raw": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
+    "data_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/data",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
+    "learn_residual": false,
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/hoag/train/checkpoints",
+    "slices_per_input": 5,
+    "num_channel_first": 32,
+    "stats_base": "/home/srivathsa/projects/studies/gad/sford_siemens/inference",
+    "zoom": 0,
     "num_rotations": 5,
-    "320_mpr": {
-      "resize": 320,
-      "resample_size": 320,
-      "checkpoint": "hoag-mpr.checkpoint",
-      "description": "hoag_mpr_320"
-
-    },
-    "512_mpr": {
-      "resize": 512,
-      "resample_size": 512,
-      "reshape_for_mpr_rotate": true,
-      "checkpoint": "hoag-mpr.checkpoint",
-      "description": "hoag_mpr_rotfix"
-    }
+    "series_num": 1002
   }
 }

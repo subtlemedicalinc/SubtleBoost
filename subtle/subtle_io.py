@@ -646,7 +646,11 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
         raise ValueError("Given experiment name {}, is not valid".format(exp_name))
 
     json_str = open(fpath_json, 'r').read()
-    config_dict = json.loads(json_str)[config_key]
+
+    all_config = json.loads(json_str)
+    gen_config = {k:v for k, v in all_config.items() if not isinstance(v, dict)} # get the top level config
+    config_dict = all_config[config_key]
+    config_dict = {**config_dict, **gen_config}
 
     if subexp_name is not None:
         subexp_config = config_dict[subexp_name]
