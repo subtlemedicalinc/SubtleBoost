@@ -43,16 +43,19 @@ description_str = 'Train SubtleGrad network on pre-processed data.'
 # FIXME: add time stamps, logging
 # FIXME: data augmentation
 
-import matplotlib.pyplot as plt
-plt.set_cmap('gray')
-
 def save_img(img, fname):
+    import matplotlib.pyplot as plt
+    plt.set_cmap('gray')
+
     plt.imshow(img)
     plt.colorbar()
     plt.savefig('/home/srivathsa/projects/studies/gad/tiantan/train/logs/test/{}.png'.format(fname))
     plt.clf()
 
 def plot_losses(losses, fname):
+    import matplotlib.pyplot as plt
+    plt.set_cmap('gray')
+
     plt.plot(np.arange(len(losses)), losses)
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
