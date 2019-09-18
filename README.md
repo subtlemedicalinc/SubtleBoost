@@ -39,14 +39,9 @@ An example `config.json` would look like
     "batch_size": 8,
     "num_epochs": 70,
     "slices_per_input": 5,
-    "val_split": 0,
-    "log_dir": "/my/log/dir",
-    "hist_dir": "/my/hist/dir",
-    "checkpoint_dir": "/my/check/point",
+    "val_split": 0
   },
   "inference": {
-    "data_dir": "/my/data/dir",
-    "data_raw": "/my/data/raw",
     "slices_per_input": 5,
     "stats_base": "/my/inference/metdics",
     "num_channel_first": 32,
