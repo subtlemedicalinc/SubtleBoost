@@ -16,7 +16,6 @@ if __name__ == '__main__':
     for case_num in data_list:
         print('\n-------------\n')
         print('*****Running inference for {}*****\n'.format(case_num))
-
         config = suio.get_config(args.experiment, args.sub_experiment, config_key='inference')
         config.checkpoint_file = '{}/{}'.format(config.checkpoint_dir, config.checkpoint)
 
@@ -39,4 +38,3 @@ if __name__ == '__main__':
             run_inference(config)
         except Exception as err:
             print('INFERENCE ERROR in {}'.format(case_num))
-            traceback.print_exc()
