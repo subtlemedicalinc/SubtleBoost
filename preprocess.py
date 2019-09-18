@@ -552,7 +552,7 @@ def reshape_fsl_mask(args, fsl_mask, metadata):
         fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
     return fsl_reshape
 
-def apply_preprocess(ims, unmasked_ims, metadata):
+def apply_preprocess(args, ims, unmasked_ims, metadata):
     if not args.fsl_mask:
         del metadata['lambda']
         return ims, metadata
@@ -607,7 +607,7 @@ def preprocess_chain(args):
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
     # reapply the preprocessing chain to the unmasked images
-    unmasked_ims, metadata = apply_preprocess(ims, unmasked_ims, metadata)
+    unmasked_ims, metadata = apply_preprocess(args, ims, unmasked_ims, metadata)
 
     ims, _ = resample_isotropic(args, ims, metadata) # dont save to metadata on masked ims
     unmasked_ims, metadata = resample_isotropic(args, unmasked_ims, metadata)
