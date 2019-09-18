@@ -635,9 +635,8 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
                     setattr(self, or_key, ns_vars[or_key])
 
         def debug_print(self):
-            print('ExperimentConfig...')
-            for key, val in self.config_dict.items():
-                print('{}: {}'.format(key, val))
+            print('ExperimentConfig...\n')
+            print(', '.join(['{}:{}'.format(key, val) for key, val in self.config_dict.items()]))
 
     fname = 'config.json'
     fpath_json = os.path.join(dirpath_exp, exp_name, fname)
