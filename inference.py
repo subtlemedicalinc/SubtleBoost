@@ -72,14 +72,14 @@ def inference_process(args):
     print('------')
     print(args.debug_print())
     print('------\n\n\n')
-    
+
     args.gpu = str(args.gpu)
 
     if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
-    if args.data_preprocess:
+    if not args.dicom_inference:
         if args.verbose:
             print('loading preprocessed data from', args.data_preprocess)
 
