@@ -49,10 +49,11 @@ import subtle.subtle_args as sargs
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
 
-import matplotlib.pyplot as plt
-plt.set_cmap('gray')
-
 def save_img(img, fname):
+
+    import matplotlib.pyplot as plt
+    plt.set_cmap('gray')
+
     plt.imshow(img)
     plt.colorbar()
     plt.savefig('/home/srivathsa/projects/studies/gad/gen_siemens/inference/test/{}.png'.format(fname))
@@ -101,7 +102,7 @@ if __name__ == '__main__':
     else:
         if args.verbose:
             print('pre-processing data')
-        data, metadata = preprocess_chain(args)
+        data, data_mask, metadata = preprocess_chain(args)
         if args.verbose:
             print('done')
 
