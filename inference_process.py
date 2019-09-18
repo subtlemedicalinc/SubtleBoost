@@ -38,3 +38,4 @@ if __name__ == '__main__':
             run_inference(config)
         except Exception as err:
             print('INFERENCE ERROR in {}'.format(case_num))
+            print(err)
