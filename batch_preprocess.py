@@ -31,4 +31,4 @@ if __name__ == '__main__':
 
         if config.fsl_mask:
             outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
-            plot_h5(input=config.out_file, output=output_png_mask, h5_key='data_mask')
+            plot_h5(input=config.out_file, output=outfile_png_mask, h5_key='data_mask')
