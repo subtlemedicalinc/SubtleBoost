@@ -35,7 +35,7 @@ from subtle.subtle_preprocess import resample_slices
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
 
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, gan_mode=False, adv_mode=None, gen_imgs=None):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
 
         'Initialization'
         self.data_list = data_list
@@ -52,10 +52,7 @@ class DataGenerator(keras.utils.Sequence):
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
-        self.gan_mode = gan_mode
-        self.gen_imgs = gen_imgs
-        self.adv_mode = adv_mode
-
+        
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
 
         self.slice_list_files = np.array(_slice_list_files)
@@ -105,18 +102,9 @@ class DataGenerator(keras.utils.Sequence):
         else:
             tic = time.time()
             X, Y = self.__data_generation(file_list, slice_list, enforce_raw_data)
+
             if self.verbose > 1:
                 print('generated batch in {} s'.format(time.time() - tic))
-            if self.gan_mode:
-                desc_gt = np.ones((self.batch_size, 1))
-                return X, [Y, desc_gt]
-
-            if self.adv_mode is not None:
-                const_fn = np.ones if self.adv_mode == 'real' else np.zeros
-                adv_out = const_fn((self.batch_size, 1))
-                adv_inp = Y if self.adv_mode == 'real' else self.gen_imgs
-
-                return adv_inp, adv_out
 
             return X, Y
 
