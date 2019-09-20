@@ -2,7 +2,7 @@
   "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
   "verbose": 1,
   "gpu": 0,
-  "use_respath": true,
+  "model_name": "multires2d",
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
   "resize": 240,
   "slices_per_input": 7,

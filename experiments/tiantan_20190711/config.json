@@ -59,7 +59,6 @@
     "num_channel_first": 32,
     "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "use_respath": true,
     "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
     "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
     "inference_mpr_avg": "mean",

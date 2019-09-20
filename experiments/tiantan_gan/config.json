@@ -19,7 +19,6 @@
   "train": {
     "wloss_lambda": 0.5,
     "max_data_sets": 100,
-    "use_respath": false,
     "val_split": 0.2,
     "learning_rate": 0.001,
     "checkpoint_name": "tiantan_gan",
@@ -45,7 +44,6 @@
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "num_channel_first": 32,
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "use_respath": true,
     "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
     "inference_mpr_avg": "mean",
     "zoom": 0,

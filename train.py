@@ -25,7 +25,7 @@ from keras.optimizers import Adam
 
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 from subtle.dnn.adversaries import AdversaryPatch2D
-from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory
+from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory, load_model
 
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
@@ -120,11 +120,7 @@ def train_process(args):
 
     compile_model = (not args.gan_mode)
 
-    if args.use_respath: ## TODO: Change this to support arg to specify model name and load using string
-        model_class = GeneratorMultiRes2D
-    else:
-        model_class = GeneratorUNet2D
-
+    model_class = load_model(args.model_name)
     m = model_class(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
@@ -138,7 +134,6 @@ def train_process(args):
             log_dir=log_tb_dir,
             job_id=args.job_id,
             save_best_only=args.save_best_only,
-            use_respath=args.use_respath,
             compile_model=compile_model)
 
     m.load_weights()
@@ -229,7 +224,8 @@ def train_process(args):
 
         history_objects = []
         gen = m.model
-        disc_m = AdversaryPatch2D(
+        adv_model = load_model(args.adversary_name)
+        disc_m = adv_model(
             img_rows=nx, img_cols=ny,
             compile_model=compile_model
         )

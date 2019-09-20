@@ -3,6 +3,12 @@ import keras
 from keras.layers import Input
 import tensorflow as tf
 
+MODEL_MAP = {
+    'unet2d': 'generators.GeneratorUNet2D',
+    'multires2d': 'generators.GeneratorMultiRes2D',
+    'patch2d': 'adversaries.patch2d.AdversaryPatch2D'
+}
+
 # clean up
 def clear_keras_memory():
     keras.backend.clear_session()
@@ -40,3 +46,17 @@ def gan_model(gen, dis, input_shape):
 
     model = keras.models.Model(inputs=inputs, outputs=[gen_img, outputs])
     return model
+
+def load_model(model_name):
+    if model_name not in MODEL_MAP:
+        raise ValueError('Model {} not supported'.format(model_name))
+
+    mod_path = MODEL_MAP[model_name]
+    mod_path = 'subtle.dnn.' + mod_path
+
+    components = mod_path.split('.')
+    mod = __import__(components[0])
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+
+    return mod

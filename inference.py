@@ -29,7 +29,7 @@ import sigpy as sp
 
 import keras.callbacks
 
-from subtle.dnn.helpers import clear_keras_memory, set_keras_memory
+from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
@@ -143,11 +143,7 @@ def inference_process(args):
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
 
-    if args.use_respath:
-        model_class = GeneratorMultiRes2D
-    else:
-        model_class = GeneratorUNet2D
-
+    model_class = load_model(args.model_name)
     m = model_class(
             num_channel_input=2 * args.slices_per_input, num_channel_output=1,
             img_rows=nx, img_cols=ny,
@@ -158,8 +154,7 @@ def inference_process(args):
             batch_norm=args.batch_norm,
             verbose=args.verbose,
             checkpoint_file=args.checkpoint_file,
-            job_id=args.job_id,
-            use_respath=args.use_respath)
+            job_id=args.job_id)
 
     m.load_weights()
 

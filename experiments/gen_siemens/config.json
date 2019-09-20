@@ -49,7 +49,6 @@
     "predict_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "num_channel_first": 32,
     "data_raw": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
-    "use_respath": true,
     "reshape_for_mpr_rotate": true,
     "stats_base": "/home/srivathsa/projects/studies/gad/gen_siemens/inference",
     "inference_mpr_avg": "mean",

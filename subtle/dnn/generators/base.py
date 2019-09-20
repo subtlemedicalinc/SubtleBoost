@@ -27,7 +27,7 @@ class GeneratorBase:
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
             num_poolings=3, num_conv_per_pooling=3,
-            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, use_respath=False, compile_model=True):
+            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True):
 
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -47,7 +47,6 @@ class GeneratorBase:
         self.log_dir = log_dir
         self.job_id = job_id
         self.save_best_only = save_best_only
-        self.use_respath = use_respath
         self.compile_model = compile_model
 
         self.model = None # to be assigned by _build_model() in children classes
