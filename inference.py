@@ -29,7 +29,8 @@ import sigpy as sp
 
 import keras.callbacks
 
-import subtle.subtle_dnn as sudnn
+from subtle.dnn.helpers import clear_keras_memory, set_keras_memory
+from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
 from scipy.ndimage.interpolation import rotate
@@ -136,12 +137,18 @@ def inference_process(args):
 
     ns, _, nx, ny = data.shape
 
-    sudnn.clear_keras_memory()
-    sudnn.set_keras_memory(args.keras_memory)
+    clear_keras_memory()
+    set_keras_memory(args.keras_memory)
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
-    m = sudnn.DeepEncoderDecoder2D(
+
+    if args.use_respath:
+        model_class = GeneratorMultiRes2D
+    else:
+        model_class = GeneratorUNet2D
+
+    m = model_class(
             num_channel_input=2 * args.slices_per_input, num_channel_output=1,
             img_rows=nx, img_cols=ny,
             num_channel_first=args.num_channel_first,

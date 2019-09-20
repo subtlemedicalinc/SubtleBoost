@@ -29,10 +29,10 @@ def imshow3(ims, axis=0, cmap='gray'):
     for i in range(n):
         plt.subplot(1, n, i+1)
         plt.imshow(np.take(ims, i, axis=axis), cmap=cmap)
-        
+
 def simshow(sitk_image, cmap='gray'):
     plt.imshow(sitk.GetArrayViewFromImage(sitk_image), cmap=cmap)
-    
+
 def imshowreg(im0, im1, title=None):
     im0n = (im0 - np.min(im0))
     im1n = (im1 - np.min(im1))
@@ -47,10 +47,10 @@ def imshowreg(im0, im1, title=None):
     plt.imshow(np.abs(im0n - im1n))
     if title is not None:
         plt.title('{} (diff)'.format(title))
-        
+
 def myshow3d(im, title=None, margin=0.05, dpi=80, figsize=None ):
     myshow.myshow3d(sitk.GetImageFromArray(im), title=title, margin=margin, dpi=dpi, figsize=figsize)
-    
+
 def imshowcmp(im0, im1, title='', figsize=None):
     im0n = (im0 - np.min(im0))
     im1n = (im1 - np.min(im1))
@@ -105,4 +105,3 @@ def compare_output(data_truth, data_predict, idx=None, show_diff=False, output=N
         plt.savefig(output)
 
     return nrmse, psnr, ssim
-

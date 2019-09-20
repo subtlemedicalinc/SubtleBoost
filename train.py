@@ -23,7 +23,10 @@ import numpy as np
 import keras.callbacks
 from keras.optimizers import Adam
 
-import subtle.subtle_dnn as sudnn
+from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
+from subtle.dnn.adversaries import AdversaryPatch2D
+from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory
+
 import subtle.subtle_io as suio
 import subtle.subtle_generator as sugen
 import subtle.subtle_loss as suloss
@@ -100,8 +103,8 @@ def train_process(args):
     #FIXME: check that image sizes are the same
         _, nx, ny, nz = data_shape
 
-    sudnn.clear_keras_memory()
-    sudnn.set_keras_memory(args.keras_memory)
+    clear_keras_memory()
+    set_keras_memory(args.keras_memory)
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, img_shape=(nx, ny, 3))
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
@@ -116,7 +119,13 @@ def train_process(args):
         print('Creating new checkpoint at {}'.format(args.checkpoint))
 
     compile_model = (not args.gan_mode)
-    m = sudnn.DeepEncoderDecoder2D(
+
+    if args.use_respath: ## TODO: Change this to support arg to specify model name and load using string
+        model_class = GeneratorMultiRes2D
+    else:
+        model_class = GeneratorUNet2D
+
+    m = model_class(
             num_channel_input=len(args.input_idx) * args.slices_per_input, num_channel_output=len(args.output_idx),
             img_rows=nx, img_cols=ny,
             num_channel_first=args.num_channel_first,
@@ -203,7 +212,6 @@ def train_process(args):
         validation_generator = None
 
     if args.gan_mode:
-
         ### TEMP CODE
         fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO29.h5'
 
@@ -221,13 +229,13 @@ def train_process(args):
 
         history_objects = []
         gen = m.model
-        disc_m = sudnn.Discriminator(
+        disc_m = AdversaryPatch2D(
             img_rows=nx, img_cols=ny,
             compile_model=compile_model
         )
         disc = disc_m.model
 
-        gan = sudnn.gan_model(gen, disc, (nx, ny, args.slices_per_input * 2))
+        gan = gan_model(gen, disc, (nx, ny, args.slices_per_input * 2))
 
         disc.trainable = True
         disc_m._compile_model()
