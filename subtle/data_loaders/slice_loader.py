@@ -8,33 +8,16 @@ Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/08/24
 '''
 
-import sys
-import os # FIXME: transition from os to pathlib
-import pathlib
-from warnings import warn
 import time
 
-import h5py
-
 import numpy as np
-
 import sigpy as sp
+import keras
 
-try:
-    import pydicom
-except:
-    import dicom as pydicom
-try:
-    import keras
-except:
-    pass
-
-from subtle.subtle_io import *
+from subtle.subtle_io import load_slices, build_slice_list, get_num_slices
 from subtle.subtle_preprocess import resample_slices
 
-class DataGenerator(keras.utils.Sequence):
-    'Generates data for Keras'
-
+class SliceLoader(keras.utils.Sequence):
     def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=True, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
 
         'Initialization'
@@ -52,7 +35,13 @@ class DataGenerator(keras.utils.Sequence):
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
-        
+        self.input_idx = input_idx
+        self.output_idx = output_idx
+
+        self._init_slice_info()
+        self.on_epoch_end()
+
+    def _init_slice_info(self):
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
 
         self.slice_list_files = np.array(_slice_list_files)
@@ -68,11 +57,6 @@ class DataGenerator(keras.utils.Sequence):
         }
 
         self.num_slices = len(self.slice_list_files)
-
-        self.input_idx = input_idx
-        self.output_idx = output_idx
-
-        self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -97,11 +81,11 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         if self.predict:
-            X = self.__data_generation(file_list, slice_list, enforce_raw_data)
+            X = self._data_generation(file_list, slice_list, enforce_raw_data)
             return X
         else:
             tic = time.time()
-            X, Y = self.__data_generation(file_list, slice_list, enforce_raw_data)
+            X, Y = self._data_generation(file_list, slice_list, enforce_raw_data)
 
             if self.verbose > 1:
                 print('generated batch in {} s'.format(time.time() - tic))
@@ -114,7 +98,7 @@ class DataGenerator(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
-    def __data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False):
+    def _data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False):
         'Generates data containing batch_size samples'
 
         # load volumes
@@ -140,9 +124,6 @@ class DataGenerator(keras.utils.Sequence):
 
             # handle edge cases for 2.5d by just repeating the boundary slices
             idxs = np.minimum(np.maximum(idxs, 0), num_slices - 1)
-
-            # FIXME: don't train on slices with very little brain signal. Can remove them by checking mask size relative to image size
-
             tic = time.time()
 
             h5_key = 'data_mask' if self.brain_only else 'data'
@@ -160,7 +141,6 @@ class DataGenerator(keras.utils.Sequence):
             elif ax == 3:
                 slices = np.transpose(slices, (3, 1, 0, 2))
 
-            # if self.resize is not None and (self.resize > slices.shape[-1] or self.resize > slices.shape[-2]):
             if self.resize is not None:
                 slices = sp.util.resize(slices, [slices.shape[0], slices.shape[1], self.resize, self.resize])
 
@@ -195,7 +175,6 @@ class DataGenerator(keras.utils.Sequence):
             Y = data_Y.copy()
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
-
 
         tic = time.time()
         if self.residual_mode and len(self.input_idx) == 2 and len(self.output_idx) == 1:

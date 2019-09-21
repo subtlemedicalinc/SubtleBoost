@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import keras
 
-import subtle.subtle_generator as sugen
+from subtle.data_loaders import SliceLoader
 from subtle.dnn.helpers import make_image
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
@@ -39,7 +39,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
 
 
     def _init_generator(self):
-            self.generator =  sugen.DataGenerator(data_list=self.data_list,
+            self.generator =  SliceLoader(data_list=self.data_list,
                     batch_size=1,
                     shuffle=self.shuffle,
                     verbose=self.verbose,

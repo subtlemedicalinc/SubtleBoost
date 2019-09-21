@@ -28,7 +28,7 @@ from subtle.dnn.adversaries import AdversaryPatch2D
 from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory, load_model
 
 import subtle.subtle_io as suio
-import subtle.subtle_generator as sugen
+from subtle.data_loaders import SliceLoader
 import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
 import subtle.subtle_args as sargs
@@ -173,7 +173,7 @@ def train_process(args):
         callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode))
     #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
-    training_generator = sugen.DataGenerator(data_list=data_train_list,
+    training_generator = SliceLoader(data_list=data_train_list,
             batch_size=args.batch_size,
             shuffle=args.shuffle,
             verbose=args.verbose,
@@ -189,7 +189,7 @@ def train_process(args):
             brain_only_mode=args.brain_only_mode)
 
     if r > 0:
-        validation_generator = sugen.DataGenerator(data_list=data_val_list,
+        validation_generator = SliceLoader(data_list=data_val_list,
                 batch_size=args.batch_size,
                 shuffle=False,
                 verbose=args.verbose,
@@ -210,7 +210,7 @@ def train_process(args):
         ### TEMP CODE
         fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO29.h5'
 
-        pred_gen = sugen.DataGenerator(
+        pred_gen = SliceLoader(
             data_list=[fpath_h5],
             batch_size=8,
             shuffle=False,
