@@ -686,7 +686,13 @@ def load_blocks(input_file, indices=None, block_size=64, strides=16, params={'h5
     blocks = []
     for idxs in indices:
         ((ss, se), (xs, xe), (ys, ye)) = idxs
-        blocks.append(ims[:, ss:se, xs:xe, ys:ye])
+        block = ims[:, ss:se, xs:xe, ys:ye]
+
+        if block.shape[1:] != [block_size] * 3:
+            diff = [(0, (block_size - sh)) for sh in block.shape[1:]]
+            diff = [(0, 0)] + diff
+            block = np.pad(block, pad_width=diff, mode='constant', constant_values=0)
+        blocks.append(block)
 
     return np.array(blocks)
 
