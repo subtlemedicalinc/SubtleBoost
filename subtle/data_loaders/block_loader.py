@@ -1,18 +1,21 @@
+import time
+import itertools
 import numpy as np
 
 import sigpy as sp
 import keras
+from expiringdict import ExpiringDict
 
-from subtle.subtle_io import build_block_list, load_blocks, is_valid_block
+from subtle.subtle_io import build_block_list, load_file, load_blocks, is_valid_block
 
 class BlockLoader(keras.utils.Sequence):
     def __init__(
-        self, data_list, batch_size=8, block_size=64, strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None
+        self, data_list, batch_size=8, block_size=64, block_strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None
     ):
         self.data_list = data_list
         self.batch_size = batch_size
         self.block_size = block_size
-        self.strides = strides
+        self.block_strides = block_strides
         self.shuffle = shuffle
         self.verbose = verbose
         self.predict = predict
@@ -20,11 +23,13 @@ class BlockLoader(keras.utils.Sequence):
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
 
+        self.ims_cache = ExpiringDict(max_len=100, max_age_seconds=24*60*60)
+
         self._init_block_info()
         self.on_epoch_end()
 
     def _init_block_info(self):
-        self.block_list_files, self.block_list_indices = build_block_list(self.data_list, self.block_size, self.strides, params={'h5_key': self.h5_key})
+        self.block_list_files, self.block_list_indices = build_block_list(self.data_list, self.block_size, self.block_strides, params={'h5_key': self.h5_key})
 
         self.num_blocks = len(self.block_list_indices)
 
@@ -37,32 +42,36 @@ class BlockLoader(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
+    def _get_ims(self, fpath):
+        ims = self.ims_cache.get(fpath)
+        if ims is not None:
+            return ims
+
+        ims = load_file(fpath, file_type='h5', params={'h5_key': self.h5_key})
+        ims = ims.transpose(1, 0, 2, 3)
+
+        self.ims_cache[fpath] = ims
+        return ims
+
     def _group_fetch(self, file_list, block_list):
         group_dict = {}
-        idx_list = []
-        for fpath, idx in zip(file_list, block_list):
-            if fpath in group_dict:
-                idx_list.append(len(group_dict[fpath]))
-                group_dict[fpath].append(idx)
-            else:
-                idx_list.append(0)
-                group_dict[fpath] = [idx]
+        for fname, bidx in zip(file_list, block_list):
+            group_dict.setdefault(fname, []).append(bidx)
 
-        block_list = [None] * len(file_list)
+        block_list = []
 
         for fpath, block_idxs in group_dict.items():
-            blocks = load_blocks(fpath, indices=block_idxs, block_size=self.block_size, strides=self.strides, params={'h5_key': self.h5_key})
-
-            idxs = [i for i, v in enumerate(file_list) if v == fpath]
-            for n, i in enumerate(idxs):
-                block_list[i] = blocks[n]
+            ims = self._get_ims(fpath)
+            blocks = load_blocks(ims, indices=block_idxs, block_size=self.block_size, strides=self.block_strides, params={'h5_key': self.h5_key})
+            block_list.extend(blocks)
 
         return np.array(block_list)
 
-
-    def __getitem__(self, index):
+    def __getitem__(self, index, enforce_raw_data=False):
         file_list = self.block_list_files[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
         block_list = self.block_list_indices[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
+
+        self._current_file_list = file_list
 
         X = []
         Y = []
@@ -72,11 +81,16 @@ class BlockLoader(keras.utils.Sequence):
             X.append(x_item)
 
             if not self.predict:
-                weights.append(is_valid_block(blocks[0], block_size=self.block_size))
-                y_item = np.array(blocks[2])
+                weights.append(int(is_valid_block(blocks[0], block_size=self.block_size)))
+                y_item = np.array([blocks[2]])
                 Y.append(y_item)
 
+        X = np.array(X)
+        X = X.transpose(0, 2, 3, 4, 1)
         if self.predict:
-            return np.array(X)
+            return X
 
-        return np.array(X), np.array(Y), np.array(weights)
+        Y = np.array(Y)
+        weights = np.array(weights)
+        Y = Y.transpose(0, 2, 3, 4, 1)
+        return X, Y, weights

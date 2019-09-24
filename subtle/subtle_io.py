@@ -679,10 +679,7 @@ def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):
 
     return data
 
-def load_blocks(input_file, indices=None, block_size=64, strides=16, params={'h5_key': 'data'}):
-    ims = load_file(input_file, file_type='h5', params=params)
-    ims = ims.transpose(1, 0, 2, 3)
-
+def load_blocks(ims, indices=None, block_size=64, strides=16, params={'h5_key': 'data'}):
     blocks = []
     for idxs in indices:
         ((ss, se), (xs, xe), (ys, ye)) = idxs
