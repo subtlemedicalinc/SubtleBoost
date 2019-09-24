@@ -1,0 +1,46 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+  "verbose": 1,
+  "gpu": 1,
+  "model_name": "unet3d",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+  "slices_per_input": 7,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "transform_type": "rigid",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
+    "discard_end_percent": 0,
+    "scale_matching": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data"
+  },
+  "train": {
+    "max_data_sets": 100,
+    "validation_split": 0.2,
+    "learning_rate": 0.001,
+    "checkpoint_name": "tiantan_3d",
+    "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
+    "l1_lambda": 0.8,
+    "file_ext": "h5",
+    "batch_size": 8,
+    "ssim_lambda": 0.2,
+    "no_save_best_only": true,
+    "queue_size": 4
+  },
+  "inference": {
+    "description": "tiantan_3d",
+    "num_rotations": 5,
+    "checkpoint": "tiantan_3d.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "num_channel_first": 32,
+    "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
+    "zoom": 0,
+    "series_num": 1002
+  }
+}
