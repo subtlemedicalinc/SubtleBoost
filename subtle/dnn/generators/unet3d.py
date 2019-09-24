@@ -1,11 +1,11 @@
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation
+from keras.layers import Input, Conv3D, BatchNormalization, MaxPooling3D, UpSampling3D, concatenate, Activation
 from keras.layers.merge import add as keras_add
 
 from subtle.dnn.generators.base import GeneratorBase
 
-class GeneratorUNet2D(GeneratorBase):
+class GeneratorUNet3D(GeneratorBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._build_model()
@@ -18,10 +18,7 @@ class GeneratorUNet2D(GeneratorBase):
         else:
             lambda_bn = lambda x: x
 
-        # layers
-        # 2D input is (rows, cols, channels)
-
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input))
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input))
 
         if self.verbose:
             print(inputs)
@@ -31,10 +28,10 @@ class GeneratorUNet2D(GeneratorBase):
 
         for i in range(self.num_conv_per_pooling):
 
-            conv1 = Conv2D(filters=self.num_channel_first, kernel_size=(3, 3), padding="same", activation="relu")(conv1)
+            conv1 = Conv3D(filters=self.num_channel_first, kernel_size=3, padding="same", activation="relu")(conv1)
             conv1 = lambda_bn(conv1)
 
-        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+        pool1 = MaxPooling3D(pool_size=(2, 2, 2))(conv1)
 
         if self.verbose:
             print(conv1, pool1)
@@ -53,10 +50,10 @@ class GeneratorUNet2D(GeneratorBase):
 
             for j in range(self.num_conv_per_pooling):
 
-                conv_encoder = Conv2D(filters=num_channel, kernel_size=(3, 3), padding="same", activation="relu")(conv_encoder)
+                conv_encoder = Conv3D(filters=num_channel, kernel_size=3, padding="same", activation="relu")(conv_encoder)
                 conv_encoder = lambda_bn(conv_encoder)
 
-            pool_encoder = MaxPooling2D(pool_size=(2, 2))(conv_encoder)
+            pool_encoder = MaxPooling3D(pool_size=(2, 2, 2))(conv_encoder)
 
             if self.verbose:
                 print(conv_encoder, pool_encoder)
@@ -66,7 +63,7 @@ class GeneratorUNet2D(GeneratorBase):
             list_num_features.append(num_channel)
 
         # center connection
-        conv_center = Conv2D(filters=list_num_features[-1], kernel_size=(3, 3), padding="same", activation="relu",
+        conv_center = Conv3D(filters=list_num_features[-1], kernel_size=3, padding="same", activation="relu",
                 kernel_initializer='zeros',
                 bias_initializer='zeros')(pools[-1])
 
@@ -80,14 +77,13 @@ class GeneratorUNet2D(GeneratorBase):
         conv_decoders = [conv_center]
 
         for i in range(1, self.num_poolings + 1):
-            decoder_upsample = UpSampling2D(size=(2, 2))(conv_decoders[-1])
+            decoder_upsample = UpSampling3D(size=(2, 2, 2))(conv_decoders[-1])
             up_decoder = concatenate([decoder_upsample, convs[-i]])
             conv_decoder = up_decoder
 
             for j in range(self.num_conv_per_pooling):
 
-                conv_decoder = Conv2D(filters=list_num_features[-i], kernel_size=(3, 3),
-                        padding="same", activation="relu")(conv_decoder)
+                conv_decoder = Conv3D(filters=list_num_features[-i], kernel_size=3, padding="same", activation="relu")(conv_decoder)
                 conv_decoder = lambda_bn(conv_decoder)
 
             conv_decoders.append(conv_decoder)
@@ -99,7 +95,7 @@ class GeneratorUNet2D(GeneratorBase):
 
         conv_decoder = conv_decoders[-1]
 
-        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(conv_decoder)
+        conv_output = Conv3D(self.num_channel_output, kernel_size=1, padding="same", activation=self.final_activation)(conv_decoder)
 
         if self.verbose:
             print(conv_output)

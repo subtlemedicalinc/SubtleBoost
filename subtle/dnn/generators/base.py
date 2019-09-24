@@ -8,8 +8,6 @@ Created on 2018/05/25
 
 import tensorflow as tf
 import keras.models
-from keras.models import Sequential
-from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation
 import keras.callbacks
 from keras.optimizers import Adam
 
@@ -22,7 +20,7 @@ from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback
 # based on u-net and v-net
 class GeneratorBase:
     def __init__(self,
-            num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128,
+            num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128,
             num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
@@ -33,6 +31,7 @@ class GeneratorBase:
         self.num_channel_output = num_channel_output
         self.img_rows = img_rows
         self.img_cols = img_cols
+        self.img_depth = img_depth
         self.num_channel_first = num_channel_first
         self.optimizer_fun = optimizer_fun
         self.final_activation = final_activation
