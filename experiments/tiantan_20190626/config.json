@@ -29,7 +29,7 @@
   "train": {
     "tb_dir": "/raid/jon/logs_tb",
     "data_list": "data_lists/data_train_tiantan_20190626.txt",
-    "val_split": 0.05,
+    "validation_split": 0.05,
     "num_workers": 4,
     "data_dir": "/raid/jon/data_full_tiantan/data",
     "queue_size": 4,

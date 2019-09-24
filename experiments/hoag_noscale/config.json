@@ -27,7 +27,7 @@
     "data_dir": "/raid/jon/data_full_hoag_noscale/data",
     "queue_size": 4,
     "ssim_lambda": 0.2,
-    "val_split": 0,
+    "validation_split": 0,
     "checkpoint_dir": "/raid/jon/checkpoints",
     "no_save_best_only": true,
     "learning_rate": 0.001,

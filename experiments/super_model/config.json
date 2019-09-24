@@ -25,7 +25,7 @@
   "train": {
     "brain_only": true,
     "max_data_sets": 100,
-    "val_split": 0.2,
+    "validation_split": 0.2,
     "learning_rate": 0.001,
     "checkpoint_name": "all_mpr_fsl",
     "log_dir": "/home/srivathsa/projects/studies/gad/all/train/tb",
