@@ -18,7 +18,6 @@ import itertools
 
 import h5py
 import numpy as np
-import tqdm
 from glob import glob
 from tqdm import tqdm
 
@@ -94,7 +93,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         output[np.where(output<0)] = 0
     output = output.astype(dtype)
 
-    for i in tqdm.tqdm(range(output_shape[0])):
+    for i in tqdm(range(output_shape[0])):
         pixel_array = output[i]
         dicom.InstanceNumber = str(i + 1)
         dicom.SOPInstanceUID = pydicom.uid.generate_uid()
