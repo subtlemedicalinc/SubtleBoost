@@ -1,7 +1,7 @@
 {
   "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
   "verbose": 1,
-  "gpu": 0,
+  "gpu": 1,
   "model_name": "unet3d",
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
   "slices_per_input": 7,
@@ -37,6 +37,11 @@
       "num_channel_first": 16,
       "checkpoint_name": "edsr3d",
       "model_name": "edsr3d"
+    },
+    "vdsr": {
+      "num_channel_first": 32,
+      "checkpoint_name": "vdsr3d",
+      "model_name": "vdsr3d"
     }
   },
   "inference": {
