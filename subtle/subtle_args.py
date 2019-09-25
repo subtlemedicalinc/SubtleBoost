@@ -32,6 +32,7 @@ def parser(usage_str='', description_str=''):
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')
     parser.add_argument('--slices_per_input', action='store', dest='slices_per_input', type=int, help='number of slices per input (2.5D)', default=1)
     parser.add_argument('--num_channel_first', action='store', dest='num_channel_first', type=int, help='first layer channels', default=32)
+    parser.add_argument('--num_poolings', action='store', dest='num_poolings', type=int, help='Number of pooling operations to perform in UNet', default=3)
     parser.add_argument('--gen_type', action='store', dest='gen_type', type=str, help='generator type (legacy or split)', default='legacy')
     parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)
     parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)

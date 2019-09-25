@@ -147,6 +147,7 @@ def inference_process(args):
     model_kwargs = {
         'num_channel_output': 1,
         'num_channel_first': args.num_channel_first,
+        'num_poolings': args.num_poolings,
         'loss_function': loss_function,
         'metrics_monitor': metrics_monitor,
         'lr_init': args.lr_init,
@@ -183,7 +184,7 @@ def inference_process(args):
         # data_half = data[:data.shape[0] // 2, :, :data.shape[2] // 2, :data.shape[3] // 2]
         #
         # data_pad = supre.zero_pad_for_dnn(data_half)
-        data_pad = supre.zero_pad_for_dnn(data)
+        data_pad = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
 
         ns, _, nx, ny = data_pad.shape
 
@@ -216,11 +217,11 @@ def inference_process(args):
         x_pred = prediction_generator.__getitem__(0)
         Y_prediction = m.model.predict(x_pred, batch_size=1, verbose=args.verbose)
 
-        print('Y_pred', Y_prediction.shape)
-
         Y_prediction = Y_prediction[0, ...].transpose(2, 0, 1, 3)
         y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        save_img(Y_prediction[98, ..., 0], 'y_pred')
     else:
         kw_model = {
             'img_rows': nx,
@@ -261,17 +262,17 @@ def inference_process(args):
                 if args.verbose:
                     print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
                 data_rot = rotate(data, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                data_rot = supre.zero_pad_for_dnn(data_rot)
+                data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=args.num_poolings)
 
                 if data_mask is not None:
                     data_mask_rot = rotate(data_mask, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot)
+                    data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=args.num_poolings)
                 else:
                     data_mask_rot = None
             else:
-                data_rot = supre.zero_pad_for_dnn(data)
+                data_rot = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
                 if data_mask is not None:
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask)
+                    data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=args.num_poolings)
                 else:
                     data_mask_rot = None
 

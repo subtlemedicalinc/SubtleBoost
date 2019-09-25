@@ -33,6 +33,7 @@ class GeneratorBase:
         self.img_cols = img_cols
         self.img_depth = img_depth
         self.num_channel_first = num_channel_first
+        self.num_poolings = num_poolings
         self.optimizer_fun = optimizer_fun
         self.final_activation = final_activation
         self.lr_init = lr_init

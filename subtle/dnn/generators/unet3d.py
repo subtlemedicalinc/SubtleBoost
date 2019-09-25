@@ -11,7 +11,7 @@ class GeneratorUNet3D(GeneratorBase):
         self._build_model()
 
     def _build_model(self):
-        print('Building standard model...')
+        print('Building standard 3D model...')
         # batch norm
         if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
