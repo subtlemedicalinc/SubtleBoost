@@ -181,9 +181,9 @@ def inference_process(args):
 
     ### Start IF condition for 3D patch based
     if '3d' in args.model_name:
-        # data_half = data[:data.shape[0] // 2, :, :data.shape[2] // 2, :data.shape[3] // 2]
-        #
-        # data_pad = supre.zero_pad_for_dnn(data_half)
+        data_half = data[:data.shape[0] // 2, :, :data.shape[2] // 2, :data.shape[3] // 2]
+
+        # data_pad = supre.zero_pad_for_dnn(data_half, num_poolings=args.num_poolings)
         data_pad = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
 
         ns, _, nx, ny = data_pad.shape

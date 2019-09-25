@@ -18,6 +18,10 @@ MODEL_MAP = {
     'unet3d': {
         'model': 'generators.GeneratorUNet3D',
         'data_loader': 'block_loader.BlockLoader'
+    },
+    'edsr3d': {
+        'model': 'generators.GeneratorEDSR3D',
+        'data_loader': 'block_loader.BlockLoader'
     }
 }
 
