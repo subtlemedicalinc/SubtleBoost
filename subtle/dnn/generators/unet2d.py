@@ -106,6 +106,7 @@ class GeneratorUNet2D(GeneratorBase):
 
         # model
         model = keras.models.Model(inputs=inputs, outputs=conv_output)
+        model.summary()
 
         if self.verbose:
             print(model)
