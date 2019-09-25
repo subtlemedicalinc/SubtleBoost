@@ -22,6 +22,10 @@ MODEL_MAP = {
     'edsr3d': {
         'model': 'generators.GeneratorEDSR3D',
         'data_loader': 'block_loader.BlockLoader'
+    },
+    'vdsr3d': {
+        'model': 'generators.GeneratorVDSR3D',
+        'data_loader': 'block_loader.BlockLoader'
     }
 }
 
