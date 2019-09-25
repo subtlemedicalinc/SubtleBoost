@@ -33,9 +33,4 @@ if __name__ == '__main__':
             os.makedirs(metrics_dir)
 
         config.stats_file = '{}/{}.h5'.format(metrics_dir, case_num)
-
-        try:
-            run_inference(config)
-        except Exception as err:
-            print('INFERENCE ERROR in {}'.format(case_num))
-            print(err)
+        run_inference(config)

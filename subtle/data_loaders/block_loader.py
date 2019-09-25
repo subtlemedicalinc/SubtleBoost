@@ -10,7 +10,7 @@ from subtle.subtle_io import build_block_list, load_file, load_blocks, is_valid_
 
 class BlockLoader(keras.utils.Sequence):
     def __init__(
-        self, data_list, batch_size=8, block_size=64, block_strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None
+        self, data_list, batch_size=8, block_size=64, block_strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None, load_full_volume=False
     ):
         self.data_list = data_list
         self.batch_size = batch_size
@@ -22,6 +22,7 @@ class BlockLoader(keras.utils.Sequence):
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
+        self.load_full_volume = load_full_volume
 
         self.ims_cache = ExpiringDict(max_len=100, max_age_seconds=24*60*60)
 
@@ -53,6 +54,9 @@ class BlockLoader(keras.utils.Sequence):
         self.ims_cache[fpath] = ims
         return ims
 
+    def _cache_img(self, fpath, ims):
+        self.ims_cache[fpath] = ims
+
     def _group_fetch(self, file_list, block_list):
         group_dict = {}
         for fname, bidx in zip(file_list, block_list):
@@ -73,24 +77,28 @@ class BlockLoader(keras.utils.Sequence):
 
         self._current_file_list = file_list
 
+        if self.predict:
+            X = np.array([self._get_ims(fpath) for fpath in file_list])
+            X = X[:, :, :2, ...].transpose(0, 3, 4, 1, 2)
+            return X
+
         X = []
         Y = []
         weights = []
+
         for blocks in self._group_fetch(file_list, block_list):
             x_item = blocks[:2]
             X.append(x_item)
 
-            if not self.predict:
-                weights.append(int(is_valid_block(blocks[0], block_size=self.block_size)))
-                y_item = np.array([blocks[2]])
-                Y.append(y_item)
+            weights.append(int(is_valid_block(blocks[0], block_size=self.block_size)))
+            y_item = np.array([blocks[2]])
+            Y.append(y_item)
 
         X = np.array(X)
         X = X.transpose(0, 2, 3, 4, 1)
-        if self.predict:
-            return X
 
         Y = np.array(Y)
-        weights = np.array(weights)
         Y = Y.transpose(0, 2, 3, 4, 1)
+
+        weights = np.array(weights)
         return X, Y, weights

@@ -361,12 +361,18 @@ def center_crop(img, ref_img):
 
     for i, sh in enumerate(img.shape):
         if sh > ref_img.shape[i]:
-            start, end = _get_crop_range(sh - ref_img.shape[i])
-            s.append(start)
-            e.append(-end)
+            diff = sh - ref_img.shape[i]
+            if diff == 1:
+                s.append(0)
+                e.append(sh-1)
+            else:
+                start, end = _get_crop_range(diff)
+                s.append(start)
+                e.append(-end)
         else:
             s.append(0)
             e.append(sh)
+
     new_img = img[s[0]:e[0], s[1]:e[1], s[2]:e[2]]
 
     if new_img.shape[1] != new_img.shape[2]:
