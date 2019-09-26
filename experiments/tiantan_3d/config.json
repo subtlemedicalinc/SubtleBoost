@@ -60,7 +60,14 @@
     "edsr": {
       "description": "edsr3d",
       "num_channel_first": 16,
-      "checkpoint": "edsr3d.checkpoint"
+      "checkpoint": "edsr3d.checkpoint",
+      "model_name": "edsr3d"
+    },
+    "vdsr": {
+      "description": "vdsr3d",
+      "num_channel_first": 32,
+      "model_name": "vdsr3d",
+      "checkpoint": "vdsr3d.checkpoint"
     }
   }
 }
