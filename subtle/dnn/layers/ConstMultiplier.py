@@ -5,6 +5,7 @@ ConstMultiplierLayer for EDSR
 Copyright (c) Subtle Medical, Inc.
 """
 
+import tensorflow as tf
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.initializers import Constant
@@ -25,7 +26,7 @@ class ConstMultiplier(Layer):
         super(ConstMultiplier, self).build(input_shape)
 
     def call(self, x):
-        return K.tf.multiply(self.k, x)
+        return tf.multiply(self.k, x)
 
     def compute_output_shape(self, input_shape):
         return input_shape
