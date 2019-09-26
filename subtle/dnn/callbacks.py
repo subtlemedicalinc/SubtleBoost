@@ -68,7 +68,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 'output_idx': self.output_idx,
                 'slice_axis': self.slice_axis,
                 'resize': self.resize,
-                'resample_size': self.resample_size,
+                'resample_size': self.resample_size
             }
 
         gen_kwargs = {**gen_kwargs, **kw}
@@ -79,8 +79,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()
         writer = tf.summary.FileWriter(self.log_dir)
-        for ii in self.img_indices:
-            tag = '{}_{}'.format(self.tag, ii)
+        for idx, ii in enumerate(self.img_indices):
+            tag = '{}_{}'.format(self.tag, idx)
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
 
