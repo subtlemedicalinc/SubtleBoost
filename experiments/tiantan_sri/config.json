@@ -15,7 +15,9 @@
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
     "discard_end_percent": 0,
     "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data"
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true
   },
   "train": {
     "max_data_sets": 100,
