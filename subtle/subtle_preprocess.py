@@ -54,15 +54,19 @@ def mask_im(im, threshold=.08, noise_mask_area=False):
         mask = binary_erosion(mask.reshape((n*N*nx, ny)), selem=rectangle(7, 4)).reshape((N, n, nx, ny))
 
         for cont in np.arange(n):
-            mask_cont = cc_label(mask[:, cont, ...])[0]
-            reg_areas = [reg.area for reg in regionprops(mask_cont)]
-            for l in np.unique(mask_cont):
-                if l != 0:
-                    mask_label = (mask_cont == l)
-                    if np.sum(mask_label) == np.max(reg_areas):
-                        mask[:, cont, ...] = (mask_cont == l)
-                        break
+            mask[:, cont, ...] = get_largest_connected_component(mask[:, cont, ...])
+
     return mask
+
+def get_largest_connected_component(mask):
+    components = cc_label(mask)[0]
+    max_area = np.max([reg.area for reg in regionprops(components)])
+
+    for val in np.unique(components):
+        if val != 0:
+            mask_label = (components == val)
+            if np.sum(mask_label) == max_area:
+                return mask_label
 
 def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), nslices=5):
     ntic = time.time()

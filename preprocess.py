@@ -22,9 +22,10 @@ import time
 import pydicom
 
 from scipy.ndimage import zoom
-from nipype.interfaces import fsl
-fsl.FSLCommand.set_default_output_type('NIFTI')
+# from nipype.interfaces import fsl
+# fsl.FSLCommand.set_default_output_type('NIFTI')
 
+from deepbrain import Extractor as BrainExtractor
 
 sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
@@ -45,6 +46,10 @@ def fetch_args():
                         help='output to npy file', default='out.npy')
 
     args = parser.parse_args()
+
+    if args.gpu is not None:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     return args
 
 def assert_and_get_init_vars(args):
@@ -431,28 +436,35 @@ def _mask_nii(fpath_nii, outdir, fsl_threshold):
 
     return mask
 
-def fsl_brain_mask(args):
+def _mask_npy(img_npy):
+    ext = BrainExtractor()
+
+    img_scale = np.interp(img_npy, (img_npy.min(), img_npy.max()), (0, 1))
+    segment_probs = ext.run(img_scale)
+
+    mask = sup.get_largest_connected_component(segment_probs > 0.5)
+    return mask
+
+def fsl_brain_mask(args, ims):
     mask = None
 
     if args.fsl_mask:
-        print('Extracting brain regions using FSL...')
+        print('Extracting brain regions using deepbrain...')
 
         with tempfile.TemporaryDirectory() as tmp:
             if args.verbose:
                 print('BET Zero')
-            out_zero = sup.dcm2nii(args.path_zero, tmp)
-            mask_zero = _mask_nii(out_zero, tmp, args.fsl_threshold)
+            ## Temporarily using DL based method for extraction
+            mask_zero = _mask_npy(ims[:, 0, ...])
 
             if args.fsl_mask_all_ims:
                 if args.verbose:
                     print('BET Low')
-                out_low = sup.dcm2nii(args.path_low, tmp)
-                mask_low = _mask_nii(out_low, tmp, args.fsl_threshold)
+                mask_low = _mask_npy(ims[:, 1, ...])
 
                 if args.verbose:
                     print('BET Full')
-                out_full = sup.dcm2nii(args.path_full, tmp)
-                mask_full = _mask_nii(out_full, tmp, args.fsl_threshold)
+                mask_full = _mask_npy(ims[:, 2, ...])
 
                 # union of all masks
                 mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
@@ -465,6 +477,7 @@ def apply_fsl_mask(args, ims, fsl_mask):
     if args.fsl_mask:
         print('Applying computed FSL masks on images')
         ims_mask = np.zeros_like(ims)
+
         for cont in range(ims.shape[1]):
             ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
 
@@ -593,7 +606,7 @@ def preprocess_chain(args):
     ims, mask, metadata = mask_images(args, ims, metadata)
 
     # next apply a BET mask to remove non-brain tissue
-    fsl_mask = fsl_brain_mask(args)
+    fsl_mask = fsl_brain_mask(args, ims)
     ims = apply_fsl_mask(args, ims, fsl_mask)
 
     # scale and register images based on BET images
