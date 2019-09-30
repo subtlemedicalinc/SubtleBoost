@@ -403,8 +403,6 @@ def zero_pad_for_dnn(img, num_poolings=3):
     return np.pad(img, pad_width=npad, mode='constant', constant_values=0)
 
 def zero_pad(img, target_size=256):
-    if img.shape[2] >= target_size:
-        return img
     npad = []
 
     if img.ndim == 4:

@@ -219,8 +219,6 @@ def inference_process(args):
         Y_prediction = Y_prediction[0, ...].transpose(2, 0, 1, 3)
         y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        save_img(Y_prediction[98, ..., 0], 'y_pred')
     else:
         kw_model = {
             'img_rows': nx,
@@ -359,18 +357,16 @@ def inference_process(args):
 
     # if 'zero_pad_size' in metadata:
     if args.undo_pad_resample:
-        if 'resampled_size' in metadata:
-            crop_size = metadata['resampled_size'][0]
-        else:
-            crop_size = metadata['original_size'][0]
+        splits = args.undo_pad_resample.split(',')
+        crop_x, crop_y = int(splits[0]), int(splits[1])
 
         y_pred = Y_prediction[..., 0]
-        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+        ref_img = np.zeros((y_pred.shape[0], crop_x, crop_y))
         y_pred = supre.center_crop(y_pred, ref_img)
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
 
-        od_crop = np.zeros((y_pred.shape[0], 3, crop_size, crop_size))
-        od_mask_crop = np.zeros((y_pred.shape[0], 3, crop_size, crop_size))
+        od_crop = np.zeros((y_pred.shape[0], 3, crop_x, crop_y))
+        od_mask_crop = np.zeros((y_pred.shape[0], 3, crop_x, crop_y))
         for c in np.arange(3):
             od_crop[:, c, ...] = supre.center_crop(original_data[:, c, ...], ref_img)
             od_mask_crop[:, c, ...] = supre.center_crop(original_data_mask[:, c, ...], ref_img)
@@ -380,13 +376,14 @@ def inference_process(args):
 
         print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
-        # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        res_iso = [args.resample_isotropic] * 3
-        y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
-        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
 
-        original_data = resample_unisotropic(args, original_data, metadata)
-        original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
+        # isotropic resampling has been done in preprocess, so need to unresample to original spacing
+        # res_iso = [args.resample_isotropic] * 3
+        # y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
+        # Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+        #
+        # original_data = resample_unisotropic(args, original_data, metadata)
+        # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
@@ -421,18 +418,18 @@ def inference_process(args):
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
-    if 'zero_pad_size' in metadata:
-        if 'resampled_size' in metadata:
-            crop_size = metadata['resampled_size'][0]
-        else:
-            crop_size = metadata['original_size'][0]
-
-        y_pred = Y_prediction[..., 0]
-        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
-        y_pred = supre.center_crop(y_pred, ref_img)
-        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
+    # if 'zero_pad_size' in metadata:
+    #     if 'resampled_size' in metadata:
+    #         crop_size = metadata['resampled_size'][0]
+    #     else:
+    #         crop_size = metadata['original_size'][0]
+    #
+    #     y_pred = Y_prediction[..., 0]
+    #     ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+    #     y_pred = supre.center_crop(y_pred, ref_img)
+    #     Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+    #
+    #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     if args.predict_dir:
         # save raw data
