@@ -71,6 +71,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
     dtype = dicom.pixel_array.dtype
     if row == 0 or col == 0:
         row, col = dicom.pixel_array.shape
+
     dicom.SOPInstanceUID = pydicom.uid.generate_uid()
     dicom.SeriesInstanceUID = pydicom.uid.generate_uid()
     if series_num is None:
@@ -445,7 +446,12 @@ def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'comp
 def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     F = h5py.File(input_file, 'r')
     if slices is None:
-        data = np.array(F[h5_key])
+        if h5_key == 'all':
+            d1 = np.array(F['data'])
+            d2 = np.array(F['data_mask'])
+            data = np.array([d1, d2])
+        else:
+            data = np.array(F[h5_key])
     else:
         slices_unique, slices_inverse = np.unique(slices, return_index=False, return_inverse=True, return_counts=False)
         if dim == 0:
@@ -678,7 +684,7 @@ def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):
 
     return data
 
-def load_blocks(ims, indices=None, block_size=64, strides=16, params={'h5_key': 'data'}):
+def load_blocks(ims, indices=None, block_size=64, strides=16):
     blocks = []
     for idxs in indices:
         ((ss, se), (xs, xe), (ys, ye)) = idxs

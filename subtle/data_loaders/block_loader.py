@@ -46,16 +46,17 @@ class BlockLoader(keras.utils.Sequence):
     def _get_ims(self, fpath):
         ims = self.ims_cache.get(fpath)
         if ims is not None:
-            return ims
+            return ims[0], ims[1]
 
-        ims = load_file(fpath, file_type='h5', params={'h5_key': self.h5_key})
+        (ims, ims_mask) = load_file(fpath, file_type='h5', params={'h5_key': 'all'})
         ims = ims.transpose(1, 0, 2, 3)
+        ims_mask = ims_mask.transpose(1, 0, 2, 3)
 
-        self.ims_cache[fpath] = ims
-        return ims
+        self._cache_img(fpath, ims, ims_mask)
+        return ims, ims_mask
 
-    def _cache_img(self, fpath, ims):
-        self.ims_cache[fpath] = ims
+    def _cache_img(self, fpath, ims, ims_mask=None):
+        self.ims_cache[fpath] = (ims, ims_mask)
 
     def _group_fetch(self, file_list, block_list):
         group_dict = {}
@@ -63,13 +64,17 @@ class BlockLoader(keras.utils.Sequence):
             group_dict.setdefault(fname, []).append(bidx)
 
         block_list = []
+        block_mask_list = []
 
         for fpath, block_idxs in group_dict.items():
-            ims = self._get_ims(fpath)
-            blocks = load_blocks(ims, indices=block_idxs, block_size=self.block_size, strides=self.block_strides, params={'h5_key': self.h5_key})
+            ims, ims_mask = self._get_ims(fpath)
+            blocks = load_blocks(ims, indices=block_idxs, block_size=self.block_size, strides=self.block_strides)
             block_list.extend(blocks)
 
-        return np.array(block_list)
+            block_masks = load_blocks(ims_mask, indices=block_idxs, block_size=self.block_size, strides=self.block_strides)
+            block_mask_list.extend(block_masks)
+
+        return np.array(block_list), np.array(block_mask_list)
 
     def __getitem__(self, index, enforce_raw_data=False):
         file_list = self.block_list_files[self.indexes[index*self.batch_size:(index+1)*self.batch_size]]
@@ -78,7 +83,7 @@ class BlockLoader(keras.utils.Sequence):
         self._current_file_list = file_list
 
         if self.predict:
-            X = np.array([self._get_ims(fpath) for fpath in file_list])
+            X = np.array([self._get_ims(fpath)[0] for fpath in file_list])
             X = X[:, :, :2, ...].transpose(0, 3, 4, 1, 2)
             return X
 
@@ -86,11 +91,15 @@ class BlockLoader(keras.utils.Sequence):
         Y = []
         weights = []
 
-        for blocks in self._group_fetch(file_list, block_list):
+        gfetch = self._group_fetch(file_list, block_list)
+        block_list = gfetch[0]
+        block_mask_list = gfetch[0]
+
+        for (blocks, block_masks) in zip(block_list, block_mask_list):
             x_item = blocks[:2]
             X.append(x_item)
 
-            weights.append(int(is_valid_block(blocks[0], block_size=self.block_size)))
+            weights.append(int(is_valid_block(block_masks[0], block_size=self.block_size)))
             y_item = np.array([blocks[2]])
             Y.append(y_item)
 
