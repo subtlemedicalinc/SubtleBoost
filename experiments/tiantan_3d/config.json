@@ -52,10 +52,13 @@
     "zoom": 0,
     "series_num": 1002,
     "unet": {
-      "description": "unet_pool5_mask",
+      "description": "unet3d_block_inf",
       "checkpoint": "unet_pool5_mask.checkpoint",
       "num_channel_first": 8,
-      "num_poolings": 5
+      "num_poolings": 5,
+      "predict_full_volume": false,
+      "block_size": 128,
+      "block_strides": 128
     },
     "edsr": {
       "description": "edsr3d",

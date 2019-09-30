@@ -184,13 +184,13 @@ def inference_process(args):
         # data_half = data[:data.shape[0] // 2, :, :data.shape[2] // 2, :data.shape[3] // 2]
         # data_pad = supre.zero_pad_for_dnn(data_half, num_poolings=args.num_poolings)
         data_pad = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
-
+        data_pad_mask = supre.zero_pad_for_dnn(data_mask, num_poolings=args.num_poolings)
         ns, _, nx, ny = data_pad.shape
 
         kw_model = {
-            'img_rows': nx,
-            'img_cols': ny,
-            'img_depth': ns,
+            'img_rows': args.block_size if not args.predict_full_volume else nx,
+            'img_cols': args.block_size if not args.predict_full_volume else ny,
+            'img_depth': args.block_size if not args.predict_full_volume else ns,
             'num_channel_input': 2
         }
         model_kwargs = {**model_kwargs, **kw_model}
@@ -200,7 +200,11 @@ def inference_process(args):
 
         kw = {
             'data_list': [args.data_preprocess],
-            'predict': True
+            'predict': True,
+            'block_size': args.block_size,
+            'block_strides': args.block_strides,
+            'batch_size': args.batch_size,
+            'predict_full': args.predict_full_volume
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
@@ -208,16 +212,32 @@ def inference_process(args):
         original_data_mask = data_mask
 
         prediction_generator = data_loader(**gen_kwargs)
-        prediction_generator._cache_img(args.data_preprocess, data_pad)
 
         predict_kwargs['generator'] = prediction_generator
-        predict_kwargs['max_queue_size'] = 1
 
-        x_pred = prediction_generator.__getitem__(0)
-        Y_prediction = m.model.predict(x_pred, batch_size=1, verbose=args.verbose)
+        if args.predict_full_volume:
+            prediction_generator._cache_img(args.data_preprocess, ims=data_pad, ims_mask=data_pad_mask)
 
-        Y_prediction = Y_prediction[0, ...].transpose(2, 0, 1, 3)
-        y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])
+            predict_kwargs['max_queue_size'] = 1
+            x_pred = prediction_generator.__getitem__(0)
+            Y_prediction = m.model.predict(x_pred, batch_size=1, verbose=args.verbose)
+            Y_prediction = Y_prediction[0, ...].transpose(2, 0, 1, 3)
+            y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])
+        else:
+            prediction_generator._cache_img(args.data_preprocess, ims=data_pad.transpose(1, 0, 2, 3), ims_mask=data_pad_mask.transpose(1, 0, 2, 3))
+            Y_prediction = m.model.predict_generator(**predict_kwargs)
+
+            n_chunks = lambda sh_idx: ((data[:, 0, ...].shape[sh_idx] - args.block_size + args.block_strides) // args.block_strides) + 1
+
+            bshape = int(np.cbrt(Y_prediction.shape[0]))
+            Y_prediction = sp.blocks_to_array(
+                input=Y_prediction.reshape(n_chunks(0), n_chunks(1), n_chunks(2), args.block_size, args.block_size, args.block_size),
+                oshape=(ns, nx, ny),
+                blk_shape=[args.block_size]*3,
+                blk_strides=[args.block_strides]*3
+            )
+
+            y_pred = supre.center_crop(Y_prediction, data[:, 0, ...])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
     else:
         kw_model = {

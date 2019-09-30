@@ -10,7 +10,7 @@ from subtle.subtle_io import build_block_list, load_file, load_blocks, is_valid_
 
 class BlockLoader(keras.utils.Sequence):
     def __init__(
-        self, data_list, batch_size=8, block_size=64, block_strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None, load_full_volume=False
+        self, data_list, batch_size=8, block_size=64, block_strides=16, shuffle=True, verbose=1, predict=False, brain_only=None, brain_only_mode=None, load_full_volume=False, predict_full=False
     ):
         self.data_list = data_list
         self.batch_size = batch_size
@@ -19,6 +19,7 @@ class BlockLoader(keras.utils.Sequence):
         self.shuffle = shuffle
         self.verbose = verbose
         self.predict = predict
+        self.predict_full = predict_full
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
@@ -35,7 +36,7 @@ class BlockLoader(keras.utils.Sequence):
         self.num_blocks = len(self.block_list_indices)
 
     def __len__(self):
-        return int(np.floor(self.num_blocks / self.batch_size))
+        return int(np.ceil(self.num_blocks / self.batch_size))
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
@@ -68,6 +69,7 @@ class BlockLoader(keras.utils.Sequence):
 
         for fpath, block_idxs in group_dict.items():
             ims, ims_mask = self._get_ims(fpath)
+
             blocks = load_blocks(ims, indices=block_idxs, block_size=self.block_size, strides=self.block_strides)
             block_list.extend(blocks)
 
@@ -82,7 +84,7 @@ class BlockLoader(keras.utils.Sequence):
 
         self._current_file_list = file_list
 
-        if self.predict:
+        if self.predict_full:
             X = np.array([self._get_ims(fpath)[0] for fpath in file_list])
             X = X[:, :, :2, ...].transpose(0, 3, 4, 1, 2)
             return X
@@ -110,4 +112,7 @@ class BlockLoader(keras.utils.Sequence):
         Y = Y.transpose(0, 2, 3, 4, 1)
 
         weights = np.array(weights)
+
+        if self.predict:
+            return X
         return X, Y, weights

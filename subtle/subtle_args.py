@@ -42,6 +42,7 @@ def parser(usage_str='', description_str=''):
     ## 3D patch based training
     parser.add_argument('--block_size', action='store', type=int, dest='block_size', help='Block size for 3D patch based training', default=64)
     parser.add_argument('--block_strides', action='store', type=int, dest='block_strides', help='Block strides for 3D patch based training', default=32)
+    parser.add_argument('--predict_full_volume', action='store_true', dest='predict_full_volume', help='If true, then inference is run on whole volume', default=False)
 
     ## inference args
     parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)

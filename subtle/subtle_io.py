@@ -702,7 +702,7 @@ def get_block_indices(data_file, block_size=64, strides=16, params={'h5_key': 'd
     ims = load_file(data_file, file_type='h5', params=params)
     ims_zero, _, _ = ims.transpose(1, 0, 2, 3)
 
-    get_sweeps = lambda N: [(b*strides, (b*strides) + block_size) for b in range((N - block_size + strides) // strides)]
+    get_sweeps = lambda N: [(b*strides, (b*strides) + block_size) for b in range(((N - block_size + strides) // strides) + 1)]
 
     return list(itertools.product(
         get_sweeps(ims_zero.shape[0]),
