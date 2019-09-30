@@ -1,0 +1,43 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+  "verbose": 1,
+  "gpu": 0,
+  "model_name": "unet2d",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+  "slices_per_input": 7,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "transform_type": "affine",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
+    "discard_end_percent": 0,
+    "scale_matching": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true,
+    "pad_for_size": 256,
+    "mask_threshold": 0.1,
+    "skip_scale_im": true,
+    "joint_normalize": true
+  },
+  "train": {
+  },
+  "inference": {
+    "undo_pad_resample": "256,232",
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "mpr_20190711",
+    "num_rotations": 5,
+    "checkpoint": "mpr_20190711.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "num_channel_first": 32,
+    "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
+    "inference_mpr_avg": "mean",
+    "resize": 256,
+    "zoom": 0,
+    "series_num": 1002
+  }
+}
