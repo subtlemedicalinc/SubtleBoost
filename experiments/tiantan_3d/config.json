@@ -1,7 +1,7 @@
 {
   "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
   "verbose": 1,
-  "gpu": 0,
+  "gpu": 2,
   "model_name": "unet3d",
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
   "slices_per_input": 7,
@@ -20,7 +20,7 @@
     "max_data_sets": 100,
     "validation_split": 0.2,
     "learning_rate": 0.001,
-    "checkpoint_name": "tiantan_3d",
+    "checkpoint_name": "unet_pool5_mask",
     "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
     "num_epochs": 100,
     "num_channel_first": 8,
@@ -52,8 +52,8 @@
     "zoom": 0,
     "series_num": 1002,
     "unet": {
-      "description": "unet3d_pool5",
-      "checkpoint": "tiantan_3d.checkpoint",
+      "description": "unet_pool5_mask",
+      "checkpoint": "unet_pool5_mask.checkpoint",
       "num_channel_first": 8,
       "num_poolings": 5
     },
