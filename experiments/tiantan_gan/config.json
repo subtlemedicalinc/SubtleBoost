@@ -29,7 +29,7 @@
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
     "l1_lambda": 0.15,
     "file_ext": "h5",
-    "batch_size": 8,
+    "batch_size": 16,
     "ssim_lambda": 0.15,
     "no_save_best_only": true,
     "perceptual_lambda": 0.2,

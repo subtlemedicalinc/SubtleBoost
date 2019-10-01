@@ -30,6 +30,7 @@ from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory, 
 import subtle.subtle_io as suio
 from subtle.data_loaders import SliceLoader
 import subtle.subtle_loss as suloss
+import subtle.subtle_metrics as sumetrics
 import subtle.subtle_plot as suplot
 import subtle.subtle_args as sargs
 
@@ -39,12 +40,15 @@ description_str = 'Train SubtleGrad network on pre-processed data.'
 # FIXME: add time stamps, logging
 # FIXME: data augmentation
 
-def save_img(img, fname):
+def save_img(img, fname, title=None):
     import matplotlib.pyplot as plt
+    plt.rcParams['figure.figsize'] = (20, 8)
+
     plt.set_cmap('gray')
 
     plt.imshow(img)
-    plt.colorbar()
+    if title is not None:
+        plt.title(title)
     plt.savefig('/home/srivathsa/projects/studies/gad/tiantan/train/logs/test/{}.png'.format(fname))
     plt.clf()
 
@@ -237,7 +241,8 @@ def train_process(args):
 
         pred_gen = SliceLoader(
             data_list=[fpath_h5],
-            batch_size=8,
+            batch_size=1,
+            predict=True,
             shuffle=False,
             verbose=0,
             residual_mode=False,
@@ -302,10 +307,10 @@ def train_process(args):
                 X_batch.extend(X)
                 Y_batch.extend(Y)
 
-                gauss1 = np.random.normal(0, 0.1, Y.shape)
+                gauss1 = np.random.normal(Y.min(), 0.1 * Y.max(), Y.shape)
                 Y_n = Y + gauss1
 
-                gauss2 = np.random.normal(0, 0.1, gen_imgs.shape)
+                gauss2 = np.random.normal(gen_imgs.min(), 0.1 * gen_imgs.max(), gen_imgs.shape)
                 g_n = gen_imgs + gauss2
 
                 dis_inp = np.concatenate([Y_n, g_n])
@@ -356,7 +361,19 @@ def train_process(args):
             y_pred = gen.predict_generator(pred_gen)
             pidx = y_pred.shape[0] // 2
             print('saving prediction...')
-            save_img(y_pred[pidx, ..., 0], 'epoch_{}'.format(epoch + 1))
+
+            gtruth_pred = suio.load_file(fpath_h5)
+            out_img = np.hstack([
+                gtruth_pred[pidx, 0],
+                gtruth_pred[pidx, 1],
+                gtruth_pred[pidx, 2],
+                y_pred[pidx, ..., 0]
+            ])
+            out_psnr = sumetrics.psnr(gtruth_pred[:, 2], y_pred[..., 0])
+            out_ssim = sumetrics.ssim(gtruth_pred[:, 2], y_pred[..., 0])
+
+            imtitle = 'PSNR={:.4f}, SSIM={:.4f}'.format(out_psnr, out_ssim)
+            save_img(out_img, 'epoch_{}'.format(epoch + 1), title=imtitle)
 
             print('End of EPOCH #{}'.format(epoch + 1))
 
