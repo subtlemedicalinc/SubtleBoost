@@ -69,7 +69,7 @@ class GeneratorWDSR3D(GeneratorBase):
         if self.verbose:
             print(inputs)
 
-        x = self._pad_symmetric()(inputs)
+        x = inputs
         if self.verbose:
             print(x)
 
@@ -110,15 +110,6 @@ class GeneratorWDSR3D(GeneratorBase):
 
         if self.compile_model:
             self._compile_model()
-
-    def _pad_symmetric(self):
-        pad = Lambda(
-            lambda x: K.in_train_phase(x,
-                tf.pad(x, tf.constant([[0, 0], [2, 2], [2, 2], [2, 2], [0, 0]]), 'SYMMETRIC')
-            )
-        )
-        pad.uses_learning_phase = True
-        return pad
 
     def _spatial_padding(self):
         return Lambda(
