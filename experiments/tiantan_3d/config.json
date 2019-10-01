@@ -42,6 +42,11 @@
       "num_channel_first": 32,
       "checkpoint_name": "vdsr3d",
       "model_name": "vdsr3d"
+    },
+    "wdsr": {
+      "num_channel_first": 16,
+      "checkpoint_name": "wdsr3d",
+      "model_name": "wdsr3d"
     }
   },
   "inference": {
