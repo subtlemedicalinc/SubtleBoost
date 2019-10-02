@@ -1,3 +1,5 @@
+#!/bin/bash
+
 commit=${commit:=$(git rev-parse HEAD | cut -c1-6)}
 exparg=$1
 

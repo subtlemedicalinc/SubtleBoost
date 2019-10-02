@@ -1,3 +1,5 @@
+#!/bin/bash
+
 logfile=$2/preprocess.out
 errfile=$2/preprocess.err
 
