@@ -51,11 +51,11 @@ class GeneratorBase:
 
         self.model = None # to be assigned by _build_model() in children classes
 
-    def callback_checkpoint(self, filename=None):
+    def callback_checkpoint(self, filename=None, monitor='val_l1_loss'):
         if filename is not None:
             self.checkpoint_file = filename
 
-        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor='val_loss', save_best_only=self.save_best_only)
+        return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor=monitor, save_best_only=self.save_best_only)
 
     def callback_tensorbaord(self, log_dir=None, log_every=None):
         if log_dir is None:

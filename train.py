@@ -177,7 +177,8 @@ def train_process(args):
 
 
     callbacks = []
-    callbacks.append(m.callback_checkpoint())
+    ckp_monitor = 'model_1_loss' if args.gan_mode else 'val_l1_loss'
+    callbacks.append(m.callback_checkpoint(monitor=ckp_monitor))
     callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
 
     slice_axis = [0]
