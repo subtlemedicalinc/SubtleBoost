@@ -219,7 +219,7 @@ def inference_process(args):
             prediction_generator._cache_img(args.data_preprocess, ims=data_pad, ims_mask=data_pad_mask)
 
             predict_kwargs['max_queue_size'] = 1
-            x_pred = prediction_generator.__getitem__(0)
+            x_pred, _, _ = prediction_generator.__getitem__(0)
             Y_prediction = m.model.predict(x_pred, batch_size=1, verbose=args.verbose)
             Y_prediction = Y_prediction[0, ...].transpose(2, 0, 1, 3)
             y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])

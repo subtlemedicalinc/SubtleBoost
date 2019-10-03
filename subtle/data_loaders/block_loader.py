@@ -87,7 +87,7 @@ class BlockLoader(keras.utils.Sequence):
         if self.predict_full:
             X = np.array([self._get_ims(fpath)[0] for fpath in file_list])
             X = X[:, :, :2, ...].transpose(0, 3, 4, 1, 2)
-            return X
+            return X, None, None
 
         X = []
         Y = []
@@ -112,7 +112,4 @@ class BlockLoader(keras.utils.Sequence):
         Y = Y.transpose(0, 2, 3, 4, 1)
 
         weights = np.array(weights)
-
-        if self.predict:
-            return X
         return X, Y, weights
