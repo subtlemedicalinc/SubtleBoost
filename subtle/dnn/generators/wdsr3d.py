@@ -44,7 +44,8 @@ class GeneratorWDSR3D(GeneratorBase):
         x = keras_add([x_in, x])
 
         if self.scale_factor:
-            x = Lambda(lambda t: t * self.scale_factor)(x)
+            sf = self.scale_factor
+            x = Lambda(lambda t: t * sf)(x)
         return x
 
     def _resblock_b(self, x_in):
@@ -57,7 +58,8 @@ class GeneratorWDSR3D(GeneratorBase):
         x = keras_add([x_in, x])
 
         if self.scale_factor:
-            x = Lambda(lambda t: t * self.scale_factor)(x)
+            sf = self.scale_factor
+            x = Lambda(lambda t: t * sf)(x)
         return x
 
     def _build_model(self):
