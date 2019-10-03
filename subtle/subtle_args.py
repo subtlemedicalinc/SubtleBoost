@@ -17,11 +17,8 @@ def parser(usage_str='', description_str=''):
     ## shared args
     parser.add_argument('--config', is_config_file=True, help='config file path', default=False)
     parser.add_argument('--experiment', action='store', dest='experiment', type=str, help='Name of the experiment for which preprocess/train/inference is to be run', default=None)
-<<<<<<< HEAD
     parser.add_argument('--sub_experiment', action='store', dest='sub_experiment', type=str, help='Name of the sub experiment for which preprocess/train/inference is to be run', default=None)
     parser.add_argument('--out_folder', action='store', dest='out_folder', type=str, help='Output folder name for inference pipeline')
-=======
->>>>>>> Preprocess pipeline using experiment configs
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--gpu', action='store', dest='gpu', type=str, help='set GPU', default=None)
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
