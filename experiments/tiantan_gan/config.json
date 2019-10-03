@@ -4,6 +4,7 @@
   "gpu": 0,
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
   "resize": 240,
+  "gan_mode": true,
   "slices_per_input": 7,
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
@@ -23,7 +24,6 @@
     "learning_rate": 0.001,
     "checkpoint_name": "tiantan_gan",
     "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
-    "gan_mode": true,
     "num_epochs": 100,
     "shuffle": true,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",

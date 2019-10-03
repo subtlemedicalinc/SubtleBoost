@@ -29,7 +29,7 @@ import sigpy as sp
 
 import keras.callbacks
 
-from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model, load_data_loader
+from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model, load_data_loader, gan_model
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 import subtle.subtle_io as suio
 from scipy.ndimage.interpolation import rotate
@@ -264,6 +264,14 @@ def inference_process(args):
             slice_axes = [0, 2, 3]
         else:
             slice_axes = [args.slice_axis]
+
+        if args.gan_mode:
+            gen = m.model
+            d = load_model(args.adversary_name)(img_rows=nx, img_cols=ny, compile_model=True)
+            disc = d.model
+
+            gan = gan_model(gen, disc, (nx, ny, 2 * args.slices_per_input))
+            gan.load_weights(args.checkpoint_file)
 
         checkpoint_files = [args.checkpoint_file_0, args.checkpoint_file_2, args.checkpoint_file_3]
 
