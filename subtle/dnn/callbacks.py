@@ -91,6 +91,19 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 X, Y, _ = self.generator.__getitem__(ii, enforce_raw_data=raw_data)
                 Y_prediction = self.model.predict_on_batch(X)
 
+                slice_idx = (idx + 1) % 3
+
+                if slice_idx == 0:
+                    pass
+                elif slice_idx == 1:
+                    X = X.transpose(0, 2, 1, 3, 4)
+                    Y = Y.transpose(0, 2, 1, 3, 4)
+                    Y_prediction = Y_prediction.transpose(0, 2, 1, 3, 4)
+                elif slice_idx == 2:
+                    X = X.transpose(0, 1, 3, 2, 4)
+                    Y = Y.transpose(0, 1, 3, 2, 4)
+                    Y_prediction = Y_prediction.transpose(0, 1, 3, 2, 4)
+
                 pidx = X.shape[1] // 2
                 X_zero = X[0, pidx, :, :, 0]
                 X_low = X[0, pidx, :, :, 1]
