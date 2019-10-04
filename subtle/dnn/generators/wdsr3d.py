@@ -75,20 +75,20 @@ class GeneratorWDSR3D(GeneratorBase):
         if self.verbose:
             print(x)
 
-        conv = Conv3D(self.features, kernel_size=3, padding='valid')(x)
+        conv = Conv3D(self.features, kernel_size=3, padding='same')(x)
         if self.verbose:
             print(conv)
 
         for _ in range(self.num_layers):
             conv = params['res_block'](conv)
 
-        conv = Conv3D(self.scale ** 3, kernel_size=3, strides=(2, 2, 2), padding='valid')(conv)
+        conv = Conv3D(self.scale ** 3, kernel_size=3, strides=(2, 2, 2), padding='same')(conv)
         conv = Conv3DTranspose(self.scale ** 3, kernel_size=3, strides=(2, 2, 2), padding='same')(conv)
 
         if self.verbose:
             print('conv', conv)
 
-        conv_1 = Conv3D(self.scale ** 3, kernel_size=5, padding='valid')(x)
+        conv_1 = Conv3D(self.scale ** 3, kernel_size=5, padding='same')(x)
         conv_1 = MaxPooling3D(pool_size=(2, 2, 2))(conv_1)
         conv_1 = Conv3DTranspose(self.scale ** 3, kernel_size=5, strides=(2, 2, 2), padding='same')(conv_1)
 
@@ -96,7 +96,6 @@ class GeneratorWDSR3D(GeneratorBase):
             print('conv 1', conv_1)
 
         conv_output = keras_add([conv, conv_1])
-        conv_output = self._spatial_padding()(conv_output)
         conv_output = Conv3D(1, kernel_size=3, padding='same')(conv_output)
 
         if self.verbose:
@@ -112,8 +111,3 @@ class GeneratorWDSR3D(GeneratorBase):
 
         if self.compile_model:
             self._compile_model()
-
-    def _spatial_padding(self):
-        return Lambda(
-            lambda x: K.spatial_3d_padding(x, padding=((2, 2), (2, 2), (2, 2)))
-        )
