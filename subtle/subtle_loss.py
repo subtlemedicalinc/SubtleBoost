@@ -24,22 +24,12 @@ try:
 except:
     warnings.warn('import keras failed')
 
-# for extract patches
-try:
-    from keras_contrib.backend import extract_image_patches as subtle_extract_image_patches
-    bypass_ssim_loss = False
-except:
-    warnings.warn('import keras_contrib failed, replacing ssim loss with L1 loss')
-    bypass_ssim_loss = True
+from keras_contrib.backend import extract_image_patches as subtle_extract_image_patches
 
 from keras.applications.vgg19 import VGG19, preprocess_input as vgg_preprocess
 from keras.models import Model
 
 def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
-    # bypass with a zero loss
-    if bypass_ssim_loss:
-        return keras.losses.mean_absolute_error(y_true, y_true)
-
     # ssim parameters
     cc1 = (k1 * max_value) ** 2
     cc2 = (k2 * max_value) ** 2
