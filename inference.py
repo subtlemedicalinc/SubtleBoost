@@ -225,11 +225,19 @@ def inference_process(args):
             y_pred = supre.center_crop(Y_prediction[..., 0], data[:, 0, ...])
         else:
             prediction_generator._cache_img(args.data_preprocess, ims=data_pad.transpose(1, 0, 2, 3), ims_mask=data_pad_mask.transpose(1, 0, 2, 3))
-            Y_prediction = m.model.predict_generator(**predict_kwargs)
+
+            Y_prediction = []
+            for idx in range(prediction_generator.__len__()):
+                x_pred, _, _ = prediction_generator.__getitem__(idx)
+
+                Y_prediction.extend(m.model.predict(x_pred, batch_size=1, verbose=args.verbose))
+
+            Y_prediction = np.array(Y_prediction)
 
             n_chunks = lambda sh_idx: ((data[:, 0, ...].shape[sh_idx] - args.block_size + args.block_strides) // args.block_strides) + 1
 
             bshape = int(np.cbrt(Y_prediction.shape[0]))
+
             Y_prediction = sp.blocks_to_array(
                 input=Y_prediction.reshape(n_chunks(0), n_chunks(1), n_chunks(2), args.block_size, args.block_size, args.block_size),
                 oshape=(ns, nx, ny),
