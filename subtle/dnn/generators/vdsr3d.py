@@ -47,7 +47,10 @@ class GeneratorVDSR3D(GeneratorBase):
 
         conv = Activation('tanh')(self._conv(conv, features=1))
         conv_output = keras_add([inputs, conv])
+        conv_output = self._conv(conv_output, features=self.num_channel_output)
 
+        if self.verbose:
+            print('final output', conv_output)
         # model
         model = keras.models.Model(inputs=inputs, outputs=conv_output)
         model.summary()
