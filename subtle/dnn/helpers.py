@@ -65,6 +65,9 @@ def make_image(im):
                          encoded_image_string=image_string)
 def gan_model(gen, dis, input_shape):
     inputs = Input(shape=input_shape)
+
+    gen.name = "gen"
+    dis.name = "dis"
     gen_img = gen(inputs)
     outputs = dis(gen_img)
 

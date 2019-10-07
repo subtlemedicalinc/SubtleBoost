@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 import numpy as np
 
-import keras.callbacks
+from keras.callbacks import TensorBoard
 from keras.optimizers import Adam
 
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
@@ -33,6 +33,7 @@ import subtle.subtle_loss as suloss
 import subtle.subtle_metrics as sumetrics
 import subtle.subtle_plot as suplot
 import subtle.subtle_args as sargs
+from subtle.dnn.callbacks import plot_tb
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Train SubtleGrad network on pre-processed data.'
@@ -183,7 +184,10 @@ def train_process(args):
     callbacks = []
     ckp_monitor = 'model_1_loss' if args.gan_mode else 'val_l1_loss'
     callbacks.append(m.callback_checkpoint(monitor=ckp_monitor))
-    callbacks.append(m.callback_tensorbaord(log_dir='{}_plot'.format(log_tb_dir)))
+
+    tb_logdir = '{}_plot'.format(log_tb_dir)
+    if not args.gan_mode:
+        callbacks.append(m.callback_tensorbaord(log_dir=tb_logdir))
 
     slice_axis = [0]
     num_epochs = args.num_epochs
@@ -194,7 +198,7 @@ def train_process(args):
         print('Training in MPR mode: {} epochs'.format(num_epochs))
 
     if r > 0:
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides, gan_mode=args.gan_mode))
     #cb_tensorboard = m.callback_tensorbaord(log_every=1)
 
     data_loader = load_data_loader(args.model_name)
@@ -236,23 +240,6 @@ def train_process(args):
         validation_generator = None
 
     if args.gan_mode:
-        ### TEMP CODE
-        fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO29.h5'
-
-        pred_gen = SliceLoader(
-            data_list=[fpath_h5],
-            batch_size=1,
-            predict=True,
-            shuffle=False,
-            verbose=0,
-            residual_mode=False,
-            slices_per_input=7,
-            slice_axis=[0]
-        )
-
-        ### TEMP CODE
-
-        history_objects = []
         gen = m.model
         adv_model = load_model(args.adversary_name)
         disc_m = adv_model(
@@ -267,8 +254,12 @@ def train_process(args):
         disc_m._compile_model()
         disc.trainable = False
 
-        gan.compile(loss=[loss_function, 'binary_crossentropy'], optimizer=Adam())
+        gan.compile(loss=[loss_function, 'mse'], optimizer=Adam())
         disc.trainable = True
+
+        tb_callback = TensorBoard(tb_logdir)
+        tb_callback.set_model(gan)
+        tb_names = ['train_gloss', 'train_dloss', 'val_gloss', 'val_dloss']
 
         data_len = training_generator.__len__()
         val_len = validation_generator.__len__()
@@ -294,12 +285,13 @@ def train_process(args):
         real_full = np.ones((data_len * args.batch_size, dc, dc, 1))
 
         for epoch in range(num_epochs):
-            print('EPOCH #{}/{}'.format(epoch + 1, num_epochs))
+            print('\nEPOCH #{}/{}'.format(epoch + 1, num_epochs))
             indices = np.random.permutation(data_len)
 
             X_batch = []
             Y_batch = []
 
+            train_dloss = []
             for idx in tqdm(indices, total=data_len):
                 X, Y = training_generator.__getitem__(idx)
                 gen_imgs = gen.predict(X, batch_size=args.batch_size)
@@ -316,79 +308,45 @@ def train_process(args):
                 dis_inp = np.concatenate([Y_n, g_n])
                 dis_out = np.concatenate([real, fake])
 
-                history_objects.append(
-                    disc.fit(
-                        dis_inp, dis_out,
-                        batch_size=args.batch_size,
-                        epochs=1,
-                        verbose=1,
-                        #callbacks=callbacks[:-1],
-                        shuffle=False
+                dhist = disc.fit(
+                    dis_inp, dis_out,
+                    batch_size=args.batch_size,
+                    epochs=1,
+                    verbose=1,
+                    shuffle=False
 
-                    )
                 )
+
+                dloss = dhist.history['loss'][0]
+                train_dloss.append(dloss)
+
+            train_dloss = np.mean(train_dloss)
 
             X_batch = np.array(X_batch)
             Y_batch = np.array(Y_batch)
 
             disc.trainable = False
-            history_objects.append(
-                gan.fit(
-                    X_batch, [Y_batch, real_full],
-                    epochs=1,
-                    batch_size=args.batch_size,
-                    verbose=1,
-                    callbacks=callbacks[:-1]
-                )
+            ghist = gan.fit(
+                X_batch, [Y_batch, real_full],
+                epochs=1,
+                batch_size=args.batch_size,
+                verbose=1,
+                callbacks=callbacks
             )
             disc.trainable = True
 
-            print('Evaluating...')
-            history_objects.append(
-                gan.evaluate(
-                    X_val, [Y_val, real_val],
-                    batch_size=args.batch_size,
-                    verbose=1
-                )
+            train_gloss = ghist.history['gen_loss'][0]
+
+            epoch_loss = gan.evaluate(
+                X_val, [Y_val, real_val],
+                batch_size=args.batch_size,
+                verbose=1
             )
 
-            epoch_loss = history_objects[-1]
-            print('Validation losses:\n')
-            print('loss: {}'.format(epoch_loss[0]))
-            print('model_1_loss: {}'.format(epoch_loss[1]))
-            print('model_2_loss: {}'.format(epoch_loss[2]))
+            val_gloss = epoch_loss[0]
+            val_dloss = epoch_loss[2]
 
-            y_pred = gen.predict_generator(pred_gen)
-            pidx = y_pred.shape[0] // 2
-            print('saving prediction...')
-
-            gtruth_pred = suio.load_file(fpath_h5)
-            out_img = np.hstack([
-                gtruth_pred[pidx, 0],
-                gtruth_pred[pidx, 1],
-                gtruth_pred[pidx, 2],
-                y_pred[pidx, ..., 0]
-            ])
-            out_psnr = sumetrics.psnr(gtruth_pred[:, 2], y_pred[..., 0])
-            out_ssim = sumetrics.ssim(gtruth_pred[:, 2], y_pred[..., 0])
-
-            imtitle = 'PSNR={:.4f}, SSIM={:.4f}'.format(out_psnr, out_ssim)
-            save_img(out_img, 'epoch_{}'.format(epoch + 1), title=imtitle)
-
-            print('End of EPOCH #{}'.format(epoch + 1))
-
-        d_losses = []
-        g_losses = []
-        for hist in history_objects:
-            if isinstance(hist, list):
-                g_losses.append(hist[0])
-            elif len(hist.history.keys()) == 1:
-                d_losses.append(hist.history['loss'][0])
-        d_losses = np.clip(d_losses, 0, 1)
-        g_losses = np.clip(g_losses, 0, 2)
-        plot_losses(d_losses, 'd_losses')
-        plot_losses(g_losses, 'g_losses')
-
+            plot_tb(callback=tb_callback, names=tb_names, logs=[train_gloss, train_dloss, val_gloss, val_dloss], batch_no=epoch)
     else:
         history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
 

@@ -8,7 +8,7 @@ from subtle.dnn.helpers import make_image, load_data_loader
 from scipy.misc import imresize
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=32):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=32, gan_mode=False):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -38,6 +38,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.model_name = model_name
         self.block_size = block_size
         self.block_strides = block_strides
+        self.gan_mode = gan_mode
 
         self._init_generator()
 
@@ -116,6 +117,9 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 X, Y = self.generator.__getitem__(ii, enforce_raw_data=raw_data)
                 Y_prediction = self.model.predict_on_batch(X)
 
+                if self.gan_mode:
+                    Y_prediction = Y_prediction[0]
+
                 X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
 
                 h = self.slices_per_input // 2
@@ -156,3 +160,12 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
             self.writer.flush()
 
         super().on_batch_end(batch, logs)
+
+def plot_tb(callback, names, logs, batch_no):
+    for name, value in zip(names, logs):
+        summary = tf.Summary()
+        summary_value = summary.value.add()
+        summary_value.simple_value = value
+        summary_value.tag = name
+        callback.writer.add_summary(summary, batch_no)
+        callback.writer.flush()
