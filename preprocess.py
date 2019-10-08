@@ -585,12 +585,15 @@ def apply_preprocess(args, ims, unmasked_ims, metadata):
     return unmasked_ims, metadata
 
 def zero_pad(args, ims, metadata):
-    ims_pad = sup.zero_pad(ims, target_size=args.pad_for_size)
-    print('Shape after zero padding...', ims_pad.shape)
-    metadata['zero_pad_size'] = (ims_pad.shape[2], ims_pad.shape[3])
-    metadata['resampled_size'] = (ims_pad.shape[2], ims_pad.shape[3])
+    if args.pad_for_size > 0:
+        ims_pad = sup.zero_pad(ims, target_size=args.pad_for_size)
+        print('Shape after zero padding...', ims_pad.shape)
+        metadata['zero_pad_size'] = (ims_pad.shape[2], ims_pad.shape[3])
+        metadata['resampled_size'] = (ims_pad.shape[2], ims_pad.shape[3])
 
-    return ims_pad, metadata
+        return ims_pad, metadata
+
+    return ims, metadata
 
 def preprocess_chain(args):
     metadata = {
