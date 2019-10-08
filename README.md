@@ -2,9 +2,13 @@
 Gadolinium Contrast Enhancement using Deep Learning
 
 ## Install
+Currently we use Tensorflow 1.14.0. However, due to a dependency issue, we also install TF 2.0.0.  
+To fix this, manually remove TF 2.0.0 after installing the requirements:
 ```bash
-pip install git+https://www.github.com/keras-team/keras-contrib.git
+pip install git+https://www.github.com/keras-team/keras-contrib.git # not available in main channel
 pip install -r requirements.txt
+rm -r /path/to/site-packages/tensorflow*
+pip install tensorflow-gpu==1.14.0
 ```
 
 ## Structure
