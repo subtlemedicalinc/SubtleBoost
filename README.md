@@ -1,6 +1,11 @@
 # SubtleGad
 Gadolinium Contrast Enhancement using Deep Learning
 
+## Install
+```bash
+pip install git+https://www.github.com/keras-team/keras-contrib.git
+pip install -r requirements.txt
+```
 
 ## Structure
 The `subtle` submodule contains all shared code for I/O, models and generators, data processing, plotting, and command-line arguments.  

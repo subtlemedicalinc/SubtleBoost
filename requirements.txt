@@ -20,6 +20,5 @@ sigpy==0.1.14
 expiringdict==1.1.4
 SimpleITK==1.2.2
 dicom==0.9.9.post1
-skimage==0.0
 scikit_learn==0.21.3
 tensorflow==2.0.0
