@@ -26,9 +26,9 @@ if __name__ == '__main__':
         except Exception as err:
             print('PREPROCESSING ERROR in {}'.format(case_num))
             traceback.print_exc()
-        outfile_png = os.path.join(config.out_dir_plots, '{}.png'.format(case_num))
-        plot_h5(input=config.out_file, output=outfile_png)
+            outfile_png = os.path.join(config.out_dir_plots, '{}.png'.format(case_num))
+            plot_h5(input=config.out_file, output=outfile_png)
 
-        if config.fsl_mask:
-            outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
-            plot_h5(input=config.out_file, output=outfile_png_mask, h5_key='data_mask')
+            if config.fsl_mask:
+                outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
+                plot_h5(input=config.out_file, output=outfile_png_mask, h5_key='data_mask')
