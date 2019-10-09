@@ -18,7 +18,7 @@ from subtle.subtle_io import load_slices, build_slice_list, get_num_slices
 from subtle.subtle_preprocess import resample_slices
 
 class SliceLoader(keras.utils.Sequence):
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0,1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
 
         'Initialization'
         self.data_list = data_list
@@ -62,7 +62,7 @@ class SliceLoader(keras.utils.Sequence):
         'Denotes the number of batches per epoch'
         return int(np.floor(self.num_slices / self.batch_size))
 
-    def __getitem__(self, index, enforce_raw_data=False):
+    def __getitem__(self, index, enforce_raw_data=False, data_npy=None):
         'Generate one batch of data'
 
         if self.verbose > 1:
@@ -81,7 +81,7 @@ class SliceLoader(keras.utils.Sequence):
 
         # Generate data
         if self.predict:
-            X = self._data_generation(file_list, slice_list, enforce_raw_data)
+            X = self._data_generation(file_list, slice_list, enforce_raw_data, data_npy)
             return X
         else:
             tic = time.time()
@@ -98,7 +98,7 @@ class SliceLoader(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
-    def _data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False):
+    def _data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False, data_npy=None):
         'Generates data containing batch_size samples'
 
         # load volumes
@@ -130,7 +130,10 @@ class SliceLoader(keras.utils.Sequence):
             if enforce_raw_data or (self.brain_only_mode == 'mixed' and i >= 5):
                 h5_key = 'data'
 
-            slices = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': h5_key}) # [c, 3, ny, nz]
+            if data_npy is not None:
+                slices = data_npy[idxs]
+            else:
+                slices = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': h5_key}) # [c, 3, ny, nz]
 
             if ax == 0:
                 pass
@@ -195,6 +198,15 @@ class SliceLoader(keras.utils.Sequence):
         # reshape to [batch, -1, nx, ny]
         # then transpose to [batch, nx, ny, -1]
         X = np.transpose(np.reshape(X, (X.shape[0], -1, X.shape[3], X.shape[4])), (0, 2, 3, 1))
+
+        # interleave - tmp code begin
+        # X = X.transpose(3, 0, 1, 2)
+        # tmp = [None]*(X.shape[0])
+        # tmp[::2] = X[:self.slices_per_input]
+        # tmp[1::2] = X[self.slices_per_input:]
+        # X = np.array(tmp).transpose(1, 2, 3, 0)
+        # interleave - tmp code end
+
         if not self.predict:
             Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
 
