@@ -70,11 +70,12 @@ class GeneratorUNet2D(GeneratorBase):
                 kernel_initializer='zeros',
                 bias_initializer='zeros')(pools[-1])
 
+        print('conv center before add', conv_center)
         # residual connection
         conv_center = keras_add([pools[-1], conv_center])
 
         if self.verbose:
-                print(conv_center)
+            print('conv center...', conv_center)
 
         # decoder steps
         conv_decoders = [conv_center]

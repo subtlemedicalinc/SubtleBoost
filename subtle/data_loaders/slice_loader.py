@@ -85,7 +85,7 @@ class SliceLoader(keras.utils.Sequence):
             return X
         else:
             tic = time.time()
-            X, Y = self._data_generation(file_list, slice_list, enforce_raw_data)
+            X, Y = self._data_generation(file_list, slice_list, enforce_raw_data, data_npy)
 
             if self.verbose > 1:
                 print('generated batch in {} s'.format(time.time() - tic))
@@ -132,6 +132,7 @@ class SliceLoader(keras.utils.Sequence):
 
             if data_npy is not None:
                 slices = data_npy[idxs]
+                slices_mask = data_npy[idxs]
             else:
                 slices = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': h5_key}) # [c, 3, ny, nz]
 

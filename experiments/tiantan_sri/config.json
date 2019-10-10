@@ -2,10 +2,9 @@
   "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
   "verbose": 1,
   "gpu": 0,
-  "model_name": "multires2d",
+  "model_name": "unet2d",
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
   "resize": 240,
-  "slices_per_input": 7,
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "transform_type": "rigid",
@@ -35,7 +34,23 @@
     "ssim_lambda": 0.15,
     "no_save_best_only": true,
     "perceptual_lambda": 0.7,
-    "queue_size": 4
+    "queue_size": 4,
+    "swap_input_unet": {
+      "checkpoint_name": "swap_input_unet",
+      "slices_per_input": 7
+    },
+    "alt_input_unet": {
+      "checkpoint_name": "alt_input_unet",
+      "slices_per_input": 7
+    },
+    "normal_2d_unet": {
+      "checkpoint_name": "normal_2d_unet",
+      "slices_per_input": 1
+    },
+    "swap_2d_unet": {
+      "checkpoint_name": "swap_2d_unet",
+      "slices_per_input": 1
+    }
   },
   "inference": {
     "inference_mpr": true,
