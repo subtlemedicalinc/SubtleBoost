@@ -66,9 +66,12 @@ class GeneratorUNet2D(GeneratorBase):
             list_num_features.append(num_channel)
 
         # center connection
-        conv_center = Conv2D(filters=list_num_features[-1], kernel_size=(3, 3), padding="same", activation="relu",
-                kernel_initializer='zeros',
-                bias_initializer='zeros')(pools[-1])
+        conv_center = Conv2D(
+            filters=list_num_features[-1],
+            kernel_size=(3, 3),
+            padding="same",
+            activation="relu"
+        )(pools[-1])
 
         print('conv center before add', conv_center)
         # residual connection
