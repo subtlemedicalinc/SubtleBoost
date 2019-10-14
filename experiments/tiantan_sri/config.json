@@ -28,12 +28,11 @@
     "num_epochs": 100,
     "shuffle": true,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
-    "l1_lambda": 0.15,
+    "l1_lambda": 0.6,
     "file_ext": "h5",
     "batch_size": 8,
-    "ssim_lambda": 0.15,
+    "ssim_lambda": 0.4,
     "no_save_best_only": true,
-    "perceptual_lambda": 0.7,
     "queue_size": 4,
     "swap_input_unet": {
       "checkpoint_name": "swap_input_unet",
@@ -47,6 +46,10 @@
       "checkpoint_name": "normal_2d_unet",
       "slices_per_input": 1
     },
+    "nonzero_init_7ch": {
+      "checkpoint_name": "nonzero_init_7ch",
+      "slices_per_input": 7
+    },
     "swap_2d_unet": {
       "checkpoint_name": "swap_2d_unet",
       "slices_per_input": 1
@@ -55,9 +58,10 @@
   "inference": {
     "inference_mpr": true,
     "learn_residual": false,
-    "description": "mres_vgg_loss",
+    "slices_per_input": 7,
+    "description": "nonzero_init",
     "num_rotations": 5,
-    "checkpoint": "mres_vgg_loss.checkpoint",
+    "checkpoint": "nonzero_init_7ch.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "num_channel_first": 32,
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
