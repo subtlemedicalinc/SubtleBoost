@@ -46,8 +46,8 @@
       "checkpoint_name": "normal_2d_unet",
       "slices_per_input": 1
     },
-    "nonzero_init_7ch": {
-      "checkpoint_name": "nonzero_init_7ch",
+    "nz_init_lrelu": {
+      "checkpoint_name": "nz_init_lrelu",
       "slices_per_input": 7
     },
     "swap_2d_unet": {

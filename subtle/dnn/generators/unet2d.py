@@ -1,6 +1,6 @@
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation
+from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation, ReLU, LeakyReLU
 from keras.layers.merge import add as keras_add
 
 from subtle.dnn.generators.base import GeneratorBase
@@ -9,6 +9,13 @@ class GeneratorUNet2D(GeneratorBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._build_model()
+
+    def _conv(self, x, filters, kernel_size=(3, 3), padding='same', activation='relu'):
+        out = Conv2D(
+            filters=filters, kernel_size=kernel_size, padding=padding
+        )(x)
+        act_fn = LeakyReLU(alpha=0.2) if activation == 'leaky_relu' else ReLU()
+        return act_fn(out)
 
     def _build_model(self):
         print('Building standard model...')
@@ -30,8 +37,7 @@ class GeneratorUNet2D(GeneratorBase):
         conv1 = inputs
 
         for i in range(self.num_conv_per_pooling):
-
-            conv1 = Conv2D(filters=self.num_channel_first, kernel_size=(3, 3), padding="same", activation="relu")(conv1)
+            conv1 = self._conv(conv1, filters=self.num_channel_first)
             conv1 = lambda_bn(conv1)
 
         pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -53,7 +59,7 @@ class GeneratorUNet2D(GeneratorBase):
 
             for j in range(self.num_conv_per_pooling):
 
-                conv_encoder = Conv2D(filters=num_channel, kernel_size=(3, 3), padding="same", activation="relu")(conv_encoder)
+                conv_encoder = self._conv(conv_encoder, filters=num_channel)
                 conv_encoder = lambda_bn(conv_encoder)
 
             pool_encoder = MaxPooling2D(pool_size=(2, 2))(conv_encoder)
@@ -66,12 +72,7 @@ class GeneratorUNet2D(GeneratorBase):
             list_num_features.append(num_channel)
 
         # center connection
-        conv_center = Conv2D(
-            filters=list_num_features[-1],
-            kernel_size=(3, 3),
-            padding="same",
-            activation="relu"
-        )(pools[-1])
+        conv_center = self._conv(pools[-1], filters=list_num_features[-1])
 
         print('conv center before add', conv_center)
         # residual connection
@@ -89,9 +90,10 @@ class GeneratorUNet2D(GeneratorBase):
             conv_decoder = up_decoder
 
             for j in range(self.num_conv_per_pooling):
-
-                conv_decoder = Conv2D(filters=list_num_features[-i], kernel_size=(3, 3),
-                        padding="same", activation="relu")(conv_decoder)
+                conv_decoder = self._conv(
+                    conv_decoder,
+                    filters=list_num_features[-i]
+                )
                 conv_decoder = lambda_bn(conv_decoder)
 
             conv_decoders.append(conv_decoder)
@@ -103,7 +105,10 @@ class GeneratorUNet2D(GeneratorBase):
 
         conv_decoder = conv_decoders[-1]
 
-        conv_output = Conv2D(self.num_channel_output, (1, 1), padding="same", activation=self.final_activation)(conv_decoder)
+        conv_output = self._conv(
+            conv_decoder, filters=self.num_channel_output,
+            kernel_size=(1, 1), activation=self.final_activation
+        )
 
         if self.verbose:
             print(conv_output)
