@@ -20,7 +20,8 @@
     "pad_for_size": 256,
     "mask_threshold": 0.1,
     "skip_scale_im": true,
-    "joint_normalize": true
+    "joint_normalize": true,
+    "save_preprocess_video": true
   },
   "train": {
   },

@@ -132,5 +132,6 @@ def parser(usage_str='', description_str=''):
     parser.add_argument('--gan_mode', action='store_true', dest='gan_mode', help='If True, network will be trained in GAN mode with adversarial loss', default=False)
     parser.add_argument('--adversary_name', action='store', dest='adversary_name', type=str, help='Name of the Discriminator model architecture', default='patch2d')
     parser.add_argument('--num_disc_steps', action='store', dest='num_disc_steps', type=int, help='Number of steps to train Discriminator for, for every generator epoch', default=5)
+    parser.add_argument('--save_preprocess_video', action='store_true', dest='save_preprocess_video', help='If True, preprocess videos are saved in MP4 format', default=False)
 
     return parser

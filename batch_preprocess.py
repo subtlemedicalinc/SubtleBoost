@@ -4,7 +4,7 @@ import traceback
 import subtle.subtle_io as suio
 import subtle.subtle_args as sargs
 
-from plot_grid import plot_h5
+from plot_grid import plot_h5, save_video
 from preprocess import execute_chain as preprocess_chain
 
 if __name__ == '__main__':
@@ -28,6 +28,10 @@ if __name__ == '__main__':
             traceback.print_exc()
             outfile_png = os.path.join(config.out_dir_plots, '{}.png'.format(case_num))
             plot_h5(input=config.out_file, output=outfile_png)
+
+            if config.save_preprocess_video:
+                video_out = outfile_png.replace('png', 'mp4')
+                save_video(input=config.out_file, output=video_out)
 
             if config.fsl_mask:
                 outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
