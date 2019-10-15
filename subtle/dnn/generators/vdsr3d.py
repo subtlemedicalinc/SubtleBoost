@@ -21,33 +21,44 @@ class GeneratorVDSR3D(GeneratorBase):
 
         self._build_model()
 
-    def _conv(self, x, features=None):
+    def _conv(self, x, features=None, name=None):
         features = self.num_channel_first if features is None else features
         return Conv3D(
-            features, kernel_size=3, strides=1, activation=None,
+            features,
+            kernel_size=3,
+            strides=1,
+            activation=None,
             kernel_initializer=he_normal(seed=self.init_seed),
-            padding='same'
+            padding='same',
+            name=name
         )(x)
-
-    def _resblock(self, x, act='relu'):
-        res_conv1 = Activation(act)(self._conv(x))
-        return self._conv(res_conv1)
-
 
     def _build_model(self):
         print('Building VDSR 3D model...')
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input))
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input), name='model_input')
 
         if self.verbose:
             print(inputs)
 
         conv = inputs
-        for _ in range(self.num_layers-1):
-            conv = Activation('relu')(self._conv(conv))
+        for res_idx in range(self.num_layers-1):
+            cname = 'conv_{}'.format(res_idx)
 
-        conv = Activation('tanh')(self._conv(conv, features=1))
-        conv_output = keras_add([inputs, conv])
-        conv_output = self._conv(conv_output, features=self.num_channel_output)
+            conv = Activation(
+                'relu',
+                name='relu_{}'.format(cname)
+            )(self._conv(conv, name=cname))
+
+        conv = Activation(
+            'tanh',
+            name='tanh_conv_pre_out'
+        )(self._conv(conv, features=1, name='conv_pre_out'))
+        conv_output = keras_add([inputs, conv], name='add_pre_out')
+        conv_output = self._conv(
+            conv_output,
+            features=self.num_channel_output,
+            name='model_output'
+        )
 
         if self.verbose:
             print('final output', conv_output)

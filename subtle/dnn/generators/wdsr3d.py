@@ -36,37 +36,70 @@ class GeneratorWDSR3D(GeneratorBase):
     def _get_params(self):
         return self.param_map[self.wdsr_type]
 
-    def _resblock_a(self, x_in):
+    def _resblock_a(self, x_in, res_idx):
         params = self._get_params()
-        x = Conv3D(self.features * params['res_expansion'], kernel_size=3, padding='same')(x_in)
-        x = Activation('relu')(x)
-        x = Conv3D(self.features, kernel_size=3, padding='same')(x)
-        x = keras_add([x_in, x])
+        x = Conv3D(
+            self.features * params['res_expansion'],
+            kernel_size=3,
+            padding='same',
+            name='conv_{}_1'.format(res_idx)
+        )(x_in)
+        x = Activation(
+            'relu',
+            name='relu_conv_{}'.format(res_idx)
+        )(x)
+        x = Conv3D(
+            self.features,
+            kernel_size=3,
+            padding='same',
+            name='conv_{}_2'.format(res_idx)
+        )(x)
+        x = keras_add([x_in, x], name='add_{}'.format(res_idx))
 
         if self.scale_factor:
             sf = self.scale_factor
-            x = Lambda(lambda t: t * sf)(x)
+            x = Lambda(lambda t: t * sf, name='lambda_{}'.format(res_idx))(x)
         return x
 
-    def _resblock_b(self, x_in):
+    def _resblock_b(self, x_in, res_idx):
         linear = 0.8
         params = self._get_params()
-        x = Conv3D(self.features * params['res_expansion'], kernel_size=1, padding='same')(x_in)
-        x = Activation('relu')(x)
-        x = Conv3D(int(self.features * linear), kernel_size=1, padding='same')(x)
-        x = Conv3D(self.features, kernel_size=3, padding='same')(x)
-        x = keras_add([x_in, x])
+        x = Conv3D(
+            self.features * params['res_expansion'],
+            kernel_size=1,
+            padding='same',
+            name='conv_{}_1'.format(res_idx)
+        )(x_in)
+
+        x = Activation(
+            'relu',
+            name='relu_conv_{}'.format(res_idx)
+        )(x)
+
+        x = Conv3D(
+            int(self.features * linear),
+            kernel_size=1,
+            padding='same',
+            name='conv_{}_2'.format(res_idx)
+        )(x)
+        x = Conv3D(
+            self.features,
+            kernel_size=3,
+            padding='same',
+            name='conv_{}_3'.format(res_idx)
+        )(x)
+        x = keras_add([x_in, x], name='add_{}'.format(res_idx))
 
         if self.scale_factor:
             sf = self.scale_factor
-            x = Lambda(lambda t: t * sf)(x)
+            x = Lambda(lambda t: t * sf, name='lambda_{}'.format(res_idx))(x)
         return x
 
     def _build_model(self):
         print('Building WDSR {} 3D model...'.format(self.wdsr_type))
         params = self._get_params()
 
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input))
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input), name='model_input')
 
         if self.verbose:
             print(inputs)
@@ -75,28 +108,63 @@ class GeneratorWDSR3D(GeneratorBase):
         if self.verbose:
             print(x)
 
-        conv = Conv3D(self.features, kernel_size=3, padding='same')(x)
+        conv = Conv3D(
+            self.features,
+            kernel_size=3,
+            padding='same',
+            name='conv_init'
+        )(x)
         if self.verbose:
             print(conv)
 
-        for _ in range(self.num_layers):
-            conv = params['res_block'](conv)
+        for idx in range(self.num_layers):
+            conv = params['res_block'](conv, res_idx=idx)
 
-        conv = Conv3D(self.scale ** 3, kernel_size=3, strides=(2, 2, 2), padding='same')(conv)
-        conv = Conv3DTranspose(self.scale ** 3, kernel_size=3, strides=(2, 2, 2), padding='same')(conv)
+        conv = Conv3D(
+            self.scale ** 3,
+            kernel_size=3,
+            strides=(2, 2, 2),
+            padding='same',
+            name='conv_a'
+        )(conv)
+        conv = Conv3DTranspose(
+            self.scale ** 3,
+            kernel_size=3,
+            strides=(2, 2, 2),
+            padding='same',
+            name='conv_trans_a'
+        )(conv)
 
         if self.verbose:
             print('conv', conv)
 
-        conv_1 = Conv3D(self.scale ** 3, kernel_size=5, padding='same')(x)
-        conv_1 = MaxPooling3D(pool_size=(2, 2, 2))(conv_1)
-        conv_1 = Conv3DTranspose(self.scale ** 3, kernel_size=5, strides=(2, 2, 2), padding='same')(conv_1)
+        conv_1 = Conv3D(
+            self.scale ** 3,
+            kernel_size=5,
+            padding='same',
+            name='conv_b'
+        )(x)
+        conv_1 = MaxPooling3D(
+            pool_size=(2, 2, 2), name='maxpool_b'
+        )(conv_1)
+        conv_1 = Conv3DTranspose(
+            self.scale ** 3,
+            kernel_size=5,
+            strides=(2, 2, 2),
+            padding='same',
+            name='conv_trans_b'
+        )(conv_1)
 
         if self.verbose:
             print('conv 1', conv_1)
 
-        conv_output = keras_add([conv, conv_1])
-        conv_output = Conv3D(1, kernel_size=3, padding='same')(conv_output)
+        conv_output = keras_add([conv, conv_1], name='add_ab')
+        conv_output = Conv3D(
+            1,
+            kernel_size=3,
+            padding='same',
+            name='model_output'
+        )(conv_output)
 
         if self.verbose:
             print('output', conv_output)
