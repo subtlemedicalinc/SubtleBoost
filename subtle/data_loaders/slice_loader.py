@@ -15,7 +15,7 @@ import sigpy as sp
 import keras
 
 from subtle.subtle_io import load_slices, build_slice_list, get_num_slices
-from subtle.subtle_preprocess import resample_slices
+from subtle.subtle_preprocess import resample_slices, enhancement_mask
 
 class SliceLoader(keras.utils.Sequence):
     def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None):
@@ -108,8 +108,10 @@ class SliceLoader(keras.utils.Sequence):
         # should be the same
 
         data_list_X = []
+        data_list_X_mask = []
         if not self.predict:
             data_list_Y = []
+            data_list_Y_mask = []
 
         for i, (f, idx_dict) in enumerate(zip(slice_list_files, slice_list_indexes)):
             c = idx_dict['index']
@@ -134,7 +136,9 @@ class SliceLoader(keras.utils.Sequence):
                 slices = data_npy[idxs]
                 slices_mask = data_npy[idxs]
             else:
-                slices = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': h5_key}) # [c, 3, ny, nz]
+                # load both full and brain-masked slices. Dimensions of each np array are [c, 3, ny, nz]
+                # FIXME: only load slices_mask if BET masking was run, and prediction is False
+                slices, slices_mask = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': 'all'})
 
             if ax == 0:
                 pass
@@ -142,41 +146,56 @@ class SliceLoader(keras.utils.Sequence):
                 assert False, 'invalid slice axis!, {}'.format(ax)
             elif ax == 2:
                 slices = np.transpose(slices, (2, 1, 0, 3))
+                slices_mask = np.transpose(slices_mask, (2, 1, 0, 3))
             elif ax == 3:
                 slices = np.transpose(slices, (3, 1, 0, 2))
+                slices_mask = np.transpose(slices_mask, (3, 1, 0, 2))
 
             if self.resize is not None:
                 slices = sp.util.resize(slices, [slices.shape[0], slices.shape[1], self.resize, self.resize])
+                slices_mask = sp.util.resize(slices_mask, [slices_mask.shape[0], slices_mask.shape[1], self.resize, self.resize])
 
             if self.resample_size is not None:
                 if self.verbose > 1:
                     print('Resampling slices to matrix size', self.resample_size)
                 slices = resample_slices(slices, self.resample_size)
+                slices_mask = resample_slices(slices_mask, self.resample_size)
 
 
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
 
             slices_X = slices[:,self.input_idx,:,:][None,...]
+            slices_X_mask = slices_mask[:,self.input_idx,:,:][None,...]
             data_list_X.append(slices_X)
+            data_list_X_mask.append(slices_X_mask)
 
             if not self.predict:
                 slices_Y = slices[h, self.output_idx, :, :][None,None,...]
+                slices_Y_mask = slices_mask[h, self.output_idx, :, :][None,None,...]
                 data_list_Y.append(slices_Y)
+                data_list_Y_mask.append(slices_Y_mask)
 
         tic = time.time()
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
+            data_X_mask = np.concatenate(data_list_X_mask, axis=0)
             if not self.predict:
                 data_Y = np.concatenate(data_list_Y, axis=0)
+                data_Y_mask = np.concatenate(data_list_Y_mask, axis=0)
         else:
             data_X = data_list_X[0]
+            data_X_mask = data_list_X_mask[0]
             if not self.predict:
                 data_Y = data_list_Y[0]
+                data_Y_mask = data_list_Y_mask[0]
 
         X = data_X.copy()
+        X_mask = data_X_mask.copy()
         if not self.predict:
             Y = data_Y.copy()
+            Y_mask = data_Y_mask.copy()
+            enh_mask = enhancement_mask(X_mask, Y_mask, center_slice=h)
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
 
@@ -208,8 +227,13 @@ class SliceLoader(keras.utils.Sequence):
         # X = np.array(tmp).transpose(1, 2, 3, 0)
         # interleave - tmp code end
 
+        X_mask = np.transpose(np.reshape(X_mask, (X_mask.shape[0], -1, X_mask.shape[3], X_mask.shape[4])), (0, 2, 3, 1))
+
         if not self.predict:
             Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
+            Y_mask = np.transpose(np.reshape(Y_mask, (Y_mask.shape[0], -1, Y_mask.shape[3], Y_mask.shape[4])), (0, 2, 3, 1))
+            enh_mask = np.transpose(np.reshape(enh_mask, (enh_mask.shape[0], -1, enh_mask.shape[3], enh_mask.shape[4])), (0, 2, 3, 1))
+            Y = np.concatenate((Y, enh_mask), axis=-1)
 
         if self.verbose > 1:
             print('tranpose data in {} s'.format(time.time() - tic))
@@ -219,7 +243,6 @@ class SliceLoader(keras.utils.Sequence):
                 print('X, size = ', X.shape)
             else:
                 print('X, Y sizes = ', X.shape, Y.shape)
-
 
         if self.predict:
             return X

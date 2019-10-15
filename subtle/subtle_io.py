@@ -445,8 +445,9 @@ def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'comp
         return save_data_npy(output_file, data)
 
 def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
+    # FIXME: remove code duplication
     F = h5py.File(input_file, 'r')
-    if slices is None:
+    if slices is None: # load the full volume
         if h5_key == 'all':
             d1 = np.array(F['data'])
             d2 = np.array(F['data_mask'])
@@ -456,21 +457,53 @@ def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     else:
         slices_unique, slices_inverse = np.unique(slices, return_index=False, return_inverse=True, return_counts=False)
         if dim == 0:
-            data = np.array(F[h5_key][slices_unique, :, :, :])
-            if len(slices_unique) < len(slices_inverse):
-                data = data[slices_inverse, :, :, :]
+            if h5_key == 'all':
+                d1 = np.array(F['data'][slices_unique, :, :, :])
+                d2 = np.array(F['data_mask'][slices_unique, :, :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[slices_inverse, :, :, :]
+                    d2 = d2[slices_inverse, :, :, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][slices_unique, :, :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[slices_inverse, :, :, :]
         elif dim == 1:
-            data = np.array(F[h5_key][:, slices_unique,  :, :])
-            if len(slices_unique) < len(slices_inverse):
-                data = data[:, slices_inverse, :, :]
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, slices_unique,  :, :])
+                d2 = np.array(F['data_mask'][:, slices_unique,  :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, slices_inverse, :, :]
+                    d2 = d2[:, slices_inverse, :, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, slices_unique,  :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, slices_inverse, :, :]
         elif dim == 2:
-            data = np.array(F[h5_key][:, :, slices_unique, :])
-            if len(slices_unique) < len(slices_inverse):
-                data = data[:, :, slices_inverse, :]
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, :, slices_unique, :])
+                d2 = np.array(F['data_mask'][:, :, slices_unique, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, :, slices_inverse, :]
+                    d2 = d2[:, :, slices_inverse, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, :, slices_unique, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, :, slices_inverse, :]
         elif dim == 3:
-            data = np.array(F[h5_key][:, :, :, slices_unique])
-            if len(slices_unique) < len(slices_inverse):
-                data = data[:, :, :, slices_inverse]
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, :, :, slices_unique])
+                d2 = np.array(F['data_mask'][:, :, :, slices_unique])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, :, :, slices_inverse]
+                    d2 = d2[:, :, :, slices_inverse]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, :, :, slices_unique])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, :, :, slices_inverse]
     F.close()
     return data
 
@@ -516,6 +549,7 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
     elif file_type == 'h5':
         return load_slices_h5(input_file, slices, h5_key=params['h5_key'], dim=dim)
     else:
+        #FIXME add real exception handling
         print('subtle_io/load_slices: ERROR. unrecognized file type', file_type)
         sys.exit(-1)
 

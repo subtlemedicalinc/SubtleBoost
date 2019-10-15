@@ -13,6 +13,7 @@ import sys
 import warnings
 import time
 import numpy as np
+from functools import wraps
 
 import tensorflow as tf
 from tensorflow import log as tf_log
@@ -22,6 +23,31 @@ from keras import backend as K
 
 from keras.applications.vgg19 import VGG19, preprocess_input as vgg_preprocess
 from keras.models import Model
+
+"""
+Decorator for splitting y_true into ground truth image and mask weights
+"""
+def extract_weights(fn):
+    @wraps(fn)
+    # This is to say that this decorator is wrapping the given function so that
+    # the __name__ attribute is meaningful and looks right in keras progressbar
+
+    def _extract(*args, **kwargs):
+        y_true = args[0]
+        y_pred = args[1]
+
+        weights = K.expand_dims(y_true[..., 1])
+        y_true = K.expand_dims(y_true[..., 0])
+
+        new_args = [y_true, y_pred, weights]
+
+        if len(args) > 2:
+            # perceptual_loss has an extra argument img_shape
+            # and ssim_loss has a bunch of extra args
+            new_args.extend(args[2:])
+
+        return fn(*new_args, **kwargs)
+    return _extract
 
 """
 Based on implementation from https://github.com/keras-team/keras-contrib/blob/master/keras_contrib/backend/tensorflow_backend.py
@@ -70,7 +96,8 @@ def extract_image_patches(x, ksizes, ssizes, padding='same',
 
     return patches
 
-def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
+@extract_weights
+def ssim_loss(y_true, y_pred, weights, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
     # ssim parameters
     cc1 = (k1 * max_value) ** 2
     cc2 = (k2 * max_value) ** 2
@@ -109,17 +136,27 @@ def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_
 
     return K.mean((1.0 - ssim) / 2.0)
 
-def mse_loss(y_true, y_pred):
+@extract_weights
+def mse_loss(y_true, y_pred, weights):
     return keras.losses.mean_squared_error(y_true, y_pred)
 
-def psnr_loss(y_true, y_pred):
+@extract_weights
+def psnr_loss(y_true, y_pred, weights):
     denominator = tf_log(tf_constant(10.0))
     return 20.*tf_log(K.max(y_true)) / denominator - 10. * tf_log(K.mean(K.square(y_pred - y_true))) / denominator
 
-def l1_loss(y_true, y_pred):
+@extract_weights
+def weighted_l1_loss(y_true, y_pred, weights):
+    y_true *= weights
+    y_pred *= weights
     return keras.losses.mean_absolute_error(y_true, y_pred)
 
-def perceptual_loss(y_true, y_pred, img_shape):
+@extract_weights
+def l1_loss(y_true, y_pred, weights):
+    return keras.losses.mean_absolute_error(y_true, y_pred)
+
+@extract_weights
+def perceptual_loss(y_true, y_pred, weights, img_shape):
     # From https://bit.ly/2HTb4t9
 
     y_true_3c = K.concatenate([y_true, y_true, y_true])
@@ -133,10 +170,13 @@ def perceptual_loss(y_true, y_pred, img_shape):
     loss_model.trainable = False
     return K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
 
-def wasserstein_loss(y_true, y_pred):
+@extract_weights
+def wasserstein_loss(y_true, y_pred, weights):
     return K.mean(y_true * y_pred)
 
-def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, img_shape=(240, 240, 3)):
+def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, img_shape=(240, 240, 3), enh_mask=False):
+    l1_fn = l1_loss if not enh_mask else weighted_l1_loss
+
     if perceptual_lambda > 0 or wloss_lambda > 0:
-        return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y)
-    return lambda x, y: l1_loss(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda
+        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y)
+    return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda

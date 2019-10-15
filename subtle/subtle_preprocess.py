@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
-from skimage.morphology import binary_erosion, rectangle
+from skimage.morphology import binary_dilation, binary_erosion, rectangle, square
 from scipy.ndimage.interpolation import zoom as zoom_interp
 from scipy.ndimage import label as cc_label
 import cv2
@@ -438,3 +438,19 @@ def zoom_iso(dcm_vol, spacing, new_spacing):
     new_spacing = spacing / real_resize_factor
 
     return zoom_interp(dcm_vol, real_resize_factor), new_spacing
+
+def enhancement_mask(X, Y, center_slice, th=.05):
+    'Create an enhancement mask to weight the loss function'
+
+    # FIXME: only works if Y.shape[2] == 1
+    im_diff = Y[:, 0, 0, ...].squeeze() - X[:, center_slice, 0,...].squeeze()
+    enh_mask = im_diff > th * np.max(abs(im_diff))
+    enh_mask[enh_mask < 0] = 0
+    if len(enh_mask.shape) > 2:
+        for i in range(enh_mask.shape[0]):
+            enh_mask[i,...] = binary_dilation(enh_mask[i, ...], selem=square(3))
+    else:
+        enh_mask = binary_dilation(enh_mask, selem=square(3))
+
+    enh_mask = enh_mask.reshape(Y.shape)
+    return enh_mask

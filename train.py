@@ -111,8 +111,13 @@ def train_process(args):
     clear_keras_memory()
     set_keras_memory(args.keras_memory)
 
-    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, img_shape=(nx, ny, 3))
-    metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
+    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, img_shape=(nx, ny, 3), enh_mask=args.enh_mask)
+
+    l1_metric = suloss.l1_loss if not args.enh_mask else suloss.weighted_l1_loss
+    metrics_monitor = [l1_metric, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
+
+    if args.enh_mask and args.verbose:
+        print('Using weighted L1 loss...')
 
     if args.resample_size is not None:
         nx = args.resample_size

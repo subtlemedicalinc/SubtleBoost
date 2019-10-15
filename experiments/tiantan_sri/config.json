@@ -53,6 +53,11 @@
     "swap_2d_unet": {
       "checkpoint_name": "swap_2d_unet",
       "slices_per_input": 1
+    },
+    "enh_mask": {
+      "enh_mask": true,
+      "checkpoint_name": "enh_mask",
+      "slices_per_input": 7
     }
   },
   "inference": {
