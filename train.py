@@ -284,6 +284,22 @@ def train_process(args):
         fake = np.zeros((args.batch_size, dc, dc, 1))
         real_full = np.ones((data_len * args.batch_size, dc, dc, 1))
 
+        # for saving epoch output as a npy file
+        fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO31.h5'
+
+        pred_gen = SliceLoader(
+            data_list=[fpath_h5],
+            batch_size=1,
+            predict=True,
+            shuffle=False,
+            verbose=0,
+            residual_mode=False,
+            slices_per_input=7,
+            slice_axis=[0]
+        )
+
+        epoch_preds = []
+
         for epoch in range(num_epochs):
             print('\nEPOCH #{}/{}'.format(epoch + 1, num_epochs))
             indices = np.random.permutation(data_len)
@@ -347,6 +363,22 @@ def train_process(args):
             val_dloss = epoch_loss[2]
 
             plot_tb(callback=tb_callback, names=tb_names, logs=[train_gloss, train_dloss, val_gloss, val_dloss], batch_no=epoch)
+
+            y_pred = gen.predict_generator(pred_gen)
+            pidx = 99 # this slice in NO31 has vasculature inside tumor
+
+            gtruth_pred = suio.load_file(fpath_h5)
+            out_img = np.hstack([
+                gtruth_pred[pidx, 0],
+                gtruth_pred[pidx, 1],
+                gtruth_pred[pidx, 2],
+                y_pred[pidx, ..., 0]
+            ])
+            out_psnr = sumetrics.psnr(gtruth_pred[:, 2], y_pred[..., 0])
+            out_ssim = sumetrics.ssim(gtruth_pred[:, 2], y_pred[..., 0])
+
+            epoch_preds.append((out_img, out_psnr, out_ssim))
+            np.save('/home/srivathsa/projects/studies/gad/tiantan/train/logs/gan_progress.npy', np.array(epoch_preds))
     else:
         history = m.model.fit_generator(generator=training_generator, validation_data=validation_generator, validation_steps=args.val_steps_per_epoch, use_multiprocessing=args.use_multiprocessing, workers=args.num_workers, max_queue_size=args.max_queue_size, epochs=num_epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, verbose=args.verbose, initial_epoch=0)
 
