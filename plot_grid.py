@@ -34,9 +34,11 @@ def save_video(input, output, h5_key='data'):
 
     row1 = np.array([np.hstack([x_0, x_1, x_2]) for (x_0, x_1, x_2) in zip(X0, X1, X2)])
     row2 = np.array([np.hstack([x_0, x_1, x_2]) for (x_0, x_1, x_2) in zip(0*X0, X1mX0, X2mX0)])
-    out = np.array([np.vstack([r1, r2]) for r1, r2 in zip(row1, row2)])
 
-    outfile = output.replace('png', 'mp4')
+    skip_count = int(row1.shape[0] * 0.1)
+
+    row1 = row1[skip_count:-skip_count]
+    row2 = row2[skip_count:-skip_count]
 
     fig = plt.figure(figsize=(10, 8))
 
@@ -55,8 +57,8 @@ def save_video(input, output, h5_key='data'):
         im2.set_data(row2[idx])
         return [im1, im2]
 
-    anim = FuncAnimation(fig, _updatefig, frames=range(out.shape[0]), interval=50)
-    anim.save(outfile)
+    anim = FuncAnimation(fig, _updatefig, frames=range(row1.shape[0]), interval=75)
+    anim.save(output)
 
 
 def plot_h5(input, output, idx=None, h5_key='data'):
