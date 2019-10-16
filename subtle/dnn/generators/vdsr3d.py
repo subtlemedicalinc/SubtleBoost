@@ -13,10 +13,9 @@ from subtle.dnn.layers.ConstMultiplier import ConstMultiplier
 
 
 class GeneratorVDSR3D(GeneratorBase):
-    def __init__(self, num_layers=20, scale_factor=0.1, init_seed=15213, **kwargs):
+    def __init__(self, num_layers=20, init_seed=15213, **kwargs):
         super().__init__(**kwargs)
         self.init_seed = init_seed
-        self.scale_factor = scale_factor
         self.num_layers = num_layers
 
         self._build_model()

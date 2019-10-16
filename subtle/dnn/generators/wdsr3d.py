@@ -160,7 +160,7 @@ class GeneratorWDSR3D(GeneratorBase):
 
         conv_output = keras_add([conv, conv_1], name='add_ab')
         conv_output = Conv3D(
-            1,
+            self.num_channel_output,
             kernel_size=3,
             padding='same',
             name='model_output'

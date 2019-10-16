@@ -72,7 +72,7 @@ class GeneratorEDSR3D(GeneratorBase):
         if self.verbose:
             print(x)
 
-        conv_output = self._conv(x, features=1, name='model_output')
+        conv_output = self._conv(x, features=self.num_channel_output, name='model_output')
 
         if self.verbose:
             print(conv_output)
