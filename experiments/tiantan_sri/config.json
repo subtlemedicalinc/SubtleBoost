@@ -54,9 +54,9 @@
       "checkpoint_name": "swap_2d_unet",
       "slices_per_input": 1
     },
-    "enh_mask": {
+    "enh_mask_weight": {
       "enh_mask": true,
-      "checkpoint_name": "enh_mask",
+      "checkpoint_name": "enh_mask_weight",
       "slices_per_input": 7
     }
   },

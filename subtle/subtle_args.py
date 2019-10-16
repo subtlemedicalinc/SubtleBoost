@@ -98,7 +98,7 @@ def parser(usage_str='', description_str=''):
     parser.add_argument('--global_scale_ref_im0', action='store_true', dest='global_scale_ref_im0', help="use zero-dose for global scaling ref", default=False)
     parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
     parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
-    parser.add_argument('--enh_mask', action='store_true', dest='enh_mask', help='If True, then enhancement_mask is computed and used to compute L1 loss')
+    parser.add_argument('--enh_mask', action='store_true', dest='enh_mask', help='If True, then enhancement_mask is computed and used to compute L1 loss', default=False)
 
     parser.add_argument('--input_idx', nargs='+', type=int, help='input indices from data', default=[0, 1])
     parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])
