@@ -19,8 +19,9 @@ class GeneratorMultiRes2D(GeneratorBase):
             x = BatchNormalization()(x)
         return x
 
-    def _res_block(self, num_channels, input, prefix, res_idx, alpha=1.67):
-        nc = num_channels
+    def _res_block(self, num_channels, input, prefix, res_idx, alpha=1.67, cfracs=[0.1667, 0.3333, 0.5]):
+        # when alpha = 1 and cfracs = [1, 1, 1] mres with full blown params is trained
+        nc = alpha * num_channels
 
         conv_params = {
             'kernel_size': (3, 3),
@@ -29,8 +30,8 @@ class GeneratorMultiRes2D(GeneratorBase):
         }
 
         shortcut = input
-        c1 = c2 = c3 = nc
-        ct = (c1 + c2 + c3)
+        c = [int(nc * cf) for cf in cfracs]
+        ct = np.sum(c)
 
         name_append = '{}_{}'.format(prefix, res_idx)
 
@@ -44,21 +45,21 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         conv_params['kernel_size'] = (3, 3)
 
-        conv_params['filters'] = c1
+        conv_params['filters'] = c[0]
         conv_a = self._conv_bn(
             input,
             conv_params,
             name='conv_rblock_{}_a'.format(name_append)
         )
 
-        conv_params['filters'] = c2
+        conv_params['filters'] = c[1]
         conv_b = self._conv_bn(
             input,
             conv_params,
             name='conv_rblock_{}_b'.format(name_append)
         )
 
-        conv_params['filters'] = c3
+        conv_params['filters'] = c[2]
         conv_c = self._conv_bn(
             input,
             conv_params,
