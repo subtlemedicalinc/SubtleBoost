@@ -19,8 +19,8 @@ class GeneratorMultiRes2D(GeneratorBase):
             x = BatchNormalization()(x)
         return x
 
-    def _res_block(self, num_channels, input, prefix, res_idx, alpha=1.67, cfracs=[0.1667, 0.3333, 0.5]):
-        # when alpha = 1 and cfracs = [1, 1, 1] mres with full blown params is trained
+    def _res_block(self, num_channels, input, prefix, res_idx, alpha=1, cfracs=[0.1667, 0.3333, 0.5]):
+        # when alpha = 1.67 and cfracs = [0.1667, 0.3333, 0.5] the architecture is similar to the one proposed in https://arxiv.org/pdf/1902.04049.pdf
         nc = alpha * num_channels
 
         conv_params = {
