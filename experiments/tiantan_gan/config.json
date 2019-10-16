@@ -42,7 +42,7 @@
     "num_rotations": 5,
     "checkpoint": "tiantan_gan.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
     "inference_mpr_avg": "mean",

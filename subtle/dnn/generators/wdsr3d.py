@@ -17,7 +17,7 @@ class GeneratorWDSR3D(GeneratorBase):
         self.wdsr_type = wdsr_type
         self.scale_factor = scale_factor
         self.scale = 2
-        self.features = self.num_channel_first
+        self.features = self.num_filters_first_conv
         self.num_layers = num_layers
 
         self.param_map = {

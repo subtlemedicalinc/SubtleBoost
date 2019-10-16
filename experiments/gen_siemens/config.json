@@ -47,7 +47,7 @@
     "checkpoint": "gen_siemens_halfmm.checkpoint",
     "resample_size": 512,
     "predict_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "data_raw": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "reshape_for_mpr_rotate": true,
     "stats_base": "/home/srivathsa/projects/studies/gad/gen_siemens/inference",

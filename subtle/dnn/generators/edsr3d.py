@@ -22,7 +22,7 @@ class GeneratorEDSR3D(GeneratorBase):
         self._build_model()
 
     def _conv(self, x, features=None, name=None):
-        features = self.num_channel_first if features is None else features
+        features = self.num_filters_first_conv if features is None else features
         return Conv3D(
             features, kernel_size=3, strides=1,
             kernel_initializer=he_normal(seed=self.init_seed),

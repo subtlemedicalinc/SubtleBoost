@@ -120,7 +120,7 @@ if __name__ == '__main__':
         m = sudnn.DeepEncoderDecoder2D(
                 num_channel_input=1 * args.slices_per_input, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
+                num_filters_first_conv=args.num_filters_first_conv,
                 loss_function=loss_function,
                 metrics_monitor=metrics_monitor,
                 lr_init=args.lr_init,
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         m = sudnn.DeepEncoderDecoder2D(
                 num_channel_input=nz, num_channel_output=1,
                 img_rows=nx, img_cols=ny,
-                num_channel_first=args.num_channel_first,
+                num_filters_first_conv=args.num_filters_first_conv,
                 loss_function=loss_function,
                 metrics_monitor=metrics_monitor,
                 lr_init=args.lr_init,

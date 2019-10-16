@@ -23,7 +23,7 @@
     "slices_per_input": 5,
     "num_rotations": 5,
     "predict_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "data_dir": "/home/srivathsa/projects/studies/gad/sford_siemens/preprocess/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/sford_siemens/data",
     "series_num": 1002,

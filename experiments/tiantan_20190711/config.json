@@ -56,7 +56,7 @@
     "num_rotations": 5,
     "checkpoint": "mpr_20190711.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",

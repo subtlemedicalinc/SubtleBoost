@@ -23,7 +23,7 @@
     "checkpoint_name": "unet_pool5_mask",
     "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
     "num_epochs": 100,
-    "num_channel_first": 8,
+    "num_filters_first_conv": 8,
     "num_poolings": 5,
     "shuffle": true,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
@@ -34,17 +34,17 @@
     "no_save_best_only": true,
     "max_queue_size": 4,
     "edsr": {
-      "num_channel_first": 16,
+      "num_filters_first_conv": 16,
       "checkpoint_name": "edsr3d",
       "model_name": "edsr3d"
     },
     "vdsr": {
-      "num_channel_first": 32,
+      "num_filters_first_conv": 32,
       "checkpoint_name": "vdsr3d",
       "model_name": "vdsr3d"
     },
     "wdsr": {
-      "num_channel_first": 16,
+      "num_filters_first_conv": 16,
       "checkpoint_name": "wdsr3d",
       "model_name": "wdsr3d"
     }
@@ -61,24 +61,24 @@
     "unet": {
       "description": "unet3d_block_inf",
       "checkpoint": "unet_pool5_mask.checkpoint",
-      "num_channel_first": 8,
+      "num_filters_first_conv": 8,
       "num_poolings": 5
     },
     "edsr": {
       "description": "edsr3d",
-      "num_channel_first": 16,
+      "num_filters_first_conv": 16,
       "checkpoint": "edsr3d.checkpoint",
       "model_name": "edsr3d"
     },
     "vdsr": {
       "description": "vdsr3d",
-      "num_channel_first": 32,
+      "num_filters_first_conv": 32,
       "model_name": "vdsr3d",
       "checkpoint": "vdsr3d.checkpoint"
     },
     "wdsr": {
       "description": "wdsr3d",
-      "num_channel_first": 16,
+      "num_filters_first_conv": 16,
       "checkpoint": "wdsr3d.checkpoint",
       "model_name": "wdsr3d"
     }

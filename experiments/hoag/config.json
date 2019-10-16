@@ -42,7 +42,7 @@
     "description": "hoag",
     "checkpoint": "hoag.checkpoint",
     "predict_dir": "/home/subtle/Data/SubtleGAD_Hoag",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "data_raw": "/home/subtle/Data/SubtleGAD_Hoag",
     "stats_base": "/home/subtle/Data/SubtleGAD_Hoag/metrics",
     "inference_mpr_avg": "mean",

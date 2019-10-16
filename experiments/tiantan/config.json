@@ -80,7 +80,7 @@
     "inference_mpr_avg": "mean",
     "resize": 240,
     "num_rotations": 5,
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "stats_base": "/raid/jon/data_full_tiantan/data/metrics",
     "zoom": 0,
     "series_num": 1002,

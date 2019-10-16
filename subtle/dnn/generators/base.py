@@ -21,7 +21,7 @@ from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback
 class GeneratorBase:
     def __init__(self,
             num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128,
-            num_channel_first=32, optimizer_fun=Adam, final_activation='linear',
+            num_filters_first_conv=32, optimizer_fun=Adam, final_activation='linear',
             lr_init=None, loss_function=suloss.l1_loss,
             metrics_monitor=[suloss.l1_loss],
             num_poolings=3, num_conv_per_pooling=3,
@@ -32,7 +32,7 @@ class GeneratorBase:
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.img_depth = img_depth
-        self.num_channel_first = num_channel_first
+        self.num_filters_first_conv = num_filters_first_conv
         self.num_poolings = num_poolings
         self.optimizer_fun = optimizer_fun
         self.final_activation = final_activation

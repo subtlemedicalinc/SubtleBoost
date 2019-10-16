@@ -53,7 +53,7 @@ An example `config.json` would look like
   "inference": {
     "slices_per_input": 5,
     "stats_base": "/my/inference/metdics",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "checkpoint": "hoag.checkpoint",
   }
 }

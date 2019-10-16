@@ -145,7 +145,7 @@ def inference_process(args):
 
     model_kwargs = {
         'num_channel_output': 1,
-        'num_channel_first': args.num_channel_first,
+        'num_filters_first_conv': args.num_filters_first_conv,
         'num_poolings': args.num_poolings,
         'loss_function': loss_function,
         'metrics_monitor': metrics_monitor,

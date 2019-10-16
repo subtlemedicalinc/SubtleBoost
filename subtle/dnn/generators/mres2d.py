@@ -148,7 +148,7 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='model_input')
 
-        nc = self.num_channel_first
+        nc = self.num_filters_first_conv
 
         # encoder
         enc_pool_ip = inputs

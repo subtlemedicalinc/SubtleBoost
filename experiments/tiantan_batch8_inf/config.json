@@ -26,7 +26,7 @@
     "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "learn_residual": false,
     "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
-    "num_channel_first": 32,
+    "num_filters_first_conv": 32,
     "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
     "zoom": 0,
     "num_rotations": 5,

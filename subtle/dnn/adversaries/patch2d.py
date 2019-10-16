@@ -6,13 +6,13 @@ from subtle.dnn.layers.SpectralNormalization import ConvSN2D
 
 class AdversaryPatch2D:
     def __init__(
-        self, num_channel_input=1, img_rows=128, img_cols=128, num_channel_first=32, num_poolings=3,
+        self, num_channel_input=1, img_rows=128, img_cols=128, num_filters_first_conv=32, num_poolings=3,
         batch_norm=True, verbose=True, compile_model=True
     ):
         self.num_channel_input = num_channel_input
         self.img_rows = img_rows
         self.img_cols = img_cols
-        self.num_channel_first = num_channel_first
+        self.num_filters_first_conv = num_filters_first_conv
         self.num_poolings = num_poolings
         self.batch_norm = batch_norm
         self.verbose = verbose
@@ -39,7 +39,7 @@ class AdversaryPatch2D:
     def _build_adversary(self):
         input = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='adv_input')
 
-        nc = self.num_channel_first
+        nc = self.num_filters_first_conv
 
         d_out = self._conv_block(input, nc, 0, bnorm=False)
         d_out = self._conv_block(d_out, nc, 1, strides=2)

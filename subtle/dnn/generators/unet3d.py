@@ -44,7 +44,7 @@ class GeneratorUNet3D(GeneratorBase):
         for i in range(self.num_conv_per_pooling):
             conv1 = self._conv(
                 conv1,
-                filters=self.num_channel_first,
+                filters=self.num_filters_first_conv,
                 kernel_size=3,
                 padding='same',
                 activation='relu',
@@ -60,13 +60,13 @@ class GeneratorUNet3D(GeneratorBase):
         # encoder pools
         convs = [inputs, conv1]
         pools = [inputs, pool1]
-        list_num_features = [self.num_channel_input, self.num_channel_first]
+        list_num_features = [self.num_channel_input, self.num_filters_first_conv]
 
         for i in range(1, self.num_poolings):
 
             # step 2
             conv_encoder = pools[-1]
-            num_channel = self.num_channel_first * (2**i) # double channels each step
+            num_channel = self.num_filters_first_conv * (2**i) # double channels each step
             # FIXME: check if this should be 2**i ?
 
             for j in range(self.num_conv_per_pooling):
