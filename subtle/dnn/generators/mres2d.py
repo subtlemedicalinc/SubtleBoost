@@ -31,6 +31,8 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         shortcut = input
         c = [int(nc * cf) for cf in cfracs]
+        if self.num_conv_per_pooling > 3:
+            c = c + ([1] * self.num_conv_per_pooling - 3)
         ct = np.sum(c)
 
         name_append = '{}_{}'.format(prefix, res_idx)
@@ -44,31 +46,20 @@ class GeneratorMultiRes2D(GeneratorBase):
         )
 
         conv_params['kernel_size'] = (3, 3)
+        convs = [input]
 
-        conv_params['filters'] = c[0]
-        conv_a = self._conv_bn(
-            input,
-            conv_params,
-            name='conv_rblock_{}_a'.format(name_append)
-        )
-
-        conv_params['filters'] = c[1]
-        conv_b = self._conv_bn(
-            input,
-            conv_params,
-            name='conv_rblock_{}_b'.format(name_append)
-        )
-
-        conv_params['filters'] = c[2]
-        conv_c = self._conv_bn(
-            input,
-            conv_params,
-            name='conv_rblock_{}_c'.format(name_append)
-        )
+        for i in range(self.num_conv_per_pooling):
+            conv_params['filters'] = c[i]
+            conv_a = self._conv_bn(
+                convs[-1],
+                conv_params,
+                name='conv_rblock_{}_{}'.format(name_append, i)
+            )
+            convs.append(conv_a)
 
         out = concatenate(
-            [conv_a, conv_b, conv_c],
-            name='cat_abc_{}'.format(name_append)
+            convs[1:],
+            name='cat_convs_{}'.format(name_append)
         )
 
         if self.batch_norm:
@@ -76,7 +67,7 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         out = keras_add(
             [shortcut, out],
-            name='cat_s_abc_{}'.format(name_append)
+            name='cat_s_convs_{}'.format(name_append)
         )
         out = Activation('relu', name='relu_rblock_{}'.format(name_append))(out)
 
@@ -160,41 +151,38 @@ class GeneratorMultiRes2D(GeneratorBase):
         nc = self.num_channel_first
 
         # encoder
-        rb1 = self._res_block(nc, inputs, 'enc', 0)
-        pool1 = MaxPooling2D(pool_size=(2, 2), name='maxpool_0')(rb1)
-        rb1 = self._res_path(nc, 4, rb1, 0)
+        enc_pool_ip = inputs
+        enc_pools = []
+        for i in range(self.num_poolings):
+            rb = self._res_block(nc * (2 ** i), enc_pool_ip, 'enc', i)
+            enc_pool_ip = MaxPooling2D(pool_size=(2, 2), name='maxpool_{}'.format(i))(rb)
+            rb = self._res_path(nc * (2 ** i), 4, rb, i)
+            enc_pools.append(rb)
 
-        rb2 = self._res_block(nc * 2, pool1, 'enc', 1)
-        pool2 = MaxPooling2D(pool_size=(2, 2), name='maxpool_1')(rb2)
-        rb2 = self._res_path(nc * 2, 4, rb2, 1)
-
-        rb3 = self._res_block(nc * 4, pool2, 'enc', 2)
-        pool3 = MaxPooling2D(pool_size=(2, 2), name='maxpool_2')(rb3)
-        rb3 = self._res_path(nc * 4, 4, rb3, 2)
+            if self.verbose:
+                print(rb)
 
         # bottleneck
-        rb4 = self._res_block(nc * 4, pool3, 'center', 3)
+        bneck_nc = nc * (2 ** (self.num_poolings - 1))
+        center_conv = self._res_block(bneck_nc, enc_pool_ip, 'center', 4)
+
+        if self.verbose:
+            print(center_conv)
 
         # decoder
         upsample = lambda idx: UpSampling2D(size=(2, 2), name='upsample_{}'.format(idx))
 
-        up3 = concatenate(
-            [upsample(0)(rb4), rb3],
-            name='cat_dec_0'
-        )
-        rb5 = self._res_block(nc * 4, up3, 'dec', 0)
+        usamples = [center_conv]
+        for i in range(self.num_poolings):
+            up = concatenate(
+                [upsample(i)(usamples[-1]), enc_pools[::-1][i]],
+                name='cat_dec_{}'.format(i)
+            )
+            dec_nc = nc * (2 ** ((self.num_poolings - i) - 1))
+            usamples.append(self._res_block(dec_nc, up, 'dec', i))
 
-        up4 = concatenate(
-            [upsample(1)(rb5), rb2],
-            name='cat_dec_1'
-        )
-        rb6 = self._res_block(nc * 2, up4, 'dec', 1)
-
-        up5 = concatenate(
-            [upsample(2)(rb6), rb1],
-            name='cat_dec_2'
-        )
-        rb7 = self._res_block(nc, up5, 'dec', 2)
+            if self.verbose:
+                print(usamples[-1])
 
         # model output
         conv_output = Conv2D(
@@ -203,7 +191,7 @@ class GeneratorMultiRes2D(GeneratorBase):
             padding='same',
             activation=self.final_activation,
             name='model_output'
-        )(rb7)
+        )(usamples[-1])
 
         if self.verbose:
             print(conv_output)
