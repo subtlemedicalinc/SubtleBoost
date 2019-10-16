@@ -8,7 +8,7 @@ from plot_grid import plot_h5
 from inference import inference_process as run_inference
 
 if __name__ == '__main__':
-    parser = sargs.parser()
+    parser = sargs.get_parser()
     args = parser.parse_args()
 
     data_list = suio.get_experiment_data(args.experiment, dataset='test')

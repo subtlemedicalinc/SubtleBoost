@@ -32,7 +32,6 @@ from subtle.data_loaders import SliceLoader
 import subtle.subtle_loss as suloss
 import subtle.subtle_metrics as sumetrics
 import subtle.subtle_plot as suplot
-import subtle.subtle_args as sargs
 from subtle.dnn.callbacks import plot_tb
 
 usage_str = 'usage: %(prog)s [options]'

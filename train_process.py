@@ -7,7 +7,7 @@ from plot_grid import plot_h5
 from train import train_process as train_execute
 
 if __name__ == '__main__':
-    parser = sargs.parser()
+    parser = sargs.get_parser()
     args = parser.parse_args()
 
     config = suio.get_config(args.experiment, args.sub_experiment, config_key='train')

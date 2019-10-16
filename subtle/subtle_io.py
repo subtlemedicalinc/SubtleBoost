@@ -665,7 +665,7 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
     class _ExperimentConfig:
         def __init__(self, config_dict):
             self.config_dict = config_dict
-            parser = sargs.parser()
+            parser = sargs.get_parser()
             ns_vars = vars(parser.parse_args())
 
             self.config_dict = {**ns_vars, **self.config_dict}

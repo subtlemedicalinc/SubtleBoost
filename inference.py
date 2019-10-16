@@ -280,8 +280,6 @@ def inference_process(args):
             gan = gan_model(gen, disc, (nx, ny, 2 * args.slices_per_input))
             gan.load_weights(args.checkpoint_file)
 
-        checkpoint_files = [args.checkpoint_file_0, args.checkpoint_file_2, args.checkpoint_file_3]
-
         Y_predictions = np.zeros((ns, nx, ny, len(slice_axes), args.num_rotations))
 
         if args.inference_mpr and args.num_rotations > 1:
@@ -328,9 +326,6 @@ def inference_process(args):
                     gen_kwargs['data_list'] = [data_file]
                     gen_kwargs['slice_axis'] = [slice_axis]
                     prediction_generator = data_loader(**gen_kwargs)
-
-                    if checkpoint_files[ii]:
-                        m.load_weights(checkpoint_files[ii])
 
                     data_ref = np.zeros_like(data_rot)
                     if slice_axis == 2:
