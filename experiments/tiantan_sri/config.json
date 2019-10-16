@@ -65,6 +65,10 @@
       "perceptual_lambda": 0.5,
       "enh_mask": true,
       "checkpoint_name": "enh_vgg",
+    },
+    "mres_fix": {
+      "model_name": "multires2d",
+      "checkpoint_name": "mres_fix",
       "slices_per_input": 7
     }
   },
