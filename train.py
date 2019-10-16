@@ -188,6 +188,16 @@ def train_process(args):
 
     callbacks = []
     ckp_monitor = 'model_1_loss' if args.gan_mode else 'val_l1_loss'
+    ckp_monitor = None
+
+    if args.gan_mode:
+        ckp_monitor = 'model_1_loss'
+    else:
+        if args.enh_mask:
+            ckp_monitor = 'val_weighted_l1_loss'
+        else:
+            ckp_monitor = 'val_l1_loss'
+    
     callbacks.append(m.callback_checkpoint(monitor=ckp_monitor))
 
     tb_logdir = '{}_plot'.format(log_tb_dir)
