@@ -7,10 +7,17 @@ from subtle.dnn.generators.base import GeneratorBase
 
 class GeneratorUNet2D(GeneratorBase):
     def __init__(self, **kwargs):
+        self.model_name = 'unet2d'
         super().__init__(**kwargs)
         self._build_model()
 
-    def _conv(self, x, filters, kernel_size=(3, 3), padding='same', activation='relu', name=None):
+    def _conv(self, x, filters, kernel_size=None, padding=None, activation=None, name=None):
+        activation = activation if activation is not None else self.get_config('activation', name)
+
+        padding = padding if padding is not None else self.get_config('padding', name)
+
+        kernel_size = kernel_size if kernel_size is not None else self.get_config('kernel_size', name)
+
         out = Conv2D(
             filters=filters,
             kernel_size=kernel_size,
@@ -18,15 +25,23 @@ class GeneratorUNet2D(GeneratorBase):
             name=name
         )(x)
 
-        act_fn = (
-            LeakyReLU(alpha=0.2, name='lrelu_{}'.format(name))
-            if activation == 'leaky_relu' else
-            ReLU(name='relu_{}'.format(name))
-        )
+        if activation == 'relu':
+            act_name = 'relu_{}'.format(name)
+            act_fn = ReLU(name=act_name)
+        elif activation == 'leaky_relu':
+            act_name = 'lrelu_{}'.format(name)
+            act_fn = LeakyReLU(
+                alpha=self.get_config('lrelu_alpha', name),
+                name=act_name
+            )
+        else:
+            act_name = '{}_{}'.format(activation, name)
+            act_fn = Activation(activation, name=act_name)
+
         return act_fn(out)
 
     def _build_model(self):
-        print('Building standard model...')
+        print('Building {} model...'.format(self.model_name))
         # batch norm
         if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
@@ -52,7 +67,10 @@ class GeneratorUNet2D(GeneratorBase):
             )
             conv1 = lambda_bn(conv1)
 
-        pool1 = MaxPooling2D(pool_size=(2, 2), name='maxpool_1')(conv1)
+        pool1 = MaxPooling2D(
+            pool_size=self.get_config('pool_size', 'maxpool_1'),
+            name='maxpool_1'
+        )(conv1)
 
         if self.verbose:
             print(conv1, pool1)
@@ -74,9 +92,10 @@ class GeneratorUNet2D(GeneratorBase):
                 )
                 conv_encoder = lambda_bn(conv_encoder)
 
+            maxpool_name = 'maxpool_{}'.format(i + 1)
             pool_encoder = MaxPooling2D(
-                pool_size=(2, 2),
-                name='maxpool_{}'.format(i + 1)
+                pool_size=self.get_config('pool_size', maxpool_name),
+                name=maxpool_name
             )(conv_encoder)
 
             if self.verbose:
@@ -104,9 +123,10 @@ class GeneratorUNet2D(GeneratorBase):
         conv_decoders = [conv_center]
 
         for i in range(1, self.num_poolings + 1):
+            ups_lname = 'upsample_{}'.format(i + 1)
             decoder_upsample = UpSampling2D(
-                size=(2, 2),
-                name='upsample_{}'.format(i + 1)
+                size=self.get_config('upsample_size', ups_lname),
+                name=ups_lname
             )(conv_decoders[-1])
 
             up_decoder = concatenate(
@@ -129,11 +149,12 @@ class GeneratorUNet2D(GeneratorBase):
                 print(conv_decoder, up_decoder)
 
         conv_decoder = conv_decoders[-1]
+
         conv_output = self._conv(
             conv_decoder,
             filters=self.num_channel_output,
-            kernel_size=(1, 1),
-            activation=self.final_activation,
+            kernel_size=self.get_config('kernel_size', 'model_output'),
+            activation=self.get_config('activation', 'model_output'),
             name='model_output'
         )
 

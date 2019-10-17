@@ -1,0 +1,50 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "batch_norm": false,
+    "mres_alpha": 1,
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2],
+      "upsample_size": [2, 2],
+      "kernel_size": [3, 3],
+      "mres_channel_frac": 1,
+      "mres_respath_length": 4
+    },
+    "conv_*_s": {
+      "kernel_size": [1, 1]
+    },
+    "conv_rpath_*_a": {
+      "activation": "linear",
+      "kernel_size": [1, 1]
+    },
+    "model_output": {
+      "activation": "linear",
+      "kernel_size": [1, 1]
+    }
+  },
+  "param_limit": {
+    "mres_alpha": 1.67,
+    "conv_rblock_*_0": {
+      "mres_channel_frac": 0.1667
+    },
+    "conv_rblock_*_1": {
+      "mres_channel_frac": 0.3333
+    },
+    "conv_rblock_*_2": {
+      "mres_channel_frac": 0.5
+    },
+    "maxpool_0": {
+      "mres_respath_length": 4
+    },
+    "maxpool_1": {
+      "mres_respath_length": 2
+    },
+    "maxpool_2": {
+      "mres_respath_length": 1
+    }
+  }
+}

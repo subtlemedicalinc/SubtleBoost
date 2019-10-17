@@ -1,0 +1,17 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "init_seed": 15213,
+    "num_residuals": 20,
+    "scale_factor": 0.1,
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "kernel_size": [3, 3, 3],
+      "kernel_initializer": "he_normal"
+    },
+    "act_conv_pre_out": {
+      "activation": "tanh"
+    }
+  }
+}

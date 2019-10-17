@@ -51,14 +51,14 @@ else
   gpu_str="--gpu ${GPU}"
 fi
 
-if test -f experiments/${expname}/config.json; then
+if test -f configs/experiments/${expname}/config.json; then
   echo ""
 else
   echo "Invalid experiment name - ${expname}"
   exit 1
 fi
 
-fcontent=$(python3 ./utils/print_config_json.py experiments/${expname}/config.json inference)
+fcontent=$(python3 ./utils/print_config_json.py configs/experiments/${expname}/config.json inference)
 fcontent=${fcontent}--${exparg}
 
 job_id=$(echo ${fcontent} | sha1sum | awk '{print $1}' | cut -c1-6)

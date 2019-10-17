@@ -1,0 +1,51 @@
+{
+  "checkpoint_dir": "/raid/jon/checkpoints",
+  "data_dir": "/raid/jon/data_full_hoag/data",
+  "verbose": 1,
+  "slices_per_input": 5,
+  "gpu": 0,
+  "preprocess": {
+    "transform_type": "affine",
+    "skip_hist_norm": true,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "out_dir_plots": "/raid/jon/data_full_hoag/plots",
+    "discard_end_percent": 0,
+    "dicom_data": "/home/subtle/Data/SubtleGAD_Hoag",
+    "skip_mask": true,
+    "discard_start_percent": 0,
+    "mask_threshold": 0.04,
+    "joint_normalize": true,
+    "out_dir": "/raid/jon/data_full_hoag/data",
+    "scale_matching": true
+  },
+  "train": {
+    "log_dir": "/raid/jon/logs_tb",
+    "train_mpr": true,
+    "max_data_sets": 100,
+    "num_epochs": 70,
+    "shuffle": true,
+    "hist_dir": "/raid/jon/history",
+    "l1_lambda": 0.8,
+    "file_ext": "h5",
+    "batch_size": 8,
+    "queue_size": 4,
+    "ssim_lambda": 0.2,
+    "validation_split": 0,
+    "no_save_best_only": true,
+    "learning_rate": 0.001,
+    "checkpoint_name": "hoag"
+  },
+  "inference": {
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "hoag",
+    "checkpoint": "hoag.checkpoint",
+    "predict_dir": "/home/subtle/Data/SubtleGAD_Hoag",
+    "data_raw": "/home/subtle/Data/SubtleGAD_Hoag",
+    "stats_base": "/home/subtle/Data/SubtleGAD_Hoag/metrics",
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002
+  }
+}

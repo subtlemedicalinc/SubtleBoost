@@ -12,34 +12,8 @@ Created on 2018/12/04
 import configargparse as argparse
 
 def _model_arch_args(parser):
-    parser.add_argument('--model_name', action='store', dest='model_name', type=str, help='Name of the model architecture to be trained/tested on, Ex: unet2d, multires2d', default='unet2d')
-    parser.add_argument('--num_filters_first_conv', action='store', dest='num_filters_first_conv', type=int, help='first layer channels', default=32)
-    parser.add_argument('--num_poolings', action='store', dest='num_poolings', type=int, help='Number of pooling operations to perform in model', default=3)
-    parser.add_argument('--batch_norm', action='store_true', dest='batch_norm', help='batch normalization')
-    parser.add_argument('--bnorm_momentum', action='store', dest='bnorm_momentum', help='Momentum argument for BatchNormalization', default=0.8)
-    parser.add_argument('--num_conv_per_pooling', action='store_true', dest='num_conv_per_pooling', type=int, help='Number of convolutions for each pooling operation', default=3)
-    parser.add_argument('--init_seed', action='store', dest='init_seed', type=int, help='Random seed for convolution kernel initializer especially he_normal', default=15213)
-    parser.add_argument('--scale_factor', action='store', dest='scale_factor', type=float, help='Scale factor for noise multiplier in residual models', default=0.1)
-    parser.add_argument('--num_residuals', action='store', dest='num_residuals', type=int, help='Number of residuals to perform in a residual model like EDSR, VDSR, WDSR etc', default=16)
-    parser.add_argument('--mres_alpha', action='store', dest='mres_alpha', type=float, help='Multiply by this factor in Multires2D model to match the number of parameters to that of standard UNet', default=1.)
-
-    # WDSR related params
-    parser.add_argument('--wdsr_channel_scale', type=int, action='store', dest='wdsr_channel_scale', help='Scale to be multiplied with the number of channels in each convolution of the WDSR model', default=2)
-    parser.add_argument('--wdsr_type', type=str, action='store', dest='wdsr_type', help='Type of WDSR: wdsr_a or wdsr_b', default='wdsr_a')
-    parser.add_argument('--wdsr_expansion', type=int, action='store', dest='wdsr_expansion', help='Factor by which the first convolution channel inside the residual block is expanded', default=4)
-    parser.add_argument('--wdsr_linear_factor', type=float, action='store', dest='wdsr_linear_factor', help='Factor by which the channels in center convolution in Resblock B is multiplied', default=0.8)
-
-    # The following params are layer specific. They can either be configured at the model level or at a layer level. See configs/model for an example
-    parser.add_argument('--kernel_size', action='store', dest='kernel_size', type=int, help='Size of convolution kernel.', default=3)
-    parser.add_argument('--padding', action='store', dest='padding', type=str, help='Type of padding Ex: "same", "valid" etc', default='same')
-    parser.add_argument('--conv_strides', action='store', dest='conv_strides', type=int, help='Stride value for convolution', default=1)
-    parser.add_argument('--activation', action='store', dest='activation', type=str, help='Type of activation that follows a convolution Ex: "relu", "leaky_relu"', default='relu')
-    parser.add_argument('--lrelu_alpha', action='store', dest='lrelu_alpha', type=float, help='Alpha value for LeakyReLU', default=0.2)
-    parser.add_argument('--pool_size', action='store', dest='pool_size', type=int, help='Size of MaxPooling operation', default=2)
-    parser.add_argument('--upsample_size', action='store', dest='upsample_size', type=int, help='Size of Upsample operation', default=2)
-    parser.add_argument('--kernel_initializer', action='store', dest='kernel_initializer', type=str, help='The type of kernel_initializer to be used for convolution layers', default='')
-    parser.add_argument('--mres_channel_frac', type=float, action='store', dest='mres_channel_frac', help='Multiply each residual convolution channel by the respective factors to match the number of parameters to that of standard UNet', default=1.)
-    parser.add_argument('--mres_respath_length', type=int, action='store', dest='mres_respath_length', help='Length of the residual path in Multires2D model', default=4)
+    parser.add_argument('--model_name', action='store', dest='model_name', type=str, help='Name of the model architecture to be trained/tested on, Ex: unet2d, mres2d', default='unet2d')
+    parser.add_argument('--model_config', action='store', dest='model_config', type=str, help='Name of the model config to use from the defined JSON file', default='base')
 
     return parser
 
@@ -115,6 +89,9 @@ def _train_args(parser):
     parser.add_argument('--checkpoint', action='store', dest='checkpoint', type=str, help='checkpoint file', default=None)
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
+    parser.add_argument('--optimizer', action='store', dest='optimizer', type=str, help='Optimizer used to train the model', default='adam')
+    parser.add_argument('--optim_amsgrad', action='store_true', dest='optim_amsgrad', help='AMS grad for Adam optimizer', default=True)
+
 
     # training loss weights
     parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)

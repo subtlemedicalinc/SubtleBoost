@@ -1,0 +1,23 @@
+{
+  "base": {
+    "num_filters_first_conv": 8,
+    "num_poolings": 5,
+    "num_conv_per_pooling": 3,
+    "batch_norm": false,
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2, 2],
+      "upsample_size": [2, 2, 2],
+      "kernel_size": [3, 3, 3]
+    },
+    "model_output": {
+      "activation": "linear",
+      "kernel_size": [1, 1, 1]
+    }
+  },
+  "lrelu": {
+    "activation": "leaky_relu",
+    "lrelu_alpha": 0.2
+  }
+}

@@ -132,13 +132,11 @@ def train_process(args):
     model_class = load_model(args.model_name)
 
     model_kwargs = {
+        'model_config': args.model_config,
         'num_channel_output': len(args.output_idx),
-        'num_filters_first_conv': args.num_filters_first_conv,
-        'num_poolings': args.num_poolings,
         'loss_function': loss_function,
         'metrics_monitor': metrics_monitor,
         'lr_init': args.lr_init,
-        'batch_norm': args.batch_norm,
         'verbose': args.verbose,
         'checkpoint_file': args.checkpoint,
         'log_dir': log_tb_dir,

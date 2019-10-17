@@ -8,6 +8,7 @@ from subtle.dnn.generators.base import GeneratorBase
 
 class GeneratorMultiRes2D(GeneratorBase):
     def __init__(self, **kwargs):
+        self.model_name = 'mres2d'
         super().__init__(**kwargs)
         self._build_model()
 
@@ -19,41 +20,51 @@ class GeneratorMultiRes2D(GeneratorBase):
             x = BatchNormalization()(x)
         return x
 
-    def _res_block(self, num_channels, input, prefix, res_idx, alpha=1, cfracs=[1., 1., 1.]):
+    def _res_block(self, num_channels, input, prefix, res_idx):
         # when alpha = 1.67 and cfracs = [0.1667, 0.3333, 0.5] the architecture is similar to the one proposed in https://arxiv.org/pdf/1902.04049.pdf
-        nc = alpha * num_channels
+        nc = self.mres_alpha * num_channels
 
         conv_params = {
-            'kernel_size': (3, 3),
-            'padding': 'same',
-            'activation': 'relu'
+            'kernel_size': self.get_config('kernel_size'),
+            'padding': self.get_config('padding'),
+            'activation': self.get_config('activation')
         }
 
-        shortcut = input
-        c = [int(nc * cf) for cf in cfracs]
-        if self.num_conv_per_pooling > 3:
-            c = c + ([1] * self.num_conv_per_pooling - 3)
-        ct = np.sum(c)
-
         name_append = '{}_{}'.format(prefix, res_idx)
+        shortcut = input
 
-        conv_params['kernel_size'] = (1, 1)
-        conv_params['filters'] = ct
+        conv_lnames = []
+        nc_cfracs = []
+        for idx in range(self.num_conv_per_pooling):
+            conv_lname = 'conv_rblock_{}_{}'.format(name_append, idx)
+            nc_cfrac = int(nc * self.get_config('mres_channel_frac', conv_lname))
+
+            conv_lnames.append(conv_lname)
+            nc_cfracs.append(nc_cfrac)
+
+        if self.num_conv_per_pooling > 3:
+            nc_cfracs = nc_cfracs + ([nc] * self.num_conv_per_pooling - 3)
+
+        nc_total = np.sum(nc_cfracs)
+
+        shortcut_name = 'conv_rblock_{}_s'.format(name_append)
+        conv_params['kernel_size'] = self.get_config('kernel_size', shortcut_name)
+        conv_params['filters'] = nc_total
         shortcut = self._conv_bn(
             shortcut,
             conv_params,
-            name='conv_rblock_{}_s'.format(name_append)
+            name=shortcut_name
         )
 
-        conv_params['kernel_size'] = (3, 3)
+        conv_params['kernel_size'] = self.get_config('kernel_size')
         convs = [input]
 
         for i in range(self.num_conv_per_pooling):
-            conv_params['filters'] = c[i]
+            conv_params['filters'] = nc_cfracs[i]
             conv_a = self._conv_bn(
                 convs[-1],
                 conv_params,
-                name='conv_rblock_{}_{}'.format(name_append, i)
+                name=conv_lnames[i]
             )
             convs.append(conv_a)
 
@@ -80,21 +91,22 @@ class GeneratorMultiRes2D(GeneratorBase):
     def _res_path(self, num_channels, length, input, res_idx):
         shortcut = input
 
+        shortcut_name = 'conv_rpath_{}_s'.format(res_idx)
         conv_params = {
-            'kernel_size': (1, 1),
-            'padding': 'same',
-            'activation': None
+            'kernel_size': self.get_config('kernel_size', shortcut_name),
+            'padding': self.get_config('padding', shortcut_name),
+            'activation': self.get_config('activation', shortcut_name)
         }
 
         conv_params['filters'] = num_channels
         shortcut = self._conv_bn(
             shortcut,
             conv_params,
-            name='conv_rpath_s_{}'.format(res_idx)
+            name=shortcut_name
         )
 
-        conv_params['kernel_size'] = (3, 3)
-        conv_params['activation'] = 'relu'
+        conv_params['kernel_size'] = self.get_config('kernel_size')
+        conv_params['activation'] = self.get_config('activation')
         out = self._conv_bn(
             input,
             conv_params,
@@ -112,17 +124,17 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         for i in np.arange(length - 1):
             shortcut = out
-
-            conv_params['kernel_size'] = (1, 1)
-            conv_params['activation'] = None
+            conv_lname = 'conv_rpath_{}_{}_a'.format(res_idx, i)
+            conv_params['kernel_size'] = self.get_config('kernel_size', conv_lname)
+            conv_params['activation'] = self.get_config('activation', conv_lname)
             shortcut = self._conv_bn(
                 shortcut,
                 conv_params,
-                name='conv_rpath_{}_{}_a'.format(res_idx, i)
+                name=conv_lname
             )
 
-            conv_params['kernel_size'] = (3, 3)
-            conv_params['activation'] = 'relu'
+            conv_params['kernel_size'] = self.get_config('kernel_size')
+            conv_params['activation'] = self.get_config('activation')
             out = self._conv_bn(
                 out,
                 conv_params,
@@ -154,9 +166,23 @@ class GeneratorMultiRes2D(GeneratorBase):
         enc_pool_ip = inputs
         enc_pools = []
         for i in range(self.num_poolings):
-            rb = self._res_block(nc * (2 ** i), enc_pool_ip, 'enc', i)
-            enc_pool_ip = MaxPooling2D(pool_size=(2, 2), name='maxpool_{}'.format(i))(rb)
-            rb = self._res_path(nc * (2 ** i), 4, rb, i)
+            maxpool_name = 'maxpool_{}'.format(i)
+            rb = self._res_block(
+                num_channels=nc * (2 ** i),
+                input=enc_pool_ip,
+                prefix='ftr_enc',
+                res_idx=i
+            )
+            enc_pool_ip = MaxPooling2D(
+                pool_size=self.get_config('pool_size'),
+                name=maxpool_name
+            )(rb)
+            rb = self._res_path(
+                num_channels=nc * (2 ** i),
+                length=self.get_config('mres_respath_length', maxpool_name),
+                input=rb,
+                res_idx=i
+            )
             enc_pools.append(rb)
 
             if self.verbose:
@@ -164,13 +190,21 @@ class GeneratorMultiRes2D(GeneratorBase):
 
         # bottleneck
         bneck_nc = nc * (2 ** (self.num_poolings - 1))
-        center_conv = self._res_block(bneck_nc, enc_pool_ip, 'center', 4)
+        center_conv = self._res_block(
+            num_channels=bneck_nc,
+            input=enc_pool_ip,
+            prefix='center',
+            res_idx=self.num_poolings + 1
+        )
 
         if self.verbose:
             print(center_conv)
 
         # decoder
-        upsample = lambda idx: UpSampling2D(size=(2, 2), name='upsample_{}'.format(idx))
+        upsample = lambda idx: UpSampling2D(
+            size=self.get_config('upsample_size'),
+            name='upsample_{}'.format(idx)
+        )
 
         usamples = [center_conv]
         for i in range(self.num_poolings):
@@ -179,7 +213,13 @@ class GeneratorMultiRes2D(GeneratorBase):
                 name='cat_dec_{}'.format(i)
             )
             dec_nc = nc * (2 ** ((self.num_poolings - i) - 1))
-            usamples.append(self._res_block(dec_nc, up, 'dec', i))
+            rb_out = self._res_block(
+                num_channels=dec_nc,
+                input=up,
+                prefix='ftr_dec',
+                res_idx=i
+            )
+            usamples.append(rb_out)
 
             if self.verbose:
                 print(usamples[-1])
@@ -187,9 +227,9 @@ class GeneratorMultiRes2D(GeneratorBase):
         # model output
         conv_output = Conv2D(
             self.num_channel_output,
-            kernel_size=(1, 1),
-            padding='same',
-            activation=self.final_activation,
+            kernel_size=self.get_config('kernel_size', 'model_output'),
+            padding=self.get_config('padding', 'model_output'),
+            activation=self.get_config('activation', 'model_output'),
             name='model_output'
         )(usamples[-1])
 

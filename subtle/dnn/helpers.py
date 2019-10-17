@@ -8,7 +8,7 @@ MODEL_MAP = {
         'model': 'generators.GeneratorUNet2D',
         'data_loader': 'slice_loader.SliceLoader'
     },
-    'multires2d': {
+    'mres2d': {
         'model': 'generators.GeneratorMultiRes2D',
         'data_loader': 'slice_loader.SliceLoader'
     },

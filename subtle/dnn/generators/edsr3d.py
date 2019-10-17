@@ -13,20 +13,27 @@ from subtle.dnn.layers.ConstMultiplier import ConstMultiplier
 
 
 class GeneratorEDSR3D(GeneratorBase):
-    def __init__(self, num_residuals=16, scale_factor=0.1, init_seed=15213, **kwargs):
+    def __init__(self, **kwargs):
+        self.model_name = 'edsr3d'
         super().__init__(**kwargs)
-        self.init_seed = init_seed
-        self.scale_factor = scale_factor
-        self.num_residuals = num_residuals
 
         self._build_model()
 
     def _conv(self, x, features=None, name=None):
         features = self.num_filters_first_conv if features is None else features
+
+        init_conf = self.get_config('kernel_initializer')
+        if init_conf == 'he_normal':
+            kernel_init = he_normal(seed=self.init_seed)
+        else:
+            kernel_init = init_conf
+
         return Conv3D(
-            features, kernel_size=3, strides=1,
-            kernel_initializer=he_normal(seed=self.init_seed),
-            padding='same', name=name
+            features,
+            kernel_size=self.get_config('kernel_size'),
+            kernel_initializer=kernel_init,
+            padding=self.get_config('padding'),
+            name=name
         )(x)
 
     def _resblock(self, x, res_idx):

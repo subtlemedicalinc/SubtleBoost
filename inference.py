@@ -144,13 +144,11 @@ def inference_process(args):
     model_class = load_model(args.model_name)
 
     model_kwargs = {
+        'model_config': args.model_config,
         'num_channel_output': 1,
-        'num_filters_first_conv': args.num_filters_first_conv,
-        'num_poolings': args.num_poolings,
         'loss_function': loss_function,
         'metrics_monitor': metrics_monitor,
         'lr_init': args.lr_init,
-        'batch_norm': args.batch_norm,
         'verbose': args.verbose,
         'checkpoint_file': args.checkpoint_file,
         'job_id': args.job_id
@@ -178,12 +176,13 @@ def inference_process(args):
     }
     data_loader = load_data_loader(args.model_name)
 
+    mconf_dict = suio.get_model_config(args.model_name, args.model_config, model_type='generators')
+    num_poolings = mconf_dict['num_poolings'] if 'num_poolings' in mconf_dict else 3
+
     ### Start IF condition for 3D patch based
     if '3d' in args.model_name:
-        # data_half = data[:data.shape[0] // 2, :, :data.shape[2] // 2, :data.shape[3] // 2]
-        # data_pad = supre.zero_pad_for_dnn(data_half, num_poolings=args.num_poolings)
-        data_pad = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
-        data_pad_mask = supre.zero_pad_for_dnn(data_mask, num_poolings=args.num_poolings)
+        data_pad = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
+        data_pad_mask = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
         ns, _, nx, ny = data_pad.shape
 
         kw_model = {
@@ -292,17 +291,17 @@ def inference_process(args):
                 if args.verbose:
                     print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
                 data_rot = rotate(data, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=args.num_poolings)
+                data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=num_poolings)
 
                 if data_mask is not None:
                     data_mask_rot = rotate(data_mask, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=args.num_poolings)
+                    data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=num_poolings)
                 else:
                     data_mask_rot = None
             else:
-                data_rot = supre.zero_pad_for_dnn(data, num_poolings=args.num_poolings)
+                data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
                 if data_mask is not None:
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=args.num_poolings)
+                    data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
                 else:
                     data_mask_rot = None
 

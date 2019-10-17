@@ -5,7 +5,7 @@ Network architecture for SubtleGad project.
 Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
-
+import re as regex
 import tensorflow as tf
 import keras.models
 import keras.callbacks
@@ -15,41 +15,43 @@ from warnings import warn
 import numpy as np
 
 import subtle.subtle_loss as suloss
+from subtle.subtle_io import get_model_config
 from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback
 
-# based on u-net and v-net
 class GeneratorBase:
-    def __init__(self,
-            num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128,
-            num_filters_first_conv=32, optimizer_fun=Adam, final_activation='linear',
-            lr_init=None, loss_function=suloss.l1_loss,
-            metrics_monitor=[suloss.l1_loss],
-            num_poolings=3, num_conv_per_pooling=3,
-            batch_norm=True, verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True):
-
+    def __init__(
+        self, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128, optimizer_fun=Adam, lr_init=None, optim_amsgrad=True, loss_function=suloss.l1_loss, metrics_monitor=[suloss.l1_loss], verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True,
+        model_config='base'
+    ):
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
         self.img_rows = img_rows
         self.img_cols = img_cols
         self.img_depth = img_depth
-        self.num_filters_first_conv = num_filters_first_conv
-        self.num_poolings = num_poolings
         self.optimizer_fun = optimizer_fun
-        self.final_activation = final_activation
         self.lr_init = lr_init
         self.loss_function = loss_function
         self.metrics_monitor = metrics_monitor
-        self.num_poolings = num_poolings
-        self.num_conv_per_pooling = num_conv_per_pooling
-        self.batch_norm = batch_norm
         self.verbose = verbose
         self.checkpoint_file = checkpoint_file
         self.log_dir = log_dir
         self.job_id = job_id
         self.save_best_only = save_best_only
         self.compile_model = compile_model
+        self.optim_amsgrad = optim_amsgrad
+        self.model_config = model_config
 
         self.model = None # to be assigned by _build_model() in children classes
+
+        self._init_model_config()
+
+    def _init_model_config(self):
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators')
+
+        for k, v in self.config_dict.items():
+            if not isinstance(v, dict):
+                # attributes like self.num_conv_per_pooling are assigned here
+                setattr(self, k, v)
 
     def callback_checkpoint(self, filename=None, monitor='val_l1_loss'):
         if filename is not None:
@@ -114,9 +116,26 @@ class GeneratorBase:
             warn('failed to load weights. training from scratch')
             warn(str(e))
 
+    def _get_layer_config(self, layer_name):
+        layer_config = {}
+        for key, val in self.config_dict.items():
+            if not isinstance(val, dict): continue
+            k = '^{}$'.format(key.replace('_', '-').replace('*', '(.*)'))
+            ln = layer_name.replace('_', '-')
+            if regex.match(k, ln):
+                layer_config = {**layer_config, **val}
+        return layer_config
+
+    def get_config(self, param_name, layer_name=''):
+        layer_config = self._get_layer_config(layer_name)
+        if param_name in layer_config:
+            return layer_config[param_name]
+
+        return self.config_dict['all'][param_name]
+
     def _compile_model(self):
         if self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=True)#,0.001 rho=0.9, epsilon=1e-08, decay=0.0)
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad)
         else:
             optimizer = self.optimizer_fun()
 

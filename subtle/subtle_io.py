@@ -15,6 +15,7 @@ from warnings import warn
 import time
 import json
 import itertools
+import collections
 
 import h5py
 import numpy as np
@@ -661,7 +662,7 @@ def has_h5_key(fpath_h5, key):
 
     return has_key
 
-def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./experiments'):
+def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./configs/experiments'):
     class _ExperimentConfig:
         def __init__(self, config_dict):
             self.config_dict = config_dict
@@ -700,7 +701,38 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
 
     return _ExperimentConfig(config_dict)
 
-def get_experiment_data(exp_name, dirpath_exp='./experiments', dataset='all'):
+def dict_merge(dct, merge_dct, add_keys=True):
+    dct = dct.copy()
+    if not add_keys:
+        merge_dct = {
+            k: merge_dct[k]
+            for k in set(dct).intersection(set(merge_dct))
+        }
+
+    for k, v in merge_dct.items():
+        if (k in dct and isinstance(dct[k], dict)
+                and isinstance(merge_dct[k], collections.Mapping)):
+            dct[k] = dict_merge(dct[k], merge_dct[k], add_keys=add_keys)
+        else:
+            dct[k] = merge_dct[k]
+
+    return dct
+
+def get_model_config(model_name, config_key='base', model_type='generators', dirpath_config='./configs/models'):
+    fpath_json = os.path.join(dirpath_config, model_type, '{}.json'.format(model_name))
+    if not os.path.exists(fpath_json):
+        raise ValueError("Given model name {}, is not valid".format(model_name))
+
+    json_str = open(fpath_json, 'r').read()
+    all_config = json.loads(json_str)
+    base_config = all_config['base']
+    if config_key == 'base':
+        return base_config
+
+    sub_config = all_config[config_key]
+    return dict_merge(base_config, sub_config)
+
+def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='all'):
     fpath_json = os.path.join(dirpath_exp, exp_name, 'data.json')
     json_str = open(fpath_json, 'r').read()
     data_dict = json.loads(json_str)
