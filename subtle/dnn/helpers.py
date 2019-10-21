@@ -13,7 +13,7 @@ MODEL_MAP = {
         'data_loader': 'slice_loader.SliceLoader'
     },
     'patch2d': {
-        'model': 'adversaries.patch2d.AdversaryPatch2D'
+        'model': 'adversaries.AdversaryPatch2D'
     },
     'unet3d': {
         'model': 'generators.GeneratorUNet3D',

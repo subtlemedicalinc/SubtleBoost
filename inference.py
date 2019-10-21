@@ -30,7 +30,6 @@ import sigpy as sp
 import keras.callbacks
 
 from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model, load_data_loader, gan_model
-from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 import subtle.subtle_io as suio
 from scipy.ndimage.interpolation import rotate
 import subtle.subtle_loss as suloss
