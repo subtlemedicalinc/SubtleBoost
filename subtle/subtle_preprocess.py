@@ -149,7 +149,6 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     Image intensity normalization using SimpleITK
     Normalize im_moving to match im_fixed
     '''
-
     sim0 = sitk.GetImageFromArray(im_fixed.squeeze())
     sim1 = sitk.GetImageFromArray(im_moving.squeeze())
 
@@ -243,8 +242,8 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     '''
 
     out = im_predict.copy()
-
     key1 = 'scale_global'
+
     if key1 in  metadata.keys():
         if 'global_scale_ref_im0' in metadata and metadata['global_scale_ref_im0']:
             sc = metadata[key1][0]
@@ -273,16 +272,15 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
 
     # undo histogram normalization. as a quick test I am using x2 for this, but in the future we should only be using a template image
 
-    # levels=1024
-    # points=50
-    # mean_intensity=True
-    # key3 = 'hist_norm'
-    # if key3 in metadata.keys():
-    #     if verbose:
-    #         print('undoing histogram normalization (TODO: use template)'.format(key3))
-    #         out = scale_im(im_gt, out, levels, points, mean_intensity)
-    #     #for idx in range(out.shape[0]):
-    #         #out[idx,...] = scale_im(im_gt[idx,...], out[idx,...], levels, points, mean_intensity)[...,None]
+    levels=1024
+    points=50
+    mean_intensity=True
+    key3 = 'hist_norm'
+    if key3 in metadata.keys():
+        if verbose:
+            print('undoing histogram normalization (TODO: use template)'.format(key3))
+            out = scale_im(im_gt, out[..., 0].astype(im_gt.dtype), levels, points, mean_intensity)
+            out = np.array([out]).transpose(1, 2, 3, 0)
 
     return out
 
