@@ -46,7 +46,7 @@ class GeneratorBase:
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators')
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/configs/models')
 
         for k, v in self.config_dict.items():
             if not isinstance(v, dict):
