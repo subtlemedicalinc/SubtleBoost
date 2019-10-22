@@ -3,7 +3,7 @@
   "gpu": 0,
   "preprocess": {
     "transform_type": "affine",
-    "skip_scale_im": true,
+    "skip_hist_norm": true,
     "normalize": true,
     "noise_mask_area": true,
     "normalize_fun": "mean",

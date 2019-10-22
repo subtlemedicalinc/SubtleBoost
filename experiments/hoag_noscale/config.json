@@ -3,7 +3,7 @@
   "gpu": 0,
   "preprocess": {
     "transform_type": "rigid",
-    "skip_scale_im": true,
+    "skip_hist_norm": true,
     "normalize": true,
     "normalize_fun": "mean",
     "out_dir_plots": "/raid/jon/data_full_hoag_noscale/plots",

@@ -205,7 +205,9 @@ def dicom_scaling(args, ims, hdr, metadata):
     return ims, metadata
 
 def hist_norm(args, ims, metadata):
-    if not args.skip_scale_im:
+    if not args.skip_hist_norm:
+        if args.verbose:
+            print('Histogram normalization')
         metadata['hist_norm'] = 1
         # FIXME: expose to outside world. subject to change once we implement white striping
         levels=1024
@@ -224,6 +226,8 @@ def hist_norm(args, ims, metadata):
             'fn': [eye, hnorm(1), hnorm(2)]
         })
     else:
+        if args.verbose:
+            print('Skipping histogram normalization')
         metadata['hist_norm'] = 0
 
     return ims, metadata
