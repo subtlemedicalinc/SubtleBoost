@@ -272,15 +272,15 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
 
     # undo histogram normalization. as a quick test I am using x2 for this, but in the future we should only be using a template image
 
-    levels=1024
-    points=50
-    mean_intensity=True
-    key3 = 'hist_norm'
-    if key3 in metadata.keys():
-        if verbose:
-            print('undoing histogram normalization (TODO: use template)'.format(key3))
-            out = scale_im(im_gt, out[..., 0].astype(im_gt.dtype), levels, points, mean_intensity)
-            out = np.array([out]).transpose(1, 2, 3, 0)
+    # levels=1024
+    # points=50
+    # mean_intensity=True
+    # key3 = 'hist_norm'
+    # if key3 in metadata.keys():
+    #     if verbose:
+    #         print('undoing histogram normalization (TODO: use template)'.format(key3))
+    #         out = scale_im(im_gt, out[..., 0].astype(im_gt.dtype), levels, points, mean_intensity)
+    #         out = np.array([out]).transpose(1, 2, 3, 0)
 
     return out
 
