@@ -56,7 +56,7 @@
     },
     "enh_mask_weight": {
       "enh_mask": true,
-      "checkpoint_name": "enh_mask_weight",
+      "checkpoint_name": "enh_mask_smooth",
       "slices_per_input": 7
     }
   },

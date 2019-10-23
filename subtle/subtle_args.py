@@ -99,6 +99,7 @@ def parser(usage_str='', description_str=''):
     parser.add_argument('--override_dicom_naming', action='store_true', dest='override', help='dont check dicom names', default=False)
     parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
     parser.add_argument('--enh_mask', action='store_true', dest='enh_mask', help='If True, then enhancement_mask is computed and used to compute L1 loss', default=False)
+    parser.add_argument('--enh_pfactor', action='store', dest='enh_pfactor', type=float, help='The power factor in the term to compute smooth enhancement mask', default=1.0)
 
     parser.add_argument('--input_idx', nargs='+', type=int, help='input indices from data', default=[0, 1])
     parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])

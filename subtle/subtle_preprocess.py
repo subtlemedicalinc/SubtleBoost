@@ -438,7 +438,7 @@ def zoom_iso(dcm_vol, spacing, new_spacing):
     return zoom_interp(dcm_vol, real_resize_factor), new_spacing
 
 def enhancement_mask(X, Y, center_slice, th=.05):
-    'Create an enhancement mask to weight the loss function'
+    'Create a binary enhancement mask to weight the loss function'
 
     # FIXME: only works if Y.shape[2] == 1
     im_diff = Y[:, 0, 0, ...].squeeze() - X[:, center_slice, 0,...].squeeze()
@@ -449,6 +449,15 @@ def enhancement_mask(X, Y, center_slice, th=.05):
             enh_mask[i,...] = binary_dilation(enh_mask[i, ...], selem=square(3))
     else:
         enh_mask = binary_dilation(enh_mask, selem=square(3))
+
+    enh_mask = enh_mask.reshape(Y.shape)
+    return enh_mask
+
+def enh_mask_smooth(X, Y, center_slice, p=1.0):
+    'Create a smooth enhancement mask'
+
+    im_diff = Y[:, 0, 0, ...].squeeze() - X[:, center_slice, 0,...].squeeze()
+    enh_mask = ((im_diff - np.min(im_diff)) / np.max(im_diff)) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask

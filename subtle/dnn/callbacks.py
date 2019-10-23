@@ -8,7 +8,7 @@ from subtle.dnn.helpers import make_image, load_data_loader
 from scipy.misc import imresize
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=32, gan_mode=False):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -35,6 +35,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.resample_size = resample_size
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
+        self.enh_pfactor = enh_pfactor
         self.model_name = model_name
         self.block_size = block_size
         self.block_strides = block_strides
@@ -69,7 +70,8 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 'output_idx': self.output_idx,
                 'slice_axis': self.slice_axis,
                 'resize': self.resize,
-                'resample_size': self.resample_size
+                'resample_size': self.resample_size,
+                'enh_pfactor': self.enh_pfactor
             }
 
         gen_kwargs = {**gen_kwargs, **kw}
