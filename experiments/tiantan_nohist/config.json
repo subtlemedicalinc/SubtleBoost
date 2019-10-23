@@ -1,0 +1,63 @@
+{
+	"data_dir": "/raid/jon/data_full_tiantan_nohist/data",
+	"verbose": 1,
+	"gpu": 3,
+	"model_name": "unet2d",
+	"checkpoint_dir": "/raid/jon/checkpoints/",
+	"resize": 240,
+	"slices_per_input": 1,
+	"override": true,
+	"preprocess": {
+		"dicom_data": "/home/subtle/Data/Tiantan",
+		"transform_type": "rigid",
+		"normalize": true,
+		"normalize_fun": "mean",
+		"discard_start_percent": 0,
+		"out_dir_plots": "/raid/jon/data_full_tiantan_nohist/plots/",
+		"discard_end_percent": 0,
+		"scale_matching": true,
+		"out_dir": "/raid/jon/data_full_tiantan_nohist/data",
+		"fsl_mask": true,
+		"fsl_mask_all_ims": true,
+		"fsl_area_threshold_cm2": 5.0,
+		"no_hist_norm": {
+			"skip_hist_norm": true
+		}
+	},
+	"train": {
+		"max_data_sets": 100,
+		"validation_split": 0.2,
+		"learning_rate": 0.001,
+		"log_dir": "/raid/jon/logs_tb",
+		"train_mpr": true,
+		"num_epochs": 30,
+		"shuffle": true,
+		"hist_dir": "/raid/jon/history",
+		"l1_lambda": 0.5,
+		"file_ext": "h5",
+		"batch_size": 8,
+		"ssim_lambda": 0.5,
+		"no_save_best_only": true,
+		"perceptual_lambda": 0.0,
+		"queue_size": 4,
+		"checkpoint_name": "jt_2d_l1_ssim",
+		"enh_mask_weight": {
+			"enh_mask": true,
+			"checkpoint_name": "jt_2d_enh_mask"
+		}
+	},
+	"inference": {
+		"inference_mpr": true,
+		"learn_residual": false,
+		"description": "jt_2d_l1_ssim",
+		"num_rotations": 5,
+		"checkpoint": "jt_2d_l1_ssim.checkpoint",
+		"predict_dir": "/raid/jon/predictions/jt_tiantan_2d/inference",
+		"num_channel_first": 32,
+		"data_raw": "/home/subtle/Data/Tiantan",
+		"stats_base": "/raid/jon/predictions/jt_tiantan_2d/stats",
+		"inference_mpr_avg": "mean",
+		"zoom": 0,
+		"series_num": 1003
+	}
+}
