@@ -58,6 +58,14 @@
       "enh_mask": true,
       "checkpoint_name": "enh_mask_smooth",
       "slices_per_input": 7
+    },
+    "enh_vgg": {
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "checkpoint_name": "enh_vgg",
+      "slices_per_input": 7
     }
   },
   "inference": {

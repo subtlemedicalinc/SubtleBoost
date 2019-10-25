@@ -40,8 +40,8 @@
     "zoom": 0,
     "series_num": 1002,
     "enh_mask": {
-      "checkpoint": "enh_mask_weight.checkpoint",
-      "description": "enh_mask_histnorm"
+      "checkpoint": "enh_vgg.checkpoint",
+      "description": "enh_vgg"
     }
   }
 }
