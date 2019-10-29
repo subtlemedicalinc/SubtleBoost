@@ -9,6 +9,7 @@ from subtle.data_loaders import SliceLoader
 from subtle.dnn.helpers import make_image, load_data_loader
 from subtle.subtle_io import print_progress_bar
 from scipy.misc import imresize
+import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
     def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False):
@@ -188,10 +189,15 @@ class HparamsCallback(keras.callbacks.TensorBoard):
     def __init__(self, log_dir, tunable_args, **kwargs):
         super(HparamsCallback, self).__init__(log_dir, **kwargs)
 
+        self.log_dir = log_dir
         self.tunable_args = tunable_args
         self.trial_id = self.log_dir.split('/')[-2].split('_')[1]
 
     def on_train_begin(self, logs=None):
+        # write to CSV for hypmonitor API
+        df_params = pd.DataFrame(list(self.tunable_args.items()), columns=['Hyperparam', 'Value'])
+        df_params.to_csv(os.path.join(self.log_dir, '..', 'params.csv'))
+
         keras.callbacks.TensorBoard.on_train_begin(self, logs=logs)
 
         disp = f'''### Hyperparameter Summary\n'''

@@ -266,17 +266,22 @@ def train_process(args):
         validation_generator = None
 
     if hypsearch:
-        tunable_params = suio.get_tunable_params(args.hypsearch_name)
-        tunable_args = {k: args.__dict__[k] for k in tunable_params}
-
+        # Hypsearch callback #1 - training progress bar
         callbacks.append(
             m.callback_progress(log_dir=tb_logdir, data_loader=training_generator)
         )
 
+        # Hypsearch callback #2 - display the trial params as a table on tensorboard
+        tunable_params = suio.get_tunable_params(args.hypsearch_name)
+        tunable_args = {k: args.__dict__[k] for k in tunable_params}
         hparams_log = os.path.join(os.path.dirname(args.checkpoint), 'tb_text')
         callbacks.append(
             m.callback_hparams(log_dir=hparams_log, tunable_args=tunable_args)
         )
+
+        # Hypsearch callback #3 - CSV logger for hypmonitor
+        fpath_csv = os.path.join(os.path.dirname(args.checkpoint), 'metrics.csv')
+        callbacks.append(m.callback_csv(fpath_csv=fpath_csv))
 
     if args.gan_mode:
         gen = m.model
