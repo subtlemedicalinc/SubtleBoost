@@ -1,0 +1,40 @@
+{
+  "name": "loss_weights",
+  "trials": 2,
+  "gpus": ["0", "1"],
+  "strategy": "random_search",
+  "base_experiment": "tiantan_sri/hyp_search",
+  "base_model": "unet2d",
+  "base_model_config": "base",
+  "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/logs",
+  "tunable": {
+    "experiment": {
+      "l1_lambda": {
+        "type": "range",
+        "low": 0.0,
+        "high": 1.0
+      },
+      "ssim_lambda": {
+        "type": "range",
+        "low": 0.0,
+        "high": 1.0
+      },
+      "perceptual_lambda": {
+        "type": "range",
+        "low": 0.0,
+        "high": 1.0
+      },
+      "wloss_lambda": {
+        "type": "range",
+        "low": 0.0,
+        "high": 1.0
+      }
+    },
+    "model": {
+      "num_filters_first_conv": {
+        "type": "list",
+        "options": [8, 16, 32, 64]
+      }
+    }
+  }
+}

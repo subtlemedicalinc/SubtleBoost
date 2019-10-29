@@ -20,6 +20,8 @@ def _model_arch_args(parser):
 def _shared_args(parser):
     parser.add_argument('--experiment', action='store', dest='experiment', type=str, help='Name of the experiment for which preprocess/train/inference is to be run', default=None)
     parser.add_argument('--sub_experiment', action='store', dest='sub_experiment', type=str, help='Name of the sub experiment for which preprocess/train/inference is to be run', default=None)
+    parser.add_argument('--hypsearch_name', action='store', dest='hypsearch_name', type=str, help='Name of the hyperparameter search experiment', default=None)
+
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--gpu', action='store', dest='gpu', type=str, help='set GPU', default=None)
     parser.add_argument('--use_multiprocessing', action='store_true', dest='use_multiprocessing', help='use multiprocessing in generator', default=False)
@@ -38,8 +40,8 @@ def _shared_args(parser):
     parser.add_argument('--block_size', action='store', type=int, dest='block_size', help='Block size for 3D patch based training', default=64)
     parser.add_argument('--block_strides', action='store', type=int, dest='block_strides', help='Block strides for 3D patch based training', default=32)
 
-    parser.add_argument('--input_idx', nargs='+', type=int, help='input indices from data', default=[0, 1])
-    parser.add_argument('--output_idx', nargs='+', type=int, help='output indices from data', default=[2])
+    parser.add_argument('--input_idx', type=str, help='input indices from data', default='0,1')
+    parser.add_argument('--output_idx', type=str, help='output indices from data', default='2')
     parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
 
     return parser

@@ -16,11 +16,13 @@ import time
 import json
 import itertools
 import collections
+import hashlib
 
 import h5py
 import numpy as np
 from glob import glob
 from tqdm import tqdm
+from test_tube import HyperOptArgumentParser
 
 try:
     import pydicom
@@ -662,6 +664,9 @@ def has_h5_key(fpath_h5, key):
 
     return has_key
 
+def get_timestamp_hash(n=6):
+    return hashlib.sha1(str(time.time()).encode()).hexdigest()[:n]
+
 def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./configs/experiments'):
     class _ExperimentConfig:
         def __init__(self, config_dict):
@@ -675,11 +680,15 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
 
             for or_key in OVERRIDE_CONFIG_KEYS:
                 if ns_vars[or_key] is not None:
+                    self.config_dict[or_key] = ns_vars[or_key]
                     setattr(self, or_key, ns_vars[or_key])
 
         def debug_print(self):
             print('ExperimentConfig...\n')
             print(', '.join(['{}:{}'.format(key, val) for key, val in self.config_dict.items()]))
+
+        def __str__(self):
+            return ', '.join(['{}:{}'.format(key, val) for key, val in self.config_dict.items()])
 
     fname = 'config.json'
     fpath_json = os.path.join(dirpath_exp, exp_name, fname)
@@ -751,6 +760,69 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
 
     return data
 
+def get_tunable_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
+    fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))
+    json_str = open(fpath_json, 'r').read()
+    hyp_config = json.loads(json_str)
+
+    return list(hyp_config['tunable']['experiment'].keys()) + list(hyp_config['tunable']['experiment'].keys())
+
+def get_hypsearch_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
+    fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))
+    json_str = open(fpath_json, 'r').read()
+    hyp_config = json.loads(json_str)
+
+    exp_splits = hyp_config['base_experiment'].split('/')
+    experiment = exp_splits[0]
+
+    if len(exp_splits) == 2:
+        sub_experiment = exp_splits[1]
+    else:
+        sub_experiment = None
+
+    default_config = get_config(experiment, sub_experiment, config_key='train')
+
+    hyp_hash = get_timestamp_hash()
+    hyp_log_dir = os.path.join(hyp_config['log_dir'], '{}_{}'.format(hypsearch_name, hyp_hash))
+    default_config.config_dict['hyp_log_dir'] = hyp_log_dir
+
+    if not os.path.exists(hyp_log_dir):
+        os.makedirs(hyp_log_dir)
+
+    tunable_config = hyp_config['tunable']['experiment']
+    arch_tunable = {
+        '__model_{}'.format(k): v
+        for k, v in hyp_config['tunable']['model'].items()
+    }
+    tunable_config = {**tunable_config, **arch_tunable}
+
+    hparser = HyperOptArgumentParser(strategy=hyp_config['strategy'])
+
+    # add the non tunable params
+    for key, val in default_config.config_dict.items():
+        if isinstance(val, dict) or key in tunable_config:
+            continue
+
+        def_val = val if not key == 'experiment' else experiment
+        hparser.add_argument('--{}'.format(key), default=def_val, type=type(def_val))
+
+    # add the tunable params
+    for key, val in tunable_config.items():
+        opt_name = '--{}'.format(key)
+        opt_default = default_config.config_dict.get(key)
+        opt_type = type(opt_default)
+
+        if val['type'] == 'range':
+            hparser.opt_range(opt_name, type=opt_type, tunable=True, default=opt_default, low=val['low'], high=val['high'], nb_samples=hyp_config['trials'])
+        elif val['type'] == 'list':
+            hparser.opt_list(opt_name, type=opt_type, tunable=True, options=val['options'])
+        else:
+            raise ValueError('Tunable type "{}" not supported'.format(tunable['type']))
+
+    hparams = hparser.parse_args()
+
+    return hparams, hyp_config
+
 def load_blocks(ims, indices=None, block_size=64, strides=16):
     blocks = []
     for idxs in indices:
@@ -795,3 +867,13 @@ def is_valid_block(block, block_size=64, pixel_percent=0.1):
 
     percent = get_nz(block.reshape((block_size, block_size**2))) / (block_size ** 3)
     return (percent >= pixel_percent)
+
+def print_progress_bar(iteration, total, fhandle, prefix='', suffix='', decimals=0, length=30, fill='█', print_end='\r'):
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    print('{} |{}| {}% {}\r'.format(prefix, bar, percent, suffix), file=fhandle, end=print_end)
+    # print('{}\r\r'.format(suffix), file=fhandle)
+
+    if iteration == total:
+        print('', file=fhandle)

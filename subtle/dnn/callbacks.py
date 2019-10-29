@@ -1,10 +1,13 @@
+import os
 import numpy as np
+import json
 
 import tensorflow as tf
 import keras
 
 from subtle.data_loaders import SliceLoader
 from subtle.dnn.helpers import make_image, load_data_loader
+from subtle.subtle_io import print_progress_bar
 from scipy.misc import imresize
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
@@ -143,6 +146,68 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
 
         return
 
+class TrainProgressCallBack(keras.callbacks.Callback):
+    def __init__(self, log_dir, data_loader, **kwargs):
+        super().__init__(**kwargs)
+        self.log_dir = log_dir
+        self.data_loader = data_loader
+
+        parent_dir = self.log_dir.split('/')[-1]
+        self.fpath_log = os.path.join(self.log_dir, '..', 'log_train_{}.log'.format(parent_dir))
+        self.total = self.data_loader.__len__()
+
+    def _get_fhandle(self):
+        fmode = 'a' if os.path.exists(self.fpath_log) else 'w'
+        return open(self.fpath_log, fmode)
+
+    def _get_metric_str(self, metrics):
+        exclude_keys = ['batch', 'size']
+        return ' '.join([
+            '{}: {:.3f}'.format(k, v)
+            for k, v in metrics.items()
+            if k not in exclude_keys
+        ])
+
+    def on_epoch_begin(self, epoch, logs={}):
+        logfile = self._get_fhandle()
+        print('Epoch #{}\n'.format(epoch + 1), file=logfile)
+
+    def on_batch_end(self, batch, logs={}):
+        logfile = self._get_fhandle()
+
+        metrics = self._get_metric_str(logs)
+        print_progress_bar(batch, self.total, logfile, prefix='Training', suffix=metrics)
+
+    def on_epoch_end(self, epoch, logs={}):
+        logfile = self._get_fhandle()
+        metrics = self._get_metric_str(logs)
+        print('End of epoch #{} - {}\n'.format(epoch + 1, metrics), file=logfile)
+        logfile.close()
+
+class HparamsCallback(keras.callbacks.TensorBoard):
+    def __init__(self, log_dir, tunable_args, **kwargs):
+        super(HparamsCallback, self).__init__(log_dir, **kwargs)
+
+        self.tunable_args = tunable_args
+        self.trial_id = self.log_dir.split('/')[-2].split('_')[1]
+
+    def on_train_begin(self, logs=None):
+        keras.callbacks.TensorBoard.on_train_begin(self, logs=logs)
+
+        disp = f'''### Hyperparameter Summary\n'''
+        disp += f'''| *Hyperparameter* | *Value* |\n'''
+        disp += f'''| --------------- | ------- |\n'''
+
+        for k, v in self.tunable_args.items():
+            v = '{:.3f}'.format(v)
+            disp += f'''| {k} | {v} |\n'''
+
+        tensor =  tf.convert_to_tensor(disp)
+        summary = tf.summary.text("Trial {}".format(self.trial_id), tensor)
+
+        with tf.Session() as sess:
+            s = sess.run(summary)
+            self.writer.add_summary(s)
 
 class TensorBoardCallBack(keras.callbacks.TensorBoard):
     def __init__(self, log_every=1, **kwargs):
@@ -151,7 +216,7 @@ class TensorBoardCallBack(keras.callbacks.TensorBoard):
         self.counter = 0
 
     def on_batch_end(self, batch, logs=None):
-        self.counter+=1
+        self.counter += 1
         if self.counter%self.log_every==0:
             for name, value in logs.items():
                 if name in ['batch', 'size']:

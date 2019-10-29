@@ -21,6 +21,7 @@ from tqdm import tqdm
 import numpy as np
 
 from keras.callbacks import TensorBoard
+
 from keras.optimizers import Adam
 
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
@@ -64,8 +65,13 @@ def plot_losses(losses, fname):
 
 def train_process(args):
     print('------')
-    print(args.debug_print())
+    print(args)
     print('------\n\n\n')
+
+    try:
+        hypsearch = (args.hypsearch_name is not None)
+    except Exception:
+        hypsearch = False
 
     if args.max_data_sets is None:
         max_data_sets = np.inf
@@ -78,7 +84,10 @@ def train_process(args):
 
     np.random.seed(args.random_seed)
 
-    log_tb_dir = os.path.join(args.log_dir, '{}_{}'.format(args.job_id, time.time()))
+    try:
+        log_tb_dir = args.log_tb_dir
+    except Exception:
+        log_tb_dir = os.path.join(args.log_dir, '{}_{}'.format(args.job_id, time.time()))
 
     # load data
     if args.verbose:
@@ -106,6 +115,9 @@ def train_process(args):
         print(data_shape)
     #FIXME: check that image sizes are the same
         _, nx, ny, nz = data_shape
+
+    args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
+    args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
 
     clear_keras_memory()
     set_keras_memory(args.keras_memory)
@@ -199,7 +211,7 @@ def train_process(args):
 
     tb_logdir = '{}_plot'.format(log_tb_dir)
     if not args.gan_mode:
-        callbacks.append(m.callback_tensorbaord(log_dir=tb_logdir))
+        callbacks.append(m.callback_tensorboard(log_dir=tb_logdir))
 
     slice_axis = [0]
     num_epochs = args.num_epochs
@@ -252,6 +264,19 @@ def train_process(args):
         validation_generator = data_loader(**gen_kwargs)
     else:
         validation_generator = None
+
+    if hypsearch:
+        tunable_params = suio.get_tunable_params(args.hypsearch_name)
+        tunable_args = {k: args.__dict__[k] for k in tunable_params}
+
+        callbacks.append(
+            m.callback_progress(log_dir=tb_logdir, data_loader=training_generator)
+        )
+
+        hparams_log = os.path.join(os.path.dirname(args.checkpoint), 'tb_text')
+        callbacks.append(
+            m.callback_hparams(log_dir=hparams_log, tunable_args=tunable_args)
+        )
 
     if args.gan_mode:
         gen = m.model

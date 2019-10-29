@@ -10,13 +10,14 @@ import tensorflow as tf
 import keras.models
 import keras.callbacks
 from keras.optimizers import Adam
+from tensorboard.plugins.hparams import keras as hp_keras
 
 from warnings import warn
 import numpy as np
 
 import subtle.subtle_loss as suloss
 from subtle.subtle_io import get_model_config
-from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback
+from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, TrainProgressCallBack, HparamsCallback
 
 class GeneratorBase:
     def __init__(
@@ -59,7 +60,7 @@ class GeneratorBase:
 
         return keras.callbacks.ModelCheckpoint(self.checkpoint_file, monitor=monitor, save_best_only=self.save_best_only)
 
-    def callback_tensorbaord(self, log_dir=None, log_every=None):
+    def callback_tensorboard(self, log_dir=None, log_every=None):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -68,7 +69,19 @@ class GeneratorBase:
         if log_every is not None and log_every > 0:
             return TensorBoardCallBack(log_every=log_every, log_dir=_log_dir, batch_size=8, write_graph=False)
         else:
-            return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=True)
+            return keras.callbacks.TensorBoard(log_dir=_log_dir, batch_size=8, write_graph=False)
+
+    def callback_progress(self, log_dir, data_loader):
+        if not log_dir:
+            log_dir = self.log_dir
+
+        return TrainProgressCallBack(log_dir=log_dir, data_loader=data_loader)
+
+    def callback_hparams(self, log_dir, tunable_args):
+        if not log_dir:
+            log_dir = self.log_dir
+
+        return HparamsCallback(log_dir=log_dir, tunable_args=tunable_args)
 
     def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=16, gan_mode=False, use_enh_mask=False, enh_pfactor=1.0):
         if log_dir is None:
