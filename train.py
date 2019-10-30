@@ -21,7 +21,6 @@ from tqdm import tqdm
 import numpy as np
 
 from keras.callbacks import TensorBoard
-
 from keras.optimizers import Adam
 
 from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
@@ -78,7 +77,7 @@ def train_process(args):
     else:
         max_data_sets = args.max_data_sets
 
-    if args.gpu is not None:
+    if args.gpu is not None and not hypsearch:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
 
