@@ -140,9 +140,7 @@ def train_process(args):
         print('Creating new checkpoint at {}'.format(args.checkpoint))
 
     compile_model = (not args.gan_mode)
-
     model_class = load_model(args.model_name)
-
     model_kwargs = {
         'model_config': args.model_config,
         'num_channel_output': len(args.output_idx),
@@ -156,6 +154,16 @@ def train_process(args):
         'save_best_only': args.save_best_only,
         'compile_model': compile_model
     }
+
+    if hypsearch:
+        tunable_exp_params, tunable_model_params = suio.get_tunable_params(args.hypsearch_name)
+
+        tunable_model_params = {k: args.__dict__['__model_{}'.format(k)] for k in tunable_model_params.keys()}
+    else:
+        tunable_exp_params = None
+        tunable_model_params = None
+
+    model_kwargs['tunable_params'] = tunable_model_params
 
     if '3d' in args.model_name:
         kw = {
@@ -272,8 +280,12 @@ def train_process(args):
         )
 
         # Hypsearch callback #2 - display the trial params as a table on tensorboard
-        tunable_params = suio.get_tunable_params(args.hypsearch_name)
-        tunable_args = {k: args.__dict__[k] for k in tunable_params}
+        src_dict = {**args.__dict__, **m.config_dict}
+        tunable_args = {
+            k: src_dict[k]
+            for k in {**tunable_exp_params, **tunable_model_params}.keys()
+        }
+
         hparams_log = os.path.join(os.path.dirname(args.checkpoint), 'tb_text')
         callbacks.append(
             m.callback_hparams(log_dir=hparams_log, tunable_args=tunable_args)

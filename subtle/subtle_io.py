@@ -765,7 +765,9 @@ def get_tunable_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     json_str = open(fpath_json, 'r').read()
     hyp_config = json.loads(json_str)
 
-    return list(hyp_config['tunable']['experiment'].keys()) + list(hyp_config['tunable']['experiment'].keys())
+    return (
+        hyp_config['tunable']['experiment'], hyp_config['tunable']['model']
+    )
 
 def get_hypsearch_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))

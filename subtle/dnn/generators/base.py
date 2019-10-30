@@ -22,7 +22,7 @@ from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, 
 class GeneratorBase:
     def __init__(
         self, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128, optimizer_fun=Adam, lr_init=None, optim_amsgrad=True, loss_function=suloss.l1_loss, metrics_monitor=[suloss.l1_loss], verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True,
-        model_config='base'
+        model_config='base', tunable_params=None
     ):
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -41,6 +41,7 @@ class GeneratorBase:
         self.compile_model = compile_model
         self.optim_amsgrad = optim_amsgrad
         self.model_config = model_config
+        self.tunable_params = tunable_params
 
         self.model = None # to be assigned by _build_model() in children classes
 
@@ -48,6 +49,9 @@ class GeneratorBase:
 
     def _init_model_config(self):
         self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/configs/models')
+
+        if self.tunable_params:
+            self.config_dict = {**self.config_dict, **self.tunable_params}
 
         for k, v in self.config_dict.items():
             if not isinstance(v, dict):
