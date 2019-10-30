@@ -185,6 +185,11 @@ class TrainProgressCallBack(keras.callbacks.Callback):
         print('End of epoch #{} - {}\n'.format(epoch + 1, metrics), file=logfile)
         logfile.close()
 
+    def on_train_end(self, logs=None):
+        logfile = self._get_fhandle()
+        print('done training', file=logfile)
+        logfile.close()
+
 class HparamsCallback(keras.callbacks.TensorBoard):
     def __init__(self, log_dir, tunable_args, **kwargs):
         super(HparamsCallback, self).__init__(log_dir, **kwargs)
