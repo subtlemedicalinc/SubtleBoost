@@ -1,0 +1,49 @@
+body {
+  padding: 16px;
+  margin: 16px;
+}
+
+h3 {
+  margin-bottom: 24px;
+}
+
+.header {
+  background: #0F2130;
+  color: #fff;
+  padding: 12px;
+  margin: -32px;
+  margin-bottom: 32px;
+}
+
+.header img {
+  width: 200px;
+}
+
+.img-col {
+  text-align: right;
+}
+
+.trial-url, .progress-url {
+  color: #007bff;
+  cursor: pointer;
+}
+
+.ui-dialog-titlebar-close {
+  height: 25px!important;
+  width: 25px!important;
+}
+
+#progress-dialog {
+  font-family: 'courier new';
+  font-size: 12px;
+  background: #000;
+  color: #fff;
+}
+
+#progress-dialog ul {
+  list-style-type: none;
+}
+
+#progress-dialog li {
+  margin-bottom: 12px;
+}
