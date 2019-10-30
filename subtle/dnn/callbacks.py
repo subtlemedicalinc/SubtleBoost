@@ -12,7 +12,7 @@ from scipy.misc import imresize
 import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -45,6 +45,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.block_strides = block_strides
         self.gan_mode = gan_mode
         self.use_enh_mask = use_enh_mask
+        self.detailed_plot = detailed_plot
 
         self._init_generator()
 
@@ -138,7 +139,13 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                     Y = X_center[..., 0] + Y
                     X_center[..., 1] = X_center[..., 1] + X_center[..., 0]
 
-                display_image = np.concatenate((X_center, Y, Y_prediction), axis=3).transpose((0,1,3,2)).reshape((X_center.shape[1], -1))
+                if self.detailed_plot:
+                    imgs = (X_center, Y, Y_prediction)
+                else:
+                    y_disp = np.array([Y[..., 0]]).transpose(1, 2, 3, 0)
+                    imgs = (y_disp, Y_prediction)
+
+                display_image = np.concatenate((imgs), axis=3).transpose((0, 1, 3, 2)).reshape((X_center.shape[1], -1))
 
             image = make_image(display_image)
             summary = tf.Summary(value=[tf.Summary.Value(tag=tag, image=image)])
