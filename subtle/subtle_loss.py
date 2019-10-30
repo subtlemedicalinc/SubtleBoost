@@ -21,8 +21,18 @@ from tensorflow import constant as tf_constant
 import keras.losses
 from keras import backend as K
 
-from keras.applications.vgg19 import VGG19, preprocess_input as vgg_preprocess
+from keras.applications.vgg19 import VGG19
 from keras.models import Model
+
+"""
+* Using VGG19's preprocess_input method caused the following error during hyperparameter search execution and hence using mobilenet's method instead
+
+```ValueError: Tensor("loss/linear_model_output_loss/Const_1:0", shape=(3,), dtype=float32) must be from the same graph as Tensor("loss/linear_model_output_loss/strided_slice_6:0", shape=(?, ?, ?, 3), dtype=float32).```
+
+* Mobilenet's preprocess_input and vgg19's preprocess input have the same functionality - refer https://github.com/keras-team/keras-applications/blob/master/keras_applications/mobilenet.py
+"""
+from keras.applications.mobilenet import preprocess_input as vgg_preprocess
+
 
 """
 Decorator for splitting y_true into ground truth image and mask weights
