@@ -1,7 +1,7 @@
 {
   "name": "loss_weights",
   "trials": 15,
-  "gpus": ["0", "2", "3"],
+  "gpus": ["0", "1", "2", "3"],
   "strategy": "random_search",
   "base_experiment": "tiantan_sri/hyp_search",
   "base_model": "unet2d",
