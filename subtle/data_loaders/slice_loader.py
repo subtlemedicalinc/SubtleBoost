@@ -18,7 +18,7 @@ from subtle.subtle_io import load_slices, build_slice_list, get_num_slices
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth
 
 class SliceLoader(keras.utils.Sequence):
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, enh_pfactor=1.0):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0):
 
         'Initialization'
         self.data_list = data_list
@@ -38,6 +38,7 @@ class SliceLoader(keras.utils.Sequence):
         self.input_idx = input_idx
         self.output_idx = output_idx
         self.enh_pfactor = enh_pfactor
+        self.use_enh_mask = use_enh_mask
 
         self._init_slice_info()
         self.on_epoch_end()
@@ -196,7 +197,8 @@ class SliceLoader(keras.utils.Sequence):
         if not self.predict:
             Y = data_Y.copy()
             Y_mask = data_Y_mask.copy()
-            enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor)
+            if self.use_enh_mask:
+                enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor)
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
 
@@ -233,7 +235,10 @@ class SliceLoader(keras.utils.Sequence):
         if not self.predict:
             Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
             Y_mask = np.transpose(np.reshape(Y_mask, (Y_mask.shape[0], -1, Y_mask.shape[3], Y_mask.shape[4])), (0, 2, 3, 1))
-            enh_mask = np.transpose(np.reshape(enh_mask, (enh_mask.shape[0], -1, enh_mask.shape[3], enh_mask.shape[4])), (0, 2, 3, 1))
+            if self.use_enh_mask:
+                enh_mask = np.transpose(np.reshape(enh_mask, (enh_mask.shape[0], -1, enh_mask.shape[3], enh_mask.shape[4])), (0, 2, 3, 1))
+            else:
+                enh_mask = np.ones(Y.shape)
             Y = np.concatenate((Y, enh_mask), axis=-1)
 
         if self.verbose > 1:
