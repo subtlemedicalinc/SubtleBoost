@@ -205,7 +205,8 @@ class HparamsCallback(keras.callbacks.TensorBoard):
 
         keras.callbacks.TensorBoard.on_train_begin(self, logs=logs)
 
-        disp = f'''### Hyperparameter Summary\n'''
+        exp_id = self.log_dir.split('/')[-3]
+        disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:3333/experiment?id={exp_id})\n'''
         disp += f'''| *Hyperparameter* | *Value* |\n'''
         disp += f'''| --------------- | ------- |\n'''
 
