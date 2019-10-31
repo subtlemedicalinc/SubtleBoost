@@ -12,7 +12,7 @@ from scipy.misc import imresize
 import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -26,7 +26,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.log_dir = log_dir
         self.max_queue_size  = max_queue_size
         self.num_workers = num_workers
-        self.use_multiprocessing=use_multiprocessing
+        self.use_multiprocessing = use_multiprocessing
         self.shuffle = shuffle
         self.gen_type = gen_type
         self.positive_only = positive_only
@@ -46,12 +46,19 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.gan_mode = gan_mode
         self.use_enh_mask = use_enh_mask
         self.detailed_plot = detailed_plot
+        self.plot_list = plot_list
 
         self._init_generator()
 
 
     def _init_generator(self):
         data_loader = load_data_loader(self.model_name)
+
+        if self.plot_list is not None:
+            self.shuffle = False
+            self.data_list = list(set([p[0] for p in self.plot_list]))
+            self.slice_axis = [0]
+
         gen_kwargs = {
             'data_list': self.data_list,
             'batch_size': 1,
@@ -84,7 +91,13 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         gen_kwargs = {**gen_kwargs, **kw}
         self.generator =  data_loader(**gen_kwargs)
 
-        self.img_indices = np.random.choice(range(self.generator.__len__()), size=self.batch_size, replace=False)
+        if self.plot_list is not None:
+            self.img_indices = np.array([
+                np.where(self.generator.slice_list_files == fpath_case)[0][idx]
+                for fpath_case, idx in self.plot_list
+            ])
+        else:
+            self.img_indices = np.random.choice(range(self.generator.__len__()), size=self.batch_size, replace=False)
 
     def on_epoch_end(self, epoch, logs={}):
         #_len = self.generator.__len__()

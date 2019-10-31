@@ -748,6 +748,7 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
 
     train_data = data_dict['train']
     test_data = data_dict['test']
+    plot_data = data_dict.get('plot')
 
     data = None
 
@@ -755,6 +756,8 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
         data = train_data
     elif dataset == 'test':
         data = test_data
+    elif dataset == 'plot':
+        data = plot_data
     else:
         data = train_data + test_data
 
@@ -824,6 +827,13 @@ def get_hypsearch_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     hparams = hparser.parse_args()
 
     return hparams, hyp_config
+
+def get_hyp_plot_list(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
+    fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))
+    json_str = open(fpath_json, 'r').read()
+    hyp_config = json.loads(json_str)
+
+    return hyp_config.get('plot')
 
 def load_blocks(ims, indices=None, block_size=64, strides=16):
     blocks = []
