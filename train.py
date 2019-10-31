@@ -118,7 +118,9 @@ def train_process(args):
     args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
     args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
 
-    clear_keras_memory()
+    if not hypsearch:
+        clear_keras_memory()
+    
     set_keras_memory(args.keras_memory)
 
     lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda + args.wloss_lambda])

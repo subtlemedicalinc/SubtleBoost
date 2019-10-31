@@ -29,9 +29,9 @@ from keras.models import Model
 
 ```ValueError: Tensor("loss/linear_model_output_loss/Const_1:0", shape=(3,), dtype=float32) must be from the same graph as Tensor("loss/linear_model_output_loss/strided_slice_6:0", shape=(?, ?, ?, 3), dtype=float32).```
 
-* Mobilenet's preprocess_input and vgg19's preprocess input have the same functionality - refer https://github.com/keras-team/keras-applications/blob/master/keras_applications/mobilenet.py
+* Imagenet's preprocess_input and vgg19's preprocess input have the same functionality - refer https://github.com/keras-team/keras-applications/blob/master/keras_applications/imagenet_utils.py
 """
-from keras.applications.mobilenet import preprocess_input as vgg_preprocess
+from keras.applications.imagenet_utils import preprocess_input as vgg_preprocess
 
 
 """
