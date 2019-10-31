@@ -13,6 +13,10 @@ if __name__ == '__main__':
 
     data_list = suio.get_experiment_data(args.experiment, dataset='all')
 
+    if args.gpu is not None:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+
     for case_num in data_list:
         print('\n-------------\n')
         print('*****Processing {}*****\n'.format(case_num))

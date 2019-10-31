@@ -1,7 +1,10 @@
 #!/bin/bash
 
 function show_usage() {
-	echo "Usage: $0 experiment_name log_dir"
+	echo "Usage: $0 [-g gpu_str] experiment_name log_dir"
+	echo ""
+	echo "-g gpu_str: specify gpus to use, e.g. '0,1,3'"
+	echo ""
 }
 
 function show_help() {
@@ -12,12 +15,14 @@ function show_help() {
 
 OPTIND=1
 
-if [[ $# -ne 2 ]] ; then
+if [[ $# -lt 2 ]] ; then
 	show_usage >&2
 	exit 1
 fi
 
-while getopts "h?" opt; do
+export GPU=' '
+
+while getopts "h?g:" opt; do
 	case "${opt}" in
 		h)
 			show_usage >&1
@@ -27,6 +32,9 @@ while getopts "h?" opt; do
 		\?)
 			show_usage >&2
 			exit 1
+			;;
+		g)
+			export GPU="--gpu ${OPTARG}"
 			;;
 	esac
 done
@@ -45,4 +53,4 @@ else
   exp_str="--experiment ${exparg}"
 fi
 
-python batch_preprocess.py ${exp_str} > ${logfile} 2>${errfile}
+python batch_preprocess.py ${exp_str} ${GPU} > ${logfile} 2>${errfile}
