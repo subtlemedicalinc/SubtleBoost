@@ -5,7 +5,6 @@ Network architecture for SubtleGad project.
 Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
-import re as regex
 import tensorflow as tf
 import keras.models
 import keras.callbacks
@@ -16,7 +15,7 @@ from warnings import warn
 import numpy as np
 
 import subtle.subtle_loss as suloss
-from subtle.utils.experiment import get_model_config
+from subtle.utils.experiment import get_model_config, get_layer_config
 from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, TrainProgressCallBack, HparamsCallback
 
 class GeneratorBase:
@@ -48,7 +47,7 @@ class GeneratorBase:
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/configs/models')
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='./configs/models')
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}
@@ -138,22 +137,8 @@ class GeneratorBase:
             warn('failed to load weights. training from scratch')
             warn(str(e))
 
-    def _get_layer_config(self, layer_name):
-        layer_config = {}
-        for key, val in self.config_dict.items():
-            if not isinstance(val, dict): continue
-            k = '^{}$'.format(key.replace('_', '-').replace('*', '(.*)'))
-            ln = layer_name.replace('_', '-')
-            if regex.match(k, ln):
-                layer_config = {**layer_config, **val}
-        return layer_config
-
     def get_config(self, param_name, layer_name=''):
-        layer_config = self._get_layer_config(layer_name)
-        if param_name in layer_config:
-            return layer_config[param_name]
-
-        return self.config_dict['all'][param_name]
+        return get_layer_config(self.config_dict, param_name, layer_name)
 
     def _compile_model(self):
         if self.lr_init is not None:

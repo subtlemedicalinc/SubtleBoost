@@ -2,73 +2,61 @@ import keras
 from keras.layers import LeakyReLU, BatchNormalization, Input, Activation
 from keras.optimizers import Adam
 
+from subtle.dnn.adversaries.base import AdversaryBase
 from subtle.dnn.layers.SpectralNormalization import ConvSN2D
 
-class AdversaryPatch2D:
-    def __init__(
-        self, num_channel_input=1, img_rows=128, img_cols=128, num_filters_first_conv=32, num_poolings=3,
-        batch_norm=True, verbose=True, compile_model=True
-    ):
-        self.num_channel_input = num_channel_input
-        self.img_rows = img_rows
-        self.img_cols = img_cols
-        self.num_filters_first_conv = num_filters_first_conv
-        self.num_poolings = num_poolings
-        self.batch_norm = batch_norm
-        self.verbose = verbose
-        self.compile_model = True
+class AdversaryPatch2D(AdversaryBase):
+    def __init__(self, **kwargs):
+        self.model_name = 'patch2d'
+        super().__init__(**kwargs)
+        self._build_model()
 
-        self.model = None
-        self._build_adversary()
-
-    def _conv_block(self, input, filters, idx, strides=1, bnorm=True):
+    def _conv_block(self, input, filters, idx, suffix=''):
+        cname = 'conv_{}_{}'.format(idx, suffix)
         d_out = ConvSN2D(
             filters=filters,
-            kernel_size=(3, 3),
-            strides=strides,
-            padding='same',
-            name='conv_{}'.format(idx)
+            kernel_size=self.get_config('kernel_size', cname),
+            strides=self.get_config('strides', cname),
+            padding=self.get_config('padding', cname),
+            name=cname
         )(input)
-        d_out = LeakyReLU(alpha=0.2, name='lrelu_conv_{}'.format(idx))(d_out)
 
-        if bnorm:
-            d_out = BatchNormalization(momentum=0.8)(d_out)
+        act_name = 'lrelu_conv_{}_{}'.format(idx, suffix)
+        d_out = LeakyReLU(
+            alpha=self.get_config('lrelu_alpha', act_name), name=act_name
+        )(d_out)
+
+        if self.get_config('batch_norm', cname):
+            d_out = BatchNormalization(momentum=self.bnorm_momentum)(d_out)
 
         return d_out
 
-    def _build_adversary(self):
-        input = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='adv_input')
+    def _build_model(self):
+        input = Input(
+            shape=(self.img_rows, self.img_cols, self.num_channel_input), name='adv_input'
+        )
 
-        nc = self.num_filters_first_conv
+        d_out = input
 
-        d_out = self._conv_block(input, nc, 0, bnorm=False)
-        d_out = self._conv_block(d_out, nc, 1, strides=2)
-        if self.verbose:
-            print(d_out)
+        for idx in range(self.num_convs):
+            nc = self.num_filters_first_conv * (2 ** idx)
+            d_out = self._conv_block(d_out, nc, idx=idx, suffix='a')
+            d_out = self._conv_block(d_out, nc, idx=idx, suffix='b')
+            if self.verbose:
+                print(d_out)
 
-        d_out = self._conv_block(d_out, nc * 2, 2)
-        d_out = self._conv_block(d_out, nc * 2, 3, strides=2)
-        if self.verbose:
-            print(d_out)
-
-        d_out = self._conv_block(d_out, nc * 4, 4)
-        d_out = self._conv_block(d_out, nc * 4, 5, strides=2)
-        if self.verbose:
-            print(d_out)
-
-        d_out = self._conv_block(d_out, nc * 8, 6)
-        d_out = self._conv_block(d_out, nc * 8, 7, strides=1)
-        if self.verbose:
-            print(d_out)
-
+        fcname = 'final_conv'
         val = ConvSN2D(
-            filters=1,
-            kernel_size=(3, 3),
-            strides=1,
-            padding='same',
-            name='conv_8'
+            filters=self.num_channel_output,
+            kernel_size=self.get_config('kernel_size', fcname),
+            strides=self.get_config('strides', fcname),
+            padding=self.get_config('padding', fcname),
+            name=fcname
         )(d_out)
-        val = Activation('sigmoid', name='adv_output')(val)
+        val = Activation(
+            self.get_config('activation', 'adv_output'),
+            name='adv_output'
+        )(val)
 
         if self.verbose:
             print(val)
@@ -79,8 +67,3 @@ class AdversaryPatch2D:
 
         if self.compile_model:
             self._compile_model()
-
-    def _compile_model(self):
-        self.model.compile(
-            loss='mse', optimizer=Adam(2e-3, 0.5)
-        )

@@ -136,6 +136,9 @@ def _train_args(parser):
     parser.add_argument('--gan_mode', action='store_true', dest='gan_mode', help='If True, network will be trained in GAN mode with adversarial loss', default=False)
     parser.add_argument('--adversary_name', action='store', dest='adversary_name', type=str, help='Name of the Discriminator model architecture', default='patch2d')
     parser.add_argument('--num_disc_steps', action='store', dest='num_disc_steps', type=int, help='Number of steps to train Discriminator for, for every generator epoch', default=5)
+    parser.add_argument('--disc_lr_init', action='store', dest='disc_lr_init', type=float, help='Learning rate initialization for adversary Adam optimizer', default=2e-3)
+    parser.add_argument('--disc_beta', action='store', dest='disc_beta', type=float, help='Beta value for adversary Adam optimizer', default=0.5)
+    parser.add_argument('--disc_loss_function', action='store', type=str, dest='disc_loss_function', help='Loss function for adversary', default='mse')
 
     return parser
 

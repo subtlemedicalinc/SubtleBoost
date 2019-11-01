@@ -1,5 +1,6 @@
 import os
 import json
+import re as regex
 
 import subtle.subtle_args as sargs
 from . import misc as misc_utils
@@ -89,3 +90,19 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
         data = train_data + test_data + val_data
 
     return data
+
+def match_layer_to_config(config_dict, layer_name):
+    layer_config = {}
+    for key, val in config_dict.items():
+        if not isinstance(val, dict): continue
+        k = '^{}$'.format(key.replace('_', '-').replace('*', '(.*)'))
+        ln = layer_name.replace('_', '-')
+        if regex.match(k, ln):
+            layer_config = {**layer_config, **val}
+    return layer_config
+
+def get_layer_config(config_dict, param_name, layer_name=''):
+    layer_config = match_layer_to_config(config_dict, layer_name)
+    if param_name in layer_config:
+        return layer_config[param_name]
+    return config_dict['all'][param_name]

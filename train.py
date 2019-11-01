@@ -326,8 +326,8 @@ def train_process(args):
         gen = m.model
         adv_model = load_model(args.adversary_name)
         disc_m = adv_model(
-            img_rows=nx, img_cols=ny,
-            compile_model=compile_model
+            img_rows=nx, img_cols=ny, compile_model=compile_model,
+            lr_init=args.disc_lr_init, beta=args.disc_beta, loss_function=args.disc_loss_function
         )
         disc = disc_m.model
 
@@ -393,6 +393,10 @@ def train_process(args):
             train_dloss = []
             for idx in tqdm(indices, total=data_len):
                 X, Y = training_generator.__getitem__(idx)
+
+                if Y.shape[3] > 1:
+                    # enh mask case
+                    Y = np.array([Y[..., 0]]).transpose(1, 2, 3, 0)
                 gen_imgs = gen.predict(X, batch_size=args.batch_size)
 
                 X_batch.extend(X)
