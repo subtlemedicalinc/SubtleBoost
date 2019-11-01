@@ -6,7 +6,7 @@
   "base_experiment": "tiantan_sri/hyp_search",
   "base_model": "unet2d",
   "base_model_config": "base",
-  "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/logs",
+  "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/hypsearch/",
   "tunable": {
     "experiment": {
       "l1_lambda": {

@@ -8,7 +8,6 @@ import gpustat
 
 import numpy as np
 import configargparse as argparse
-from test_tube import HyperOptArgumentParser
 
 import subtle.subtle_loss as suloss
 import subtle.utils.misc as misc_utils
