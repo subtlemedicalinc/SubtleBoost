@@ -213,8 +213,13 @@ def train_process(args):
     else: # len(data_list) > 1
         r = int(len(data_list) * args.validation_split)
 
-    data_val_list = data_list[:r]
-    data_train_list = data_list[r:]
+    val_data = exp_utils.get_experiment_data(args.experiment, dataset='val')
+    if len(val_data) > 0:
+        data_val_list = ['{}/{}.h5'.format(args.data_dir, v) for v in val_data]
+        data_train_list = data_list
+    else:
+        data_val_list = data_list[:r]
+        data_train_list = data_list[r:]
 
     if args.verbose:
         print('using {} datasets for training:'.format(len(data_train_list)))

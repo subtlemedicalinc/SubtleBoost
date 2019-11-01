@@ -69,6 +69,10 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
 
     train_data = data_dict['train']
     test_data = data_dict['test']
+
+    val_data = data_dict.get('validation')
+    val_data = [] if val_data is None else val_data
+
     plot_data = data_dict.get('plot')
 
     data = None
@@ -77,9 +81,11 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
         data = train_data
     elif dataset == 'test':
         data = test_data
+    elif dataset == 'val':
+        data = val_data
     elif dataset == 'plot':
         data = plot_data
     else:
-        data = train_data + test_data
+        data = train_data + test_data + val_data
 
     return data
