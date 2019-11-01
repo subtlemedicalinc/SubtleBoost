@@ -1,3 +1,4 @@
+import time
 import hashlib
 
 def get_timestamp_hash(n=6):
