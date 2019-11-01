@@ -27,7 +27,9 @@ from subtle.dnn.generators import GeneratorUNet2D, GeneratorMultiRes2D
 from subtle.dnn.adversaries import AdversaryPatch2D
 from subtle.dnn.helpers import gan_model, clear_keras_memory, set_keras_memory, load_model, load_data_loader
 
-import subtle.subtle_io as suio
+import subtle.utils.io as io_utils
+import subtle.utils.experiment as exp_utils
+import subtle.utils.hyperparameter as hyp_utils
 from subtle.data_loaders import SliceLoader
 import subtle.subtle_loss as suloss
 import subtle.subtle_metrics as sumetrics
@@ -93,7 +95,7 @@ def train_process(args):
         print('loading data from {}'.format(args.data_list_file))
     tic = time.time()
 
-    case_nums = suio.get_experiment_data(args.experiment, dataset='train')
+    case_nums = exp_utils.get_experiment_data(args.experiment, dataset='train')
     data_list = ['{}/{}.h5'.format(args.data_dir, cnum) for cnum in case_nums]
 
     # each element of the data_list contains 3 sets of 3D
@@ -107,10 +109,10 @@ def train_process(args):
 
     # get dimensions from first file
     if args.gen_type == 'legacy':
-        data_shape = suio.get_shape(data_list[0])
+        data_shape = io_utils.get_shape(data_list[0])
         _, _, nx, ny = data_shape
     elif args.gen_type == 'split':
-        data_shape = suio.get_shape(data_list[0], params={'h5_key': 'data/X'})
+        data_shape = io_utils.get_shape(data_list[0], params={'h5_key': 'data/X'})
         print(data_shape)
     #FIXME: check that image sizes are the same
         _, nx, ny, nz = data_shape
@@ -120,7 +122,7 @@ def train_process(args):
 
     if not hypsearch:
         clear_keras_memory()
-    
+
     set_keras_memory(args.keras_memory)
 
     lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda + args.wloss_lambda])
@@ -167,13 +169,13 @@ def train_process(args):
     }
 
     if hypsearch:
-        plot_list = suio.get_hyp_plot_list(args.hypsearch_name)
+        plot_list = hyp_utils.get_hyp_plot_list(args.hypsearch_name)
 
-        tunable_exp_params, tunable_model_params = suio.get_tunable_params(args.hypsearch_name)
+        tunable_exp_params, tunable_model_params = hyp_utils.get_tunable_params(args.hypsearch_name)
 
         tunable_model_params = {k: args.__dict__['__model_{}'.format(k)] for k in tunable_model_params.keys()}
     else:
-        plot_list = suio.get_experiment_data(args.experiment, dataset='plot')
+        plot_list = exp_utils.get_experiment_data(args.experiment, dataset='plot')
         tunable_exp_params = None
         tunable_model_params = None
 
@@ -443,7 +445,7 @@ def train_process(args):
             y_pred = gen.predict_generator(pred_gen)
             pidx = 99 # this slice in NO31 has vasculature inside tumor
 
-            gtruth_pred = suio.load_file(fpath_h5)
+            gtruth_pred = io_utils.load_file(fpath_h5)
             out_img = np.hstack([
                 gtruth_pred[pidx, 0],
                 gtruth_pred[pidx, 1],

@@ -22,7 +22,7 @@ try:
     import SimpleITK as sitk
 except:
     warnings.warn('SimpleITK not found!')
-import utils.myshow as myshow
+import scripts.utils.myshow as myshow
 
 def imshow3(ims, axis=0, cmap='gray'):
     n = ims.shape[axis]

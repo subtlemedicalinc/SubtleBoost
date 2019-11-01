@@ -3,8 +3,6 @@ import numpy as np
 import os
 from os.path import abspath
 
-import subtle.subtle_io as suio
-
 # import subtle.subtle_preprocess as sup
 import nibabel as nib
 import nipype
@@ -50,10 +48,10 @@ coreg_full_node = nipype.Node(fsl.FLIRT(cost=cost, dof=dof, interp=interp, bins=
 
 wf = nipype.Workflow(name='registration', base_dir=working_dir)
 wf.connect([
-    (bet_zero_node, coreg_low_node, [('out_file', 'reference')]), 
-    (bet_low_node, coreg_low_node, [('out_file', 'in_file')]), 
-    (bet_zero_node, coreg_full_node, [('out_file', 'reference')]), 
-    (bet_full_node, coreg_full_node, [('out_file', 'in_file')]), 
+    (bet_zero_node, coreg_low_node, [('out_file', 'reference')]),
+    (bet_low_node, coreg_low_node, [('out_file', 'in_file')]),
+    (bet_zero_node, coreg_full_node, [('out_file', 'reference')]),
+    (bet_full_node, coreg_full_node, [('out_file', 'in_file')]),
     ])
 wf.write_graph(graph2use='flat')
 
@@ -63,5 +61,3 @@ bet_full_node.inputs.in_file = nib_files[2]
 
 # wf.run()
 wf.run(plugin='MultiProc', plugin_args={'n_procs' : 10})
-
-

@@ -11,14 +11,15 @@ import configargparse as argparse
 from test_tube import HyperOptArgumentParser
 
 import subtle.subtle_loss as suloss
-import subtle.subtle_io as suio
+import subtle.utils.misc as misc_utils
+import subtle.utils.hyperparameter as hyp_utils
 from subtle.dnn.generators import GeneratorUNet2D
 from subtle.data_loaders import SliceLoader
 from train import train_process as train_execute
 
 
 def train_wrap(params, *args):
-    ts_hash = suio.get_timestamp_hash(n=4)
+    ts_hash = misc_utils.get_timestamp_hash(n=4)
     dirpath_trial = os.path.join(params.hyp_log_dir, 'trial_{}'.format(ts_hash))
 
     if not os.path.exists(dirpath_trial):
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     if not args.hypsearch_name:
         raise ValueError('Hyperparameter search name should be specified')
 
-    hparams, hyp_config = suio.get_hypsearch_params(args.hypsearch_name)
+    hparams, hyp_config = hyp_utils.get_hypsearch_params(args.hypsearch_name)
 
     gpu_ids = gpu_check(hyp_config['gpus'])
     hparams.optimize_parallel_gpu(train_wrap, gpu_ids=gpu_ids, max_nb_trials=hyp_config['trials'])

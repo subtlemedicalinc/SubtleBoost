@@ -58,7 +58,7 @@ else
   exit 1
 fi
 
-fcontent=$(python3 ./utils/print_config_json.py configs/experiments/${expname}/config.json train)
+fcontent=$(python3 ./scripts/utils/print_config_json.py configs/experiments/${expname}/config.json train)
 fcontent=${fcontent}--${exparg}
 
 job_id=$(echo ${fcontent} | sha1sum | awk '{print $1}' | cut -c1-6)

@@ -7,7 +7,7 @@ import keras
 
 from subtle.data_loaders import SliceLoader
 from subtle.dnn.helpers import make_image, load_data_loader
-from subtle.subtle_io import print_progress_bar
+from subtle.utils.misc import print_progress_bar
 from scipy.misc import imresize
 import pandas as pd
 

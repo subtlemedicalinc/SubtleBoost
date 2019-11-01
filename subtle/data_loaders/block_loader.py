@@ -6,7 +6,8 @@ import sigpy as sp
 import keras
 from expiringdict import ExpiringDict
 
-from subtle.subtle_io import build_block_list, load_file, load_blocks, is_valid_block
+from subtle.utils.block import build_block_list, load_blocks, is_valid_block
+from subtle.utils.io import load_file
 
 class BlockLoader(keras.utils.Sequence):
     def __init__(

@@ -16,7 +16,7 @@ from warnings import warn
 import numpy as np
 
 import subtle.subtle_loss as suloss
-from subtle.subtle_io import get_model_config
+from subtle.utils.experiment import get_model_config
 from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, TrainProgressCallBack, HparamsCallback
 
 class GeneratorBase:

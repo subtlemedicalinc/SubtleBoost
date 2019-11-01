@@ -19,7 +19,6 @@ ctags  --extra=+f ./preprocess.py
 ./plot_grid.py
 ./train.py
 ./inference.py
-./subtle/subtle_io.py
 ./subtle/subtle_preprocess.py
 ./subtle/subtle_metrics.py
 ./subtle/subtle_plot.py

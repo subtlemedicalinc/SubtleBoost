@@ -3,7 +3,7 @@
 import argparse
 import pathlib
 
-import  subtle.subtle_io as suio
+import  subtle.utils.io as io_utils
 
 usage_str = 'usage: %(prog)s [options] <input> <output>'
 #description_str = 'pick lines from input and store in output'
@@ -18,11 +18,11 @@ args = parser.parse_args()
 
 # infer data type from file extensions
 
-data = suio.load_file(args.input_file, params={'h5_key': args.key})
+data = io_utils.load_file(args.input_file, params={'h5_key': args.key})
 
 suffix = ''.join(pathlib.Path(args.output_file).suffixes)
 
 if suffix == '.h5z':
-    suio.save_data_h5(args.output_file, data, h5_key=args.key, compress=True)
+    io_utils.save_data_h5(args.output_file, data, h5_key=args.key, compress=True)
 else:
-    suio.save_data(args.output_file, data, params={'h5_key': args.key, 'compress': False})
+    io_utils.save_data(args.output_file, data, params={'h5_key': args.key, 'compress': False})

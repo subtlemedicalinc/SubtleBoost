@@ -9,7 +9,7 @@ plt.switch_backend('agg')
 
 import argparse
 
-import subtle.subtle_io as suio
+import subtle.utils.io as io_utils
 import subtle.subtle_metrics as sumetrics
 
 usage_str = 'usage: %(prog)s [options]'
@@ -27,8 +27,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    data_truth = suio.load_file(args.file_truth)
-    data_predict = suio.load_file(args.file_predict)
+    data_truth = io_utils.load_file(args.file_truth)
+    data_predict = io_utils.load_file(args.file_predict)
 
     n_slices = data_truth.shape[0]
 

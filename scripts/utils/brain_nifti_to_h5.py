@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import nibabel as nib
-import subtle.subtle_io as suio
+import subtle.utils.io as io_utils
 import numpy as np
 
 import os
@@ -32,4 +32,4 @@ print(x0.shape, x1.shape, x2.shape)
 
 xx = np.stack((x0, x1, x2), axis=1)
 
-suio.save_data('{}/{}_brain.h5'.format(os.path.dirname(mydir), os.path.basename(mydir)), xx)
+io_utils.save_data('{}/{}_brain.h5'.format(os.path.dirname(mydir), os.path.basename(mydir)), xx)
