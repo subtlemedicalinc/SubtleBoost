@@ -47,6 +47,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.use_enh_mask = use_enh_mask
         self.detailed_plot = detailed_plot
         self.plot_list = plot_list
+        self.tag_list = []
 
         self._init_generator()
 
@@ -96,6 +97,11 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 np.where(self.generator.slice_list_files == fpath_case)[0][idx]
                 for fpath_case, idx in self.plot_list
             ])
+
+            self.tag_list = [
+                '{}_{}'.format(fpath_case.split('/')[-1].replace('.h5', ''), idx + 1) 
+                for fpath_case, idx in self.plot_list
+            ]
         else:
             self.img_indices = np.random.choice(range(self.generator.__len__()), size=self.batch_size, replace=False)
 
@@ -103,7 +109,10 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         #_len = self.generator.__len__()
         writer = tf.summary.FileWriter(self.log_dir)
         for idx, ii in enumerate(self.img_indices):
-            tag = '{}_{}'.format(self.tag, idx)
+            if len(self.tag_list) == 0:
+                tag = '{}_{}'.format(self.tag, idx)
+            else:
+                tag = self.tag_list[idx]
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
 
