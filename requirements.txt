@@ -22,3 +22,5 @@ dicom==0.9.9.post1
 scikit_learn==0.21.3
 torch==1.1.0
 test_tube
+gpustat
+flask==1.1.1
