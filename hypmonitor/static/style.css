@@ -47,3 +47,11 @@ h3 {
 #progress-dialog li {
   margin-bottom: 12px;
 }
+
+th.sorted.ascending:after {
+	content: "  \2191";
+}
+
+th.sorted.descending:after {
+	content: " \2193";
+}

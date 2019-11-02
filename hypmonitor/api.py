@@ -60,6 +60,10 @@ def index():
 def style():
     return app.send_static_file('style.css')
 
+@app.route('/jquery.tablesort.js')
+def tablesort():
+    return app.send_static_file('jquery.tablesort.js')
+
 @app.route('/experiment')
 def experiment():
     return render_template('experiment.html', id=req.args.get('id'), port=app.config.get('port'))
