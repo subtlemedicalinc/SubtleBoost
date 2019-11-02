@@ -15,6 +15,7 @@ def get_experiment_list(hypsearch_path):
     return [
         {'id': exp_path.split('/')[-1]}
         for exp_path in glob('{}/*'.format(hypsearch_path))
+        if os.path.isdir(exp_path)
     ]
 
 def get_trial_params(dirpath_trial):
