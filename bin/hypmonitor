@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function show_usage() {
-	echo "Usage: $0 [start|stop|restart]"
+	echo "Usage: $0 [start|stop]"
 }
 
 function show_help() {
@@ -24,11 +24,6 @@ function stop() {
   pid=$(ps -ef | awk '/[h]ypmonitor/{print $2}')
   kill -9 ${pid}
   echo "HypMonitor stopped..."
-}
-
-function restart() {
-  stop
-  start
 }
 
 cmd=$1
