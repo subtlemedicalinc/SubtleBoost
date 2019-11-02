@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function show_usage() {
-	echo "Usage: $0 hypsearch_name log_dir"
+	echo "Usage: $0 hypsearch_name"
 }
 
 function show_help() {
@@ -12,7 +12,7 @@ function show_help() {
 
 OPTIND=1
 
-if [[ $# -ne 2 ]] ; then
+if [[ $# -ne 1 ]] ; then
 	show_usage >&2
 	exit 1
 fi
@@ -42,5 +42,5 @@ else
   exit 1
 fi
 
-logfile=$2/log_hypsearch_${exparg}.log
+logfile=${HYPMONITOR_SRC_PATH}/log_hypsearch_${exparg}.log
 python hyperparam.py --hypsearch_name ${exparg} > ${logfile} 2>${logfile}

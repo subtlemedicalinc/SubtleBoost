@@ -99,7 +99,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             ])
 
             self.tag_list = [
-                '{}_{}'.format(fpath_case.split('/')[-1].replace('.h5', ''), idx + 1) 
+                '{}_{}'.format(fpath_case.split('/')[-1].replace('.h5', ''), idx + 1)
                 for fpath_case, idx in self.plot_list
             ]
         else:
@@ -235,7 +235,8 @@ class HparamsCallback(keras.callbacks.TensorBoard):
         keras.callbacks.TensorBoard.on_train_begin(self, logs=logs)
 
         exp_id = self.log_dir.split('/')[-3]
-        disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:3333/experiment?id={exp_id})\n'''
+        hypmonitor_port = str(os.environ['HYPMONITOR_PORT'])
+        disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:{hypmonitor_port}/experiment?id={exp_id})\n'''
         disp += f'''| *Hyperparameter* | *Value* |\n'''
         disp += f'''| --------------- | ------- |\n'''
 

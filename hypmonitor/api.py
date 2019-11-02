@@ -54,7 +54,7 @@ def get_epoch_metrics(dirpath_trial):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', port=app.config.get('port'))
 
 @app.route('/style.css')
 def style():
@@ -62,7 +62,7 @@ def style():
 
 @app.route('/experiment')
 def experiment():
-    return render_template('experiment.html', id=req.args.get('id'))
+    return render_template('experiment.html', id=req.args.get('id'), port=app.config.get('port'))
 
 @app.route('/list')
 def explist():
@@ -125,4 +125,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     app.config['hypsearch_path'] = args.hypsearch_path
+    app.config['port'] = args.port
     app.run(port=args.port)

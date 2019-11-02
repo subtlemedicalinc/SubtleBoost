@@ -48,10 +48,6 @@ def gpu_check(input_gpuids, percent_limit=0.15):
 
 
 if __name__ == '__main__':
-    seed_val = 12321
-    random.seed(seed_val)
-    np.random.seed(seed_val)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--hypsearch_name', type=str, action='store', help='Name of the hyperparameter search')
 
@@ -61,6 +57,8 @@ if __name__ == '__main__':
         raise ValueError('Hyperparameter search name should be specified')
 
     hparams, hyp_config = hyp_utils.get_hypsearch_params(args.hypsearch_name)
+    random.seed(hparams.random_seed)
+    np.random.seed(hparams.random_seed)
 
     gpu_ids = gpu_check(hyp_config['gpus'])
     hparams.optimize_parallel_gpu(train_wrap, gpu_ids=gpu_ids, max_nb_trials=hyp_config['trials'])

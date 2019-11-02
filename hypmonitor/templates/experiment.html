@@ -19,6 +19,7 @@
 
   <script type="text/javascript">
     var exp_id = '{{ id }}';
+    var port = '{{ port }}';
     var fetch_progress_timer;
 
     setInterval(function() { fillMainTable() }, 10000);
@@ -28,7 +29,7 @@
 
       $.ajax({
         "async": true,
-        "url": "http://localhost:3333/logs?experiment="+exp_id,
+        "url": "http://localhost:" + port + "/logs?experiment="+exp_id,
         "method": "GET"
       }).done(function(response) {
         var tableStr = '<thead class="thead-dark"><tr>';
@@ -85,7 +86,7 @@
     function fetch_progress(trial_id) {
       $.ajax({
         "async": true,
-        "url": "http://localhost:3333/progress?experiment="+exp_id+"&id="+trial_id,
+        "url": "http://localhost:" + port + "/progress?experiment="+exp_id+"&id="+trial_id,
         "method": "GET"
       }).done(function(response) {
         var progress = '<ul>';
@@ -135,7 +136,7 @@
       $("#exp-table").on('click', '.trial-url', function(evt) {
         $.ajax({
           "async": true,
-          "url": "http://localhost:3333/metrics?experiment="+exp_id+"&id="+evt.target.id,
+          "url": "http://localhost:" + port + "/metrics?experiment="+exp_id+"&id="+evt.target.id,
           "method": "GET"
         }).done(function(response) {
           var tableStr = '<table class="table table-striped" border=1>'

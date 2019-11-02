@@ -13,15 +13,16 @@
   <link rel="stylesheet" href="style.css">
   <script type="text/javascript">
     $(document).ready(function() {
+      var port = '{{ port }}';
       $.ajax({
         "async": true,
-        "url": "http://localhost:3333/list",
+        "url": "http://localhost:" + port + "/list",
         "method": "GET"
       }).done(function(response) {
         var tableStr = '<thead class="thead-dark"><tr><th scope="col">Experiments</th></tr></thead>';
         tableStr += '<tbody>';
         response.forEach(function(resObj) {
-          var url = '<a href="http://localhost:3333/experiment?id=' + resObj.id + '">' + resObj.id + '</a>';
+          var url = '<a href="http://localhost:' + port + '/experiment?id=' + resObj.id + '">' + resObj.id + '</a>';
           tableStr += '<tr><td>' + url + '</td></tr>';
           $("#exp-table").html(tableStr);
         })

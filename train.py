@@ -125,7 +125,7 @@ def train_process(args):
 
     set_keras_memory(args.keras_memory)
 
-    lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda + args.wloss_lambda])
+    lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda])
 
     if lw_sum > 1.0:
         args.l1_lambda /= lw_sum
