@@ -74,8 +74,8 @@
       "slices_per_input": 7
     },
     "hyp_search": {
-      "num_epochs": 6,
-      "validation_split": 0.5
+      "slices_per_input": 7,
+      "checkpoint_name": "hyp_loss_weights"
     }
   },
   "inference": {

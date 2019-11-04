@@ -30,7 +30,7 @@ def train_wrap(params, *args):
 
     train_execute(params)
 
-def gpu_check(input_gpuids, percent_limit=0.15):
+def gpu_check(input_gpuids, jobs_per_gpu, percent_limit=0.15):
     ip = [int(id) for id in input_gpuids]
     stats = gpustat.GPUStatCollection.new_query().jsonify()
 
@@ -44,8 +44,11 @@ def gpu_check(input_gpuids, percent_limit=0.15):
             ip.remove(gpu_info['index'])
     if len(ip) == 0:
         raise Exception('None of the GPUs are available. Cannot continue hyperparameter experiment')
-    return [str(id) for id in ip]
 
+    avail_gpus = [str(id) for id in ip]
+    avail_repeat = [[g] * jobs_per_gpu for g in avail_gpus]
+
+    return [item for sublist in avail_repeat for item in sublist]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -60,5 +63,6 @@ if __name__ == '__main__':
     random.seed(hparams.random_seed)
     np.random.seed(hparams.random_seed)
 
-    gpu_ids = gpu_check(hyp_config['gpus'])
+    gpu_ids = gpu_check(hyp_config['gpus'], hyp_config['jobs_per_gpu'])
+    
     hparams.optimize_parallel_gpu(train_wrap, gpu_ids=gpu_ids, max_nb_trials=hyp_config['trials'])
