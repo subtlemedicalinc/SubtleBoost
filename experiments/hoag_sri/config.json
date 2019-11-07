@@ -1,6 +1,5 @@
-
+{
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/hoag/train/checkpoints",
-  "resize": 320,
   "verbose": 1,
   "data_dir": "/home/srivathsa/projects/studies/gad/hoag/preprocess/data",
   "slices_per_input": 5,
@@ -15,9 +14,12 @@
     "joint_normalize": true,
     "dicom_data": "/home/srivathsa/projects/studies/gad/hoag/data",
     "discard_start_percent": 0,
-    "mask_threshold": 0.04,
+    "mask_threshold": 0.1,
     "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/hoag/preprocess/data"
+    "out_dir": "/home/srivathsa/projects/studies/gad/hoag/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true,
+    "resample_isotropic": 1
   },
   "train": {
     "log_dir": "/home/srivathsa/projects/studies/gad/hoag/train/tb",
@@ -40,6 +42,7 @@
     "inference_mpr": true,
     "learn_residual": false,
     "description": "hoag_mpr",
+
     "checkpoint": "hoag_mpr.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/hoag/data",
     "num_channel_first": 32,
@@ -47,6 +50,16 @@
     "stats_base": "/home/srivathsa/projects/studies/gad/hoag/inference",
     "inference_mpr_avg": "mean",
     "zoom": 0,
-    "series_num": 1002
+    "series_num": 1002,
+    "enh_vgg": {
+      "num_rotations": 5,
+      "slices_per_input": 7,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+      "checkpoint": "enh_mask_smooth.checkpoint",
+      "description": "enh_only",
+      "resize": 240,
+      "resample_size": 240,
+      "resample_isotropic": 1
+    }
   }
 }
