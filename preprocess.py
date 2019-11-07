@@ -547,10 +547,11 @@ def resample_isotropic(args, ims, metadata):
         print('New image shape', ims_zero.shape)
         metadata['resampled_size'] = (ims_zero.shape[1], ims_zero.shape[2])
 
-        return np.transpose(
+        ims_iso = np.transpose(
             np.array([ims_zero, ims_low, ims_full]),
             (1, 0, 2, 3)
         )
+        return ims_iso, metadata
 
     return ims, metadata
 
@@ -565,7 +566,8 @@ def reshape_fsl_mask(args, fsl_mask, metadata):
         fsl_mask_ims[:, 1, ...] = np.copy(fsl_mask)
         fsl_mask_ims[:, 2, ...] = np.copy(fsl_mask)
 
-        fsl_reshape, _ = resample_isotropic(args, fsl_mask_ims, metadata)[:, 0, ...]
+        fsl_reshape, _ = resample_isotropic(args, fsl_mask_ims, metadata)
+        fsl_reshape = fsl_reshape[:, 0, ...]
         fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
     return fsl_reshape
 
