@@ -1,6 +1,21 @@
 # SubtleGad
 Gadolinium Contrast Enhancement using Deep Learning
 
+
+- [Install](#install)
+- [Structure](#structure)
+- [Usage](#usage)
+- [Creating experiment configs](#creating-experiment-configs)
+  * [Pre-processing](#pre-processing)
+  * [Training](#training)
+  * [Inference](#inference)
+  * [Note on sub experiments](#note-on-sub-experiments)
+- [Hyperparameter Search](#hyperparameter-search)
+  * [The `tunable` object](#the--tunable--object)
+  * [Running the hyperparameter search](#running-the-hyperparameter-search)
+  * [HypMonitor dashboard](#hypmonitor-dashboard)
+
+
 ## Install
 Currently we use Tensorflow 1.14.0. However, due to a dependency issue, we also install TF 2.0.0.  
 To fix this, manually remove TF 2.0.0 after installing the requirements:
@@ -79,7 +94,7 @@ An example `data.json` would look like
 }
 ```
 
-## Pre-processing
+### Pre-processing
 General template of running the preprocess pipeline is
 ```
 ./scripts/batch_preprocess.sh [experiment_name] [log_dir]
@@ -92,7 +107,7 @@ Example:
 
 The logs will be written to `[log_dir]` and the preprocessed data will be saved to `out_dir` present in config/preprocess.
 
-## Training
+### Training
 General template of running the training pipeline is
 ```
 ./scripts/train.sh [experiment_name] [log_dir]
@@ -105,7 +120,7 @@ Example:
 
 The logs will be written to `[log_dir]` and the checkpoint will be saved to `checkpoint_dir` as configured in config/train.
 
-## Inference
+### Inference
 General template of running the inference pipeline is
 ```
 ./scripts/inference.sh [experiment_name] [log_dir]
@@ -118,7 +133,7 @@ Example:
 
 The logs will be written to `[log_dir]` and the dicoms will be written to `data_dir` as configured in config/inference.
 
-## Note on sub experiments
+### Note on sub experiments
 All three workflows can have sub-experiments i.e multiple experiments under the same config but with minor changes to only a few params. A sample training sub-experiment config would look like
 
 `configs/experiments/train_tiantan/config.json`
@@ -203,7 +218,7 @@ specified.
 }
 ```
 
-## Running the hyperparameter search
+### Running the hyperparameter search
 
 Once the hyperparam config is defined in `configs/hyperparam`, the hyperparam script can be started by running
 
@@ -213,7 +228,7 @@ $ ./scripts/hyperparam.sh <hyperparam_name>
 
 where `hyperparam_name` is the name of the JSON file you have defined in `configs/hyperparam`.
 
-## HypMonitor dashboard
+### HypMonitor dashboard
 
 HypMonitor is a simple web GUI dashboard for monitoring hyperparameter progress
 and easy tracking of training logs. Run the following to setup the dashboard
