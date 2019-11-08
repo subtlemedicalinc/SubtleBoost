@@ -24,7 +24,7 @@ General workflow:
 In general, the helper shell scripts should be used instead of directly calling the python programs. This helps with batch processing and automatic logging.
 
 ## Creating experiment configs
-All the three processes in the workflow depend on experiment configs present in different experiment folders under `experiments`. The params are configured in `config.json` and the data lists are configured in `data.json`.
+All the three processes in the workflow depend on experiment configs present in different experiment folders under `configs/experiments`. The params are configured in `config.json` and the data lists are configured in `data.json`.
 
 An example `config.json` would look like
 
@@ -121,7 +121,7 @@ The logs will be written to `[log_dir]` and the dicoms will be written to `data_
 ## Note on sub experiments
 All three workflows can have sub-experiments i.e multiple experiments under the same config but with minor changes to only a few params. A sample training sub-experiment config would look like
 
-`experiments/train_tiantan/config.json`
+`configs/experiments/train_tiantan/config.json`
 
 ```
 ...
@@ -152,3 +152,86 @@ Using the above config we can run the following sub-experiments
 ./scripts/train.sh tiantan_sri/with_mpr /mylogs/tiantan_sri_logs/
 ./scripts/train.sh tiantan_sri /mylogs/tiantan_sri_logs/ # runs with default config
 ```
+
+## Hyperparameter Search
+
+Hyperparameter search experiments can be defined in `configs/hyperparam`.
+Example can be found in `configs/hyperparam/loss_weights.json`
+
+The following are the high-level parameters that can be defined in a hyperparam
+config
+
+- `name` - name of the hyperparam experiment
+- `trials` - number of random trials
+- `jobs_per_gpu` - number of parallel training jobs that can be run on a single gpu
+- `gpus` - array of GPU IDs that are available for the hyperparam script
+- `strategy` - hyperparam search strategy - `random_search` or `grid_search`
+- `base_experiment` - base experiment config name from which the default parameters are to be taken
+- `base_model` - base model config from which model defaults are to be taken
+- `tunable` - set of tunable parameters for the experiment and the model
+- `plot` - set of case and slice numbers that are plotted on tensorboard
+- `log_dir` - directory path where the hyperparameter script creates a folder
+with logs, metrics and tensorboard protobuf objects
+
+### The `tunable` object
+
+The `tunable` object has `experiment` and `model` sub-objects where the
+parameters that need to be tuned are defined. `tunable` params can either be a
+`range` which has a `low` and a `high` value and the values are randomly
+sampled from a uniform distribution or the param can be a `list` with `options`
+specified.
+
+**Example**
+
+```json
+{
+  "tunable": {
+    "experiment": {
+      "l1_lambda": {
+        "type": "range",
+        "low": 0,
+        "high": 1
+      }
+    },
+    "model": {
+      "num_filters_first_conv": {
+        "type": "list",
+        "options": [8, 16, 24, 32]
+      }
+    }
+  }
+}
+```
+
+## Running the hyperparameter search
+
+Once the hyperparam config is defined in `configs/hyperparam`, the hyperparam script can be started by running
+
+```
+$ ./scripts/hyperparam.sh <hyperparam_name>
+```
+
+where `hyperparam_name` is the name of the JSON file you have defined in `configs/hyperparam`.
+
+## HypMonitor dashboard
+
+HypMonitor is a simple web GUI dashboard for monitoring hyperparameter progress
+and easy tracking of training logs. Run the following to setup the dashboard
+
+```
+$ ./hypmonitor/setup.sh <base_log_path> <port>
+$ source ~/.bashrc
+```
+
+where the `base_log_path` should be the base path of hyperparameter logs and
+and the server is run on the specified `port`.
+
+To start/stop the hypmonitor service run
+```
+$ hypmonitor [start | stop]
+```
+
+The dashboard can be accessed at `http://localhost:<port>` or by clicking the
+`Detailed logs` link in the tensorboard's `Text` tab.
+
+The server access logs can be found in `~/.hypmonitor`.
