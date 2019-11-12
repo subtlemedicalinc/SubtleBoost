@@ -1,7 +1,7 @@
 import numpy as np
 import h5py
 
-from . import io as io_utils
+from . import io as utils_io
 
 def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     # FIXME: remove code duplication
@@ -101,7 +101,7 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
     '''
 
     if file_type is None:
-        file_type = io_utils.get_file_type(input_file)
+        file_type = utils_io.get_file_type(input_file)
 
     if file_type == 'npy':
         return load_slices_npy(input_file, slices, dim=dim)
@@ -132,7 +132,7 @@ def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'})
         number of slices in dimension axis
     '''
 
-    data_shape = io_utils.get_shape(data_file, file_type, params)
+    data_shape = utils_io.get_shape(data_file, file_type, params)
     return data_shape[axis]
 
 

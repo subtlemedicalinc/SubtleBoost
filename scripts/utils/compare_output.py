@@ -8,7 +8,7 @@ plt.switch_backend('agg')
 
 import argparse
 
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 import subtle.subtle_plot as suplot
 
 usage_str = 'usage: %(prog)s [options]'
@@ -27,8 +27,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    data_truth = io_utils.load_file(args.file_truth)
-    data_predict = io_utils.load_file(args.file_predict)
+    data_truth = utils_io.load_file(args.file_truth)
+    data_predict = utils_io.load_file(args.file_predict)
 
     n_slices = data_truth.shape[0]
 

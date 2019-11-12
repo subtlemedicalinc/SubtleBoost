@@ -30,8 +30,8 @@ import sigpy as sp
 import keras.callbacks
 
 from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model, load_data_loader, gan_model
-import subtle.utils.io as io_utils
-import subtle.utils.experiment as exp_utils
+import subtle.utils.io as utils_io
+import subtle.utils.experiment as utils_exp
 from scipy.ndimage.interpolation import rotate
 import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
@@ -83,11 +83,11 @@ def inference_process(args):
         if args.verbose:
             print('loading preprocessed data from', args.data_preprocess)
 
-        data = io_utils.load_file(args.data_preprocess, params={'h5_key': 'data'})
-        data_mask = io_utils.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}) if io_utils.has_h5_key(args.data_preprocess, 'data_mask') else None
+        data = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data'})
+        data_mask = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}) if utils_io.has_h5_key(args.data_preprocess, 'data_mask') else None
 
-        metadata = io_utils.load_h5_metadata(args.data_preprocess)
-        dicom_dirs = io_utils.get_dicom_dirs(args.path_base, override=args.override)
+        metadata = utils_io.load_h5_metadata(args.data_preprocess)
+        dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
 
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
@@ -106,7 +106,7 @@ def inference_process(args):
             print('done')
 
     # get ground-truth for testing (e.g. hist re-normalization)
-    im_gt, hdr_gt = io_utils.dicom_files(args.path_full, normalize=False)
+    im_gt, hdr_gt = utils_io.dicom_files(args.path_full, normalize=False)
 
     if args.denoise:
         if args.verbose:
@@ -177,7 +177,7 @@ def inference_process(args):
     }
     data_loader = load_data_loader(args.model_name)
 
-    mconf_dict = exp_utils.get_model_config(args.model_name, args.model_config, model_type='generators')
+    mconf_dict = utils_exp.get_model_config(args.model_name, args.model_config, model_type='generators')
     num_poolings = mconf_dict['num_poolings'] if 'num_poolings' in mconf_dict else 3
 
     ### Start IF condition for 3D patch based
@@ -320,7 +320,7 @@ def inference_process(args):
                     'data_mask': data_mask_rot,
                     'h5_key': 'data'
                 }
-                io_utils.save_data_h5(data_file, **params)
+                utils_io.save_data_h5(data_file, **params)
 
                 for ii, slice_axis in enumerate(slice_axes):
                     gen_kwargs['data_list'] = [data_file]
@@ -466,11 +466,11 @@ def inference_process(args):
         data_file_base = os.path.basename(data_file)
         _1, _2 = os.path.splitext(data_file_base)
         data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-        io_utils.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
+        utils_io.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
 
-    io_utils.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+    utils_io.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
     if args.brain_only:
         data_zero = original_data[..., 0]
@@ -481,7 +481,7 @@ def inference_process(args):
 
         data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
 
-        io_utils.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
+        utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
 
     if args.stats_file and not metadata['inference_only']:
         print('running stats on inference...')

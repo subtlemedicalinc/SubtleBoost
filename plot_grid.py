@@ -9,7 +9,7 @@ from matplotlib.animation import FuncAnimation
 
 import subtle.subtle_plot as suplot
 import subtle.subtle_preprocess as sup
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 
 import argparse
 
@@ -23,7 +23,7 @@ def imshowtile(x, cmap='gray', vmin=None, vmax=None):
     plt.imshow(x.transpose((0,2,1)).reshape((x.shape[0], -1)), cmap=cmap, vmin=vmin, vmax=vmax)
 
 def save_video(input, output, h5_key='data'):
-    data = io_utils.load_file(input, params={'h5_key': h5_key})
+    data = utils_io.load_file(input, params={'h5_key': h5_key})
 
     X0 = data[:, 0, ...].squeeze()
     X1 = data[:, 1, ...].squeeze()
@@ -62,7 +62,7 @@ def save_video(input, output, h5_key='data'):
 
 
 def plot_h5(input, output, idx=None, h5_key='data'):
-    data = io_utils.load_file(input, params={'h5_key': h5_key})
+    data = utils_io.load_file(input, params={'h5_key': h5_key})
 
     if idx is None:
         idx = data.shape[0] // 2

@@ -31,7 +31,7 @@ sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/W
 import SimpleITK as sitk
 
 import subtle.subtle_preprocess as sup
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 import subtle.subtle_args as sargs
 
 
@@ -89,7 +89,7 @@ def get_images(args, metadata):
     metadata['use_base_path'] = use_base_path
 
     if use_base_path:
-        dicom_dirs = io_utils.get_dicom_dirs(args.path_base, override=args.override)
+        dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
 
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
@@ -106,13 +106,13 @@ def get_images(args, metadata):
             print('path_low = {}'.format(args.path_low))
             print('path_full = {}'.format(args.path_full))
 
-    ims_zero, hdr_zero = io_utils.dicom_files(args.path_zero, normalize=False)
-    ims_low, hdr_low = io_utils.dicom_files(args.path_low, normalize=False)
-    ims_full, hdr_full = io_utils.dicom_files(args.path_full, normalize=False)
+    ims_zero, hdr_zero = utils_io.dicom_files(args.path_zero, normalize=False)
+    ims_low, hdr_low = utils_io.dicom_files(args.path_low, normalize=False)
+    ims_full, hdr_full = utils_io.dicom_files(args.path_full, normalize=False)
 
-    pixel_spacing_zero = io_utils.get_pixel_spacing(hdr_zero)
-    pixel_spacing_low = io_utils.get_pixel_spacing(hdr_low)
-    pixel_spacing_full = io_utils.get_pixel_spacing(hdr_full)
+    pixel_spacing_zero = utils_io.get_pixel_spacing(hdr_zero)
+    pixel_spacing_low = utils_io.get_pixel_spacing(hdr_low)
+    pixel_spacing_full = utils_io.get_pixel_spacing(hdr_full)
 
     metadata['pixel_spacing_zero'] = pixel_spacing_zero
     metadata['pixel_spacing_low'] = pixel_spacing_low
@@ -645,7 +645,7 @@ def execute_chain(args):
     print(args.debug_print())
     print('------\n\n\n')
     ims, ims_mask, metadata = preprocess_chain(args)
-    io_utils.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
+    utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
 
 if __name__ == '__main__':
     args = fetch_args()

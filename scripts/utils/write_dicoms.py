@@ -18,7 +18,7 @@ import datetime
 import time
 
 import subtle.subtle_preprocess as supre
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 
 import argparse
 
@@ -39,13 +39,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    data_in = io_utils.load_file(args.input)
+    data_in = utils_io.load_file(args.input)
 
     if args.metadata:
-        metadata = io_utils.load_h5_metadata(args.metadata)
+        metadata = utils_io.load_h5_metadata(args.metadata)
     else:
-        metadata = io_utils.load_h5_metadata(args.input)
+        metadata = utils_io.load_h5_metadata(args.input)
 
     data_out = supre.undo_scaling(data_in, metadata, verbose=args.verbose)
 
-    io_utils.write_dicoms(args.path_ref, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)
+    utils_io.write_dicoms(args.path_ref, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description)

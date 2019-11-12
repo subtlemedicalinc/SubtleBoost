@@ -29,7 +29,7 @@ import numpy as np
 import keras.callbacks
 
 import subtle.subtle_dnn as sudnn
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 import subtle.subtle_generator as sugen
 import subtle.subtle_loss as suloss
 import subtle.subtle_plot as suplot
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         print('loading data from {}'.format(args.data_list_file))
     tic = time.time()
 
-    data_list = io_utils.get_data_list(args.data_list_file, file_ext=args.file_ext, data_dir=args.data_dir)
+    data_list = utils_io.get_data_list(args.data_list_file, file_ext=args.file_ext, data_dir=args.data_dir)
 
     # each element of the data_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
@@ -102,10 +102,10 @@ if __name__ == '__main__':
 
     # get dimensions from first file
     if args.gen_type == 'legacy':
-        data_shape = io_utils.get_shape(data_list[0])
+        data_shape = utils_io.get_shape(data_list[0])
         _, _, nx, ny = data_shape
     elif args.gen_type == 'split':
-        data_shape = io_utils.get_shape(data_list[0], params={'h5_key': 'data/X'})
+        data_shape = utils_io.get_shape(data_list[0], params={'h5_key': 'data/X'})
         print(data_shape)
     #FIXME: check that image sizes are the same
         _, nx, ny, nz = data_shape
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
             Y_prediction = m.model.predict_generator(generator=prediction_generator, max_queue_size=args.max_queue_size, workers=args.num_workers, use_multiprocessing=args.use_multiprocessing, verbose=args.verbose)
 
-            data = io_utils.load_file(data_file).transpose((0, 2, 3, 1))
+            data = utils_io.load_file(data_file).transpose((0, 2, 3, 1))
 
             # if residual mode is on, we need to add the original contrast back in
             if args.residual_mode:
@@ -183,7 +183,7 @@ if __name__ == '__main__':
             if args.verbose:
                 print('output: {}'.format(data_file_predict))
 
-            io_utils.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
+            utils_io.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
             for __idx in np.linspace(.1*Y_prediction.shape[0], .9*Y_prediction.shape[0], 5):
                 _idx = int(__idx)
                 plot_file_predict = '{}/plots/{}_predict_{}_{:03d}.png'.format(args.predict_dir, _1, args.job_id, _idx)

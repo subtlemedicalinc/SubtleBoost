@@ -2,7 +2,7 @@ import numpy as np
 import itertools
 from tqdm import tqdm
 
-from . import io as io_utils
+from . import io as utils_io
 
 def load_blocks(ims, indices=None, block_size=64, strides=16):
     blocks = []
@@ -19,7 +19,7 @@ def load_blocks(ims, indices=None, block_size=64, strides=16):
     return np.array(blocks)
 
 def get_block_indices(data_file, block_size=64, strides=16, params={'h5_key': 'data'}):
-    ims = io_utils.load_file(data_file, file_type='h5', params=params)
+    ims = utils_io.load_file(data_file, file_type='h5', params=params)
     ims_zero, _, _ = ims.transpose(1, 0, 2, 3)
 
     get_sweeps = lambda N: [(b*strides, (b*strides) + block_size) for b in range(((N - block_size + strides) // strides) + 1)]

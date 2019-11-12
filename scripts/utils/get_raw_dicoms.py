@@ -27,7 +27,7 @@ import configargparse as argparse
 
 import numpy as np
 
-import subtle.utils.io as io_utils
+import subtle.utils.io as utils_io
 import subtle.subtle_args as sargs
 from distutils.dir_util import copy_tree
 
@@ -45,13 +45,13 @@ if __name__ == '__main__':
     args.path_low = None
     args.path_full = None
 
-    args.path_zero, args.path_low, args.path_full = io_utils.get_dicom_dirs(args.path_base, override=args.override)
+    args.path_zero, args.path_low, args.path_full = utils_io.get_dicom_dirs(args.path_base, override=args.override)
 
     _, path_zero = os.path.split(args.path_zero)
     _, path_low = os.path.split(args.path_low)
     _, path_full = os.path.split(args.path_full)
 
-    for dicom_dir in io_utils.get_dicom_dirs(args.path_base, override=args.override):
+    for dicom_dir in utils_io.get_dicom_dirs(args.path_base, override=args.override):
         _, base_dir = os.path.split(dicom_dir)
         try:
             mydir = '{}/{}'.format(args.path_out, base_dir)

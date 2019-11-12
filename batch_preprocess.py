@@ -1,7 +1,7 @@
 import os
 import traceback
 
-import subtle.utils.experiment as exp_utils
+import subtle.utils.experiment as utils_exp
 import subtle.subtle_args as sargs
 
 from plot_grid import plot_h5, save_video
@@ -11,7 +11,7 @@ if __name__ == '__main__':
     parser = sargs.get_parser()
     args = parser.parse_args()
 
-    data_list = exp_utils.get_experiment_data(args.experiment, dataset='all')
+    data_list = utils_exp.get_experiment_data(args.experiment, dataset='all')
 
     if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
@@ -21,7 +21,7 @@ if __name__ == '__main__':
         print('\n-------------\n')
         print('*****Processing {}*****\n'.format(case_num))
 
-        config = exp_utils.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
+        config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
         config.path_base = os.path.join(config.dicom_data, case_num)
         config.out_file = os.path.join(config.out_dir, '{}.h5'.format(case_num))
 

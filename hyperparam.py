@@ -10,15 +10,15 @@ import numpy as np
 import configargparse as argparse
 
 import subtle.subtle_loss as suloss
-import subtle.utils.misc as misc_utils
-import subtle.utils.hyperparameter as hyp_utils
+import subtle.utils.misc as utils_misc
+import subtle.utils.hyperparameter as utils_hyp
 from subtle.dnn.generators import GeneratorUNet2D
 from subtle.data_loaders import SliceLoader
 from train import train_process as train_execute
 
 
 def train_wrap(params, *args):
-    ts_hash = misc_utils.get_timestamp_hash(n=4)
+    ts_hash = utils_misc.get_timestamp_hash(n=4)
     dirpath_trial = os.path.join(params.hyp_log_dir, 'trial_{}'.format(ts_hash))
 
     if not os.path.exists(dirpath_trial):
@@ -59,10 +59,10 @@ if __name__ == '__main__':
     if not args.hypsearch_name:
         raise ValueError('Hyperparameter search name should be specified')
 
-    hparams, hyp_config = hyp_utils.get_hypsearch_params(args.hypsearch_name)
+    hparams, hyp_config = utils_hyp.get_hypsearch_params(args.hypsearch_name)
     random.seed(hparams.random_seed)
     np.random.seed(hparams.random_seed)
 
     gpu_ids = gpu_check(hyp_config['gpus'], hyp_config['jobs_per_gpu'])
-    
+
     hparams.optimize_parallel_gpu(train_wrap, gpu_ids=gpu_ids, max_nb_trials=hyp_config['trials'])

@@ -2,8 +2,8 @@ import os
 import json
 from test_tube import HyperOptArgumentParser
 
-from . import experiment as exp_utils
-from . import misc as misc_utils
+from . import experiment as utils_exp
+from . import misc as utils_misc
 
 def get_tunable_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))
@@ -27,9 +27,9 @@ def get_hypsearch_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     else:
         sub_experiment = None
 
-    default_config = exp_utils.get_config(experiment, sub_experiment, config_key='train')
+    default_config = utils_exp.get_config(experiment, sub_experiment, config_key='train')
 
-    hyp_hash = misc_utils.get_timestamp_hash()
+    hyp_hash = utils_misc.get_timestamp_hash()
     hyp_log_dir = os.path.join(hyp_config['log_dir'], '{}_{}'.format(hypsearch_name, hyp_hash))
     default_config.config_dict['hyp_log_dir'] = hyp_log_dir
 

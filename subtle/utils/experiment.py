@@ -3,7 +3,7 @@ import json
 import re as regex
 
 import subtle.subtle_args as sargs
-from . import misc as misc_utils
+from . import misc as utils_misc
 from scripts.utils.print_config_json import IGNORE_KEYS as OVERRIDE_CONFIG_KEYS
 
 def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./configs/experiments'):
@@ -61,7 +61,7 @@ def get_model_config(model_name, config_key='base', model_type='generators', dir
         return base_config
 
     sub_config = all_config[config_key]
-    return misc_utils.dict_merge(base_config, sub_config)
+    return utils_misc.dict_merge(base_config, sub_config)
 
 def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='all'):
     fpath_json = os.path.join(dirpath_exp, exp_name, 'data.json')

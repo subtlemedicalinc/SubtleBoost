@@ -1,7 +1,7 @@
 import os
 import traceback
 
-import subtle.utils.experiment as exp_utils
+import subtle.utils.experiment as utils_exp
 import subtle.subtle_args as sargs
 
 from plot_grid import plot_h5
@@ -11,12 +11,12 @@ if __name__ == '__main__':
     parser = sargs.get_parser()
     args = parser.parse_args()
 
-    data_list = exp_utils.get_experiment_data(args.experiment, dataset='test')
+    data_list = utils_exp.get_experiment_data(args.experiment, dataset='test')
 
     for case_num in data_list:
         print('\n-------------\n')
         print('*****Running inference for {}*****\n'.format(case_num))
-        config = exp_utils.get_config(args.experiment, args.sub_experiment, config_key='inference')
+        config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='inference')
         config.checkpoint_file = '{}/{}'.format(config.checkpoint_dir, config.checkpoint)
 
         path_base = '{}/{}'.format(config.data_dir, case_num)

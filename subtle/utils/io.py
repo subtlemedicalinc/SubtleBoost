@@ -17,7 +17,7 @@ import numpy as np
 from glob import glob
 from tqdm import tqdm
 
-from . import slice as slice_utils
+from . import slice as utils_slice
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
@@ -273,10 +273,10 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
     return npy_list
 
 def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
-    return slice_utils.load_slices(input_file, slices=None, file_type=file_type, params=params)
+    return utils_slice.load_slices(input_file, slices=None, file_type=file_type, params=params)
 
 def load_h5_file(h5_file, h5_key='data'):
-    return slice_utils.load_slices_h5(h5_file, slices=None, h5_key=h5_key)
+    return utils_slice.load_slices_h5(h5_file, slices=None, h5_key=h5_key)
 
 def load_h5_metadata(h5_file, key='metadata'):
     metadata = {}
@@ -287,7 +287,7 @@ def load_h5_metadata(h5_file, key='metadata'):
 
 
 def load_npy_file(npy_file):
-    return slice_utils.load_slices_npy(npy_file, slices=None)
+    return utils_slice.load_slices_npy(npy_file, slices=None)
 
 def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
 
