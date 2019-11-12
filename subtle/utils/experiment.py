@@ -102,7 +102,10 @@ def match_layer_to_config(config_dict, layer_name):
     return layer_config
 
 def get_layer_config(config_dict, param_name, layer_name=''):
-    layer_config = match_layer_to_config(config_dict, layer_name)
-    if param_name in layer_config:
-        return layer_config[param_name]
-    return config_dict['all'][param_name]
+    try:
+        layer_config = match_layer_to_config(config_dict, layer_name)
+        if param_name in layer_config:
+            return layer_config[param_name]
+        return config_dict['all'][param_name]
+    except KeyError:
+        raise ValueError('Parameter "{}" not defined for layer - "{}"'.format(param_name, layer_name))
