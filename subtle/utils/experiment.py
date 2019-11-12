@@ -3,7 +3,7 @@ import json
 import re as regex
 
 import subtle.subtle_args as sargs
-from . import misc as utils_misc
+import subtle.utils.misc as utils_misc
 from scripts.utils.print_config_json import IGNORE_KEYS as OVERRIDE_CONFIG_KEYS
 
 def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./configs/experiments'):

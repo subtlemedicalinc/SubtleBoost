@@ -1,9 +1,8 @@
 import os
 import json
 from test_tube import HyperOptArgumentParser
-
-from . import experiment as utils_exp
-from . import misc as utils_misc
+import subtle.utils.experiment as utils_exp
+import subtle.utils.misc as utils_misc
 
 def get_tunable_params(hypsearch_name, dirpath_hyp='./configs/hyperparam'):
     fpath_json = os.path.join(dirpath_hyp, '{}.json'.format(hypsearch_name))
