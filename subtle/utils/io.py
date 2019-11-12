@@ -17,8 +17,6 @@ import numpy as np
 from glob import glob
 from tqdm import tqdm
 
-from . import slice as utils_slice
-
 def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
         series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
     """Write output numpy array to dicoms, given input dicoms.
@@ -273,10 +271,10 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
     return npy_list
 
 def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
-    return utils_slice.load_slices(input_file, slices=None, file_type=file_type, params=params)
+    return load_slices(input_file, slices=None, file_type=file_type, params=params)
 
 def load_h5_file(h5_file, h5_key='data'):
-    return utils_slice.load_slices_h5(h5_file, slices=None, h5_key=h5_key)
+    return load_slices_h5(h5_file, slices=None, h5_key=h5_key)
 
 def load_h5_metadata(h5_file, key='metadata'):
     metadata = {}
@@ -287,7 +285,7 @@ def load_h5_metadata(h5_file, key='metadata'):
 
 
 def load_npy_file(npy_file):
-    return utils_slice.load_slices_npy(npy_file, slices=None)
+    return load_slices_npy(npy_file, slices=None)
 
 def load_npy_files(data_dir, npy_list=None, max_data_sets=np.inf):
 
@@ -470,3 +468,112 @@ def has_h5_key(fpath_h5, key):
     h5_file.close()
 
     return has_key
+
+def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
+    # FIXME: remove code duplication
+    F = h5py.File(input_file, 'r')
+    if slices is None: # load the full volume
+        if h5_key == 'all':
+            d1 = np.array(F['data'])
+            d2 = np.array(F['data_mask'])
+            data = np.array([d1, d2])
+        else:
+            data = np.array(F[h5_key])
+    else:
+        slices_unique, slices_inverse = np.unique(slices, return_index=False, return_inverse=True, return_counts=False)
+        if dim == 0:
+            if h5_key == 'all':
+                d1 = np.array(F['data'][slices_unique, :, :, :])
+                d2 = np.array(F['data_mask'][slices_unique, :, :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[slices_inverse, :, :, :]
+                    d2 = d2[slices_inverse, :, :, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][slices_unique, :, :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[slices_inverse, :, :, :]
+        elif dim == 1:
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, slices_unique,  :, :])
+                d2 = np.array(F['data_mask'][:, slices_unique,  :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, slices_inverse, :, :]
+                    d2 = d2[:, slices_inverse, :, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, slices_unique,  :, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, slices_inverse, :, :]
+        elif dim == 2:
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, :, slices_unique, :])
+                d2 = np.array(F['data_mask'][:, :, slices_unique, :])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, :, slices_inverse, :]
+                    d2 = d2[:, :, slices_inverse, :]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, :, slices_unique, :])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, :, slices_inverse, :]
+        elif dim == 3:
+            if h5_key == 'all':
+                d1 = np.array(F['data'][:, :, :, slices_unique])
+                d2 = np.array(F['data_mask'][:, :, :, slices_unique])
+                if len(slices_unique) < len(slices_inverse):
+                    d1 = d1[:, :, :, slices_inverse]
+                    d2 = d2[:, :, :, slices_inverse]
+                data = np.array([d1, d2])
+            else:
+                data = np.array(F[h5_key][:, :, :, slices_unique])
+                if len(slices_unique) < len(slices_inverse):
+                    data = data[:, :, :, slices_inverse]
+    F.close()
+    return data
+
+def load_slices_npy(input_file, slices=None, dim=0):
+    d = np.load(input_file, mmap_mode='r')
+    if slices is None:
+        return d
+    else:
+        if dim == 0:
+            return d[slices, :, :, :]
+        elif dim == 1:
+            return d[:, slices, :, :]
+        elif dim == 2:
+            return d[:, :, slices, :]
+        elif dim == 3:
+            return d[:, :, :, slices]
+
+def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}, dim=0):
+    ''' Load some or all slices from data file
+
+    Parameters:
+    -----------
+    input_file : string
+        name of data file
+    slices : numpy array or list
+        list of slices to load. If None, load all slices
+    file_type : string
+        defines the file type of the input data
+    params : dict
+        dictionary used for loading the data
+
+    Returns:
+    --------
+    out : numpy array
+        numpy array
+    '''
+
+    if file_type is None:
+        file_type = utils_io.get_file_type(input_file)
+
+    if file_type == 'npy':
+        return load_slices_npy(input_file, slices, dim=dim)
+    elif file_type == 'h5':
+        return load_slices_h5(input_file, slices, h5_key=params['h5_key'], dim=dim)
+    else:
+        #FIXME add real exception handling
+        print('subtle_io/load_slices: ERROR. unrecognized file type', file_type)
+        sys.exit(-1)

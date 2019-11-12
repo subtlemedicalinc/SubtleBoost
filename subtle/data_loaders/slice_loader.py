@@ -12,7 +12,8 @@ import numpy as np
 import sigpy as sp
 import keras
 
-from subtle.utils.slice import load_slices, build_slice_list, get_num_slices
+from subtle.utils.slice import build_slice_list, get_num_slices
+from subtle.utils.io import load_slices
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth
 
 class SliceLoader(keras.utils.Sequence):
