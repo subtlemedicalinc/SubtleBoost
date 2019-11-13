@@ -567,7 +567,7 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
     '''
 
     if file_type is None:
-        file_type = utils_io.get_file_type(input_file)
+        file_type = get_file_type(input_file)
 
     if file_type == 'npy':
         return load_slices_npy(input_file, slices, dim=dim)
