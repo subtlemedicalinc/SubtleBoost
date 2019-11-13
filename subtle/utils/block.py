@@ -2,7 +2,7 @@ import numpy as np
 import itertools
 from tqdm import tqdm
 
-import subtle.utils.io as utils_io
+from . import io as utils_io
 
 def load_blocks(ims, indices=None, block_size=64, strides=16):
     blocks = []

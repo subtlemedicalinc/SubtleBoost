@@ -1,7 +1,7 @@
 import numpy as np
 import h5py
 
-import subtle.utils.io as utils_io
+from . import io as utils_io
 
 def get_num_slices(data_file, axis=0, file_type=None, params={'h5_key': 'data'}):
     ''' Get number of slices along a particular axis in data file
