@@ -5,19 +5,29 @@
   "gpu": 0,
   "slices_per_input": 5,
   "preprocess": {
-    "transform_type": "affine",
-    "skip_hist_norm": true,
+    "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data",
+    "transform_type": "rigid",
     "normalize": true,
     "normalize_fun": "mean",
+    "discard_start_percent": 0,
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots",
     "discard_end_percent": 0,
-    "joint_normalize": true,
-    "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data",
-    "fsl_mask": true,
-    "discard_start_percent": 0,
-    "mask_threshold": 0.04,
+    "mask_threshold": 0.1,
     "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data"
+    "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true,
+    "save_preprocess_video": true,
+    "resample_isotropic": 1,
+    "batch1": {
+      "data_batch": "0,24"
+    },
+    "batch2": {
+      "data_batch": "24,48"
+    },
+    "batch3": {
+      "data_batch": "48,70"
+    }
   },
   "train": {
     "max_data_sets": 100,
@@ -105,6 +115,16 @@
       "resample_size": 320,
       "description": "320nompr",
       "checkpoint": "320nompr"
+    },
+    "enh_vgg": {
+      "inference_mpr": true,
+      "description": "enh_vgg",
+      "num_rotations": 5,
+      "slices_per_input": 7,
+      "resize": 240,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+      "checkpoint": "enh_vgg.checkpoint",
+      "resample_isotropic": 1
     }
   }
 }
