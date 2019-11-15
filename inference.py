@@ -406,12 +406,23 @@ def inference_process(args):
 
         print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
-
+    if args.resample_isotropic > 0:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        # res_iso = [args.resample_isotropic] * 3
-        # y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
-        # Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-        #
+        res_iso = [args.resample_isotropic] * 3
+        y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        # Isotropic resampling leaves some artifacts around the brain which has negative values
+        Y_prediction = np.clip(Y_prediction, 0, Y_prediction.max())
+
+        ypred_mask = supre.mask_im(np.copy(Y_prediction).transpose(0, 3, 1, 2), threshold=0.08, noise_mask_area=True, use_selem=False)
+        ypred_mask = ypred_mask.transpose(0, 2, 3, 1)
+
+        Y_prediction *= ypred_mask
+
+        args.stats_file = None
+        # Resampling the original data and mask back to the native resolution takes a long time. Hence uncommenting those two steps and making the stats_file to None so that metrics are not calculated
+
         # original_data = resample_unisotropic(args, original_data, metadata)
         # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 

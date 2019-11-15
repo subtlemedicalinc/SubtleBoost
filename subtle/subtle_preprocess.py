@@ -39,7 +39,7 @@ def rescale_slope_intercept(im, rs, ri, ss):
 
 
 # FIXME: do differently for each image
-def mask_im(im, threshold=.08, noise_mask_area=False):
+def mask_im(im, threshold=.08, noise_mask_area=False, use_selem=True):
     '''
     Image masking
     Masks an image set based on max val compared to threshold.
@@ -51,7 +51,11 @@ def mask_im(im, threshold=.08, noise_mask_area=False):
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
 
     if noise_mask_area:
-        mask = binary_erosion(mask.reshape((n*N*nx, ny)), selem=rectangle(7, 4)).reshape((N, n, nx, ny))
+        if use_selem:
+            er_args = {'selem': rectangle(7, 4)}
+        else:
+            er_args = {}
+        mask = binary_erosion(mask.reshape((n*N*nx, ny)), **er_args).reshape((N, n, nx, ny))
 
         for cont in np.arange(n):
             mask[:, cont, ...] = get_largest_connected_component(mask[:, cont, ...])
