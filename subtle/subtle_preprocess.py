@@ -175,7 +175,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     return im_out
 
 
-def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None):
+def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -197,6 +197,8 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
             print("using default '{}' parameter map".format(default_transform))
         param_map = sitk.GetDefaultParameterMap(default_transform)
 
+    param_map['MaximumNumberOfIterations'] = [str(max_iter)]
+
     ef = sitk.ElastixImageFilter()
     ef.SetFixedImage(sim0)
     ef.SetMovingImage(sim1)
@@ -206,6 +208,7 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
         print('image registration')
         tic = time.time()
 
+    # TODO: Set mask for registration by using ef.SetFixedMask(brain_mask)
     ef.Execute()
 
     if verbose:
