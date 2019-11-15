@@ -83,6 +83,7 @@ def _preprocess_args(parser):
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
 
     parser.add_argument('--save_preprocess_video', action='store_true', dest='save_preprocess_video', help='If True, preprocess videos are saved in MP4 format', default=False)
+    parser.add_argument('--data_batch', action='store', dest='data_batch', type=str, help='Argument to preprocess data in batches. This string specified the start index and the number of cases to process in a comma separated fashion. Ex: "0, 10" will process cases starting from index 0 to index 10 as defined in the experiment data.json')
 
     return parser
 

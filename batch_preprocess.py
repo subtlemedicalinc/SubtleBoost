@@ -11,7 +11,19 @@ if __name__ == '__main__':
     parser = sargs.get_parser()
     args = parser.parse_args()
 
-    data_list = utils_exp.get_experiment_data(args.experiment, dataset='all')
+    config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
+
+    if config.data_batch:
+        batch_splits = config.data_batch.split(',')
+        batch_start = int(batch_splits[0])
+        batch_end = int(batch_splits[1])
+    else:
+        batch_start = batch_end = None
+
+    data_list = utils_exp.get_experiment_data(args.experiment, dataset='all', start=batch_start, end=batch_end)
+
+    print('Processing the following cases...')
+    print(data_list)
 
     if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
