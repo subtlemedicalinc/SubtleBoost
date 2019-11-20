@@ -181,9 +181,11 @@ def dicom_files(dicom_dir, normalize=False):
     #%% loop through the Dicom list
 
     for filename in lstDCM:
-        ds = pydicom.read_file(filename)
-        img_array[lstDCM.index(filename), :, :] = np.array(ds.pixel_array)
-
+        try:
+            ds = pydicom.read_file(filename)
+            img_array[lstDCM.index(filename), :, :] = np.array(ds.pixel_array)
+        except Exception:
+            continue
     #%% Normalize the array
 
     if normalize is True:

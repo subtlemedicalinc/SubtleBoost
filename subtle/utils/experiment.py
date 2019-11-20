@@ -89,7 +89,7 @@ def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='
     else:
         data = train_data + test_data + val_data
 
-    if (start + end) > 0:
+    if start is not None and end is not None:
         data = data[start:end]
 
     return data
