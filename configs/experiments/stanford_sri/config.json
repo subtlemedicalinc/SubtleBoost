@@ -74,11 +74,11 @@
   "inference": {
     "learn_residual": false,
     "inference_mpr_avg": "mean",
-    "predict_dir": "/home/srivathsa/projects/studies/gad/stanford/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/stanford/data",
     "series_num": 1002,
     "stats_base": "/home/srivathsa/projects/studies/gad/stanford/inference",
     "zoom": 0,
+    "procs_per_gpu": 2,
     "512_nompr": {
       "inference_mpr": false,
       "resize": 512,

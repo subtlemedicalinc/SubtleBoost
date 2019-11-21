@@ -20,6 +20,8 @@ import time
 import random
 from warnings import warn
 import configargparse as argparse
+from multiprocessing import Pool, Queue
+import copy
 
 import h5py
 import numpy as np
@@ -29,7 +31,7 @@ import sigpy as sp
 
 import keras.callbacks
 
-from subtle.dnn.helpers import clear_keras_memory, set_keras_memory, load_model, load_data_loader, gan_model
+from subtle.dnn.helpers import set_keras_memory, load_model, load_data_loader, gan_model
 import subtle.utils.io as utils_io
 import subtle.utils.experiment as utils_exp
 from scipy.ndimage.interpolation import rotate
@@ -68,16 +70,116 @@ def resample_unisotropic(args, ims, metadata):
 
     return data_uniso
 
+def process_mpr(proc_params):
+    global gpu_pool
+    gpu_id = gpu_pool.get(block=True)
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+
+    set_keras_memory(proc_params['keras_memory'])
+
+    mkwargs = proc_params['mkwargs']
+
+    model_class = load_model(proc_params['model_name'])
+    m = model_class(**mkwargs)
+    m.load_weights()
+
+    data = proc_params['data']
+    data_mask = proc_params['data_mask']
+    metadata = proc_params['metadata']
+    angle = proc_params['angle']
+    slice_axis = proc_params['slice_axis']
+    num_poolings = proc_params['num_poolings']
+    gen_kwargs = proc_params['gen_kwargs']
+    predict_kwargs = proc_params['predict_kwargs']
+    data_loader = proc_params['data_loader']
+    rr = proc_params['rr']
+
+    if proc_params['num_rotations'] > 1 and angle > 0:
+        if proc_params['verbose']:
+            print('{}/{} rotating by {} degrees'.format(rr+1, proc_params['num_rotations'], angle))
+        data_rot = rotate(data, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
+        data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=num_poolings)
+
+        if data_mask is not None:
+            data_mask_rot = rotate(data_mask, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
+            data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=num_poolings)
+        else:
+            data_mask_rot = None
+    else:
+        data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
+        if data_mask is not None:
+            data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
+        else:
+            data_mask_rot = None
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_file = '{}/data.h5'.format(tmpdirname)
+
+        params = {
+            'metadata': metadata,
+            'data': data_rot,
+            'data_mask': data_mask_rot,
+            'h5_key': 'data'
+        }
+        utils_io.save_data_h5(data_file, **params)
+
+        gen_kwargs['data_list'] = [data_file]
+        gen_kwargs['slice_axis'] = [slice_axis]
+        prediction_generator = data_loader(**gen_kwargs)
+
+        data_ref = np.zeros_like(data_rot)
+        if slice_axis == 2:
+            data_ref = np.transpose(data_ref, (2, 1, 0, 3))
+        elif slice_axis == 3:
+            data_ref = np.transpose(data_ref, (3, 1, 0, 2))
+
+        if proc_params['reshape_for_mpr_rotate']:
+            m.img_rows = data_ref.shape[2]
+            m.img_cols = data_ref.shape[3]
+            m.verbose = False
+            m._build_model()
+            m.load_weights()
+
+        predict_kwargs['generator'] = prediction_generator
+        _Y_prediction = m.model.predict_generator(**predict_kwargs)
+        # N, x, y, 1
+
+        if slice_axis == 0:
+            pass
+        elif slice_axis == 2:
+            _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
+        elif slice_axis == 3:
+            _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
+
+        ns, _, nx, ny = data.shape
+
+        if proc_params['resize']:
+            _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
+
+        pred_rotated = False
+
+        if proc_params['num_rotations'] > 1 and angle > 0:
+            pred_rotated = True
+            _Y_prediction = rotate(_Y_prediction, -angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 1))
+
+        if pred_rotated or _Y_prediction.shape[0] != data.shape[0]:
+            y_pred = _Y_prediction[..., 0]
+            y_pred = supre.center_crop(y_pred, data[:, 0, ...])
+            _Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+    gpu_pool.put(gpu_id)
+    return _Y_prediction
+
+def init_gpu_pool(local_gpu_q):
+    global gpu_pool
+    gpu_pool = local_gpu_q
+
 def inference_process(args):
     print('------')
     print(args.debug_print())
     print('------\n\n\n')
-
-    args.gpu = str(args.gpu)
-
-    if args.gpu is not None:
-        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
     if not args.dicom_inference:
         if args.verbose:
@@ -135,9 +237,6 @@ def inference_process(args):
         data = np.array(data_mod).transpose(1, 0, 2, 3)
 
     ns, _, nx, ny = data.shape
-
-    clear_keras_memory()
-    set_keras_memory(args.keras_memory)
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda)
     metrics_monitor = [suloss.l1_loss, suloss.ssim_loss, suloss.mse_loss]
@@ -254,9 +353,6 @@ def inference_process(args):
         }
         model_kwargs = {**model_kwargs, **kw_model}
 
-        m = model_class(**model_kwargs)
-        m.load_weights()
-
         kw = {
             'residual_mode': args.residual_mode,
             'slices_per_input': args.slices_per_input,
@@ -287,88 +383,50 @@ def inference_process(args):
         else:
             angles = [0]
 
+        gpu_ids = args.gpu.split(',')
+        gpu_repeat = [[id] * args.procs_per_gpu for id in gpu_ids]
+        gpu_ids = [item for sublist in gpu_repeat for item in sublist]
+        nworkers = len(gpu_ids)
+
+        gpu_q = Queue()
+        for gid in gpu_ids:
+            gpu_q.put(gid)
+
+        process_pool = Pool(processes=len(gpu_ids), initializer=init_gpu_pool, initargs=(gpu_q, ))
+
+        mkwargs = copy.deepcopy(model_kwargs)
+        del mkwargs['loss_function']
+        del mkwargs['metrics_monitor']
+
+        proc_params = {
+            'model_name': args.model_name,
+            'data': data,
+            'data_mask': data_mask,
+            'metadata': metadata,
+            'num_poolings': num_poolings,
+            'gen_kwargs': gen_kwargs,
+            'predict_kwargs': predict_kwargs,
+            'mkwargs': mkwargs,
+            'data_loader': data_loader,
+            'num_rotations': args.num_rotations,
+            'reshape_for_mpr_rotate': args.reshape_for_mpr_rotate,
+            'resize': args.resize,
+            'verbose': args.verbose,
+            'keras_memory': args.keras_memory
+        }
+
+        parallel_params = []
+
         for rr, angle in enumerate(angles):
-            if args.num_rotations > 1 and angle > 0:
-                if args.verbose:
-                    print('{}/{} rotating by {} degrees'.format(rr+1, args.num_rotations, angle))
-                data_rot = rotate(data, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=num_poolings)
+            for ii, slice_axis in enumerate(slice_axes):
+                proc_params['angle'] = angle
+                proc_params['rr'] = rr
+                proc_params['slice_axis'] = slice_axis
 
-                if data_mask is not None:
-                    data_mask_rot = rotate(data_mask, angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 2))
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=num_poolings)
-                else:
-                    data_mask_rot = None
-            else:
-                data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
-                if data_mask is not None:
-                    data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
-                else:
-                    data_mask_rot = None
+                parallel_params.append(proc_params)
 
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                data_file = '{}/data.h5'.format(tmpdirname)
-                original_scale = (data_rot.min(), data_rot.max())
-
-                if args.match_scales_fsl:
-                    data_rot = np.interp(data_rot, original_scale, (data_mask_rot.min(), data_mask_rot.max()))
-                    print(data_rot.min(), data_rot.max())
-
-                params = {
-                    'metadata': metadata,
-                    'data': data_rot,
-                    'data_mask': data_mask_rot,
-                    'h5_key': 'data'
-                }
-                utils_io.save_data_h5(data_file, **params)
-
-                for ii, slice_axis in enumerate(slice_axes):
-                    gen_kwargs['data_list'] = [data_file]
-                    gen_kwargs['slice_axis'] = [slice_axis]
-                    prediction_generator = data_loader(**gen_kwargs)
-
-                    data_ref = np.zeros_like(data_rot)
-                    if slice_axis == 2:
-                        data_ref = np.transpose(data_ref, (2, 1, 0, 3))
-                    elif slice_axis == 3:
-                        data_ref = np.transpose(data_ref, (3, 1, 0, 2))
-
-                    if args.reshape_for_mpr_rotate:
-                        m.img_rows = data_ref.shape[2]
-                        m.img_cols = data_ref.shape[3]
-                        m.verbose = False
-                        m._build_model()
-                        m.load_weights()
-
-                    predict_kwargs['generator'] = prediction_generator
-                    _Y_prediction = m.model.predict_generator(**predict_kwargs)
-                    # N, x, y, 1
-
-                    if args.match_scales_fsl:
-                        _Y_prediction = np.interp(_Y_prediction, (_Y_prediction.min(), _Y_prediction.max()), original_scale)
-
-                    if slice_axis == 0:
-                        pass
-                    elif slice_axis == 2:
-                        _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
-                    elif slice_axis == 3:
-                        _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
-
-                    if args.resize:
-                        _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
-
-                    pred_rotated = False
-
-                    if args.num_rotations > 1 and angle > 0:
-                        pred_rotated = True
-                        _Y_prediction = rotate(_Y_prediction, -angle, reshape=args.reshape_for_mpr_rotate, axes=(0, 1))
-
-                    if pred_rotated or _Y_prediction.shape[0] != data.shape[0]:
-                        y_pred = _Y_prediction[..., 0]
-                        y_pred = supre.center_crop(y_pred, data[:, 0, ...])
-                        _Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-                    Y_predictions[..., ii, rr] = _Y_prediction[..., 0]
+        proc_results = np.array(process_pool.map(process_mpr, parallel_params))
+        Y_predictions = proc_results[..., 0].transpose(1, 2, 3, 0).reshape((ns, nx, ny, len(slice_axes), args.num_rotations))
 
         if args.verbose and args.inference_mpr:
             print('averaging each plane')
@@ -383,7 +441,6 @@ def inference_process(args):
             Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
     # End IF for 3D patch based
-
 
     # if 'zero_pad_size' in metadata:
     if args.undo_pad_resample:
@@ -474,7 +531,7 @@ def inference_process(args):
 
     if args.predict_dir:
         # save raw data
-        data_file_base = os.path.basename(data_file)
+        data_file_base = os.path.basename(args.path_out)
         _1, _2 = os.path.splitext(data_file_base)
         data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
         utils_io.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
