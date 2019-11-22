@@ -332,7 +332,7 @@ def match_scales(args, ims, ims_mod, metadata):
 
         ntic = time.time()
         scale_low = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 1], levels=levels, max_iter=max_iter)
-        scale_full = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 1], levels=levels, max_iter=max_iter)
+        scale_full = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 2], levels=levels, max_iter=max_iter)
 
         metadata['scale_low'] = scale_low
         metadata['scale_full'] = scale_full
