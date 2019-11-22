@@ -6,6 +6,7 @@ import subtle.subtle_args as sargs
 
 from plot_grid import plot_h5
 from inference import inference_process as run_inference
+from subtle.dnn.helpers import clear_keras_memory
 
 if __name__ == '__main__':
     parser = sargs.get_parser()
@@ -33,4 +34,6 @@ if __name__ == '__main__':
             os.makedirs(metrics_dir)
 
         config.stats_file = '{}/{}.h5'.format(metrics_dir, case_num)
+
+        clear_keras_memory()
         run_inference(config)

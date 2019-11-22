@@ -22,7 +22,7 @@ from warnings import warn
 import configargparse as argparse
 from multiprocessing import Pool, Queue
 import copy
-
+import traceback
 import h5py
 import numpy as np
 from scipy.ndimage import zoom
@@ -74,103 +74,111 @@ def process_mpr(proc_params):
     global gpu_pool
     gpu_id = gpu_pool.get(block=True)
 
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+    try:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
-    set_keras_memory(proc_params['keras_memory'])
+        set_keras_memory(proc_params['keras_memory'])
 
-    mkwargs = proc_params['mkwargs']
+        mkwargs = proc_params['mkwargs']
 
-    model_class = load_model(proc_params['model_name'])
-    m = model_class(**mkwargs)
-    m.load_weights()
+        model_class = load_model(proc_params['model_name'])
+        m = model_class(**mkwargs)
+        m.load_weights()
 
-    data = proc_params['data']
-    data_mask = proc_params['data_mask']
-    metadata = proc_params['metadata']
-    angle = proc_params['angle']
-    slice_axis = proc_params['slice_axis']
-    num_poolings = proc_params['num_poolings']
-    gen_kwargs = proc_params['gen_kwargs']
-    predict_kwargs = proc_params['predict_kwargs']
-    data_loader = proc_params['data_loader']
-    rr = proc_params['rr']
-
-    if proc_params['num_rotations'] > 1 and angle > 0:
-        if proc_params['verbose']:
-            print('{}/{} rotating by {} degrees'.format(rr+1, proc_params['num_rotations'], angle))
-        data_rot = rotate(data, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
-        data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=num_poolings)
-
-        if data_mask is not None:
-            data_mask_rot = rotate(data_mask, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
-            data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=num_poolings)
-        else:
-            data_mask_rot = None
-    else:
-        data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
-        if data_mask is not None:
-            data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
-        else:
-            data_mask_rot = None
-
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        data_file = '{}/data.h5'.format(tmpdirname)
-
-        params = {
-            'metadata': metadata,
-            'data': data_rot,
-            'data_mask': data_mask_rot,
-            'h5_key': 'data'
-        }
-        utils_io.save_data_h5(data_file, **params)
-
-        gen_kwargs['data_list'] = [data_file]
-        gen_kwargs['slice_axis'] = [slice_axis]
-        prediction_generator = data_loader(**gen_kwargs)
-
-        data_ref = np.zeros_like(data_rot)
-        if slice_axis == 2:
-            data_ref = np.transpose(data_ref, (2, 1, 0, 3))
-        elif slice_axis == 3:
-            data_ref = np.transpose(data_ref, (3, 1, 0, 2))
-
-        if proc_params['reshape_for_mpr_rotate']:
-            m.img_rows = data_ref.shape[2]
-            m.img_cols = data_ref.shape[3]
-            m.verbose = False
-            m._build_model()
-            m.load_weights()
-
-        predict_kwargs['generator'] = prediction_generator
-        _Y_prediction = m.model.predict_generator(**predict_kwargs)
-        # N, x, y, 1
-
-        if slice_axis == 0:
-            pass
-        elif slice_axis == 2:
-            _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
-        elif slice_axis == 3:
-            _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
-
-        ns, _, nx, ny = data.shape
-
-        if proc_params['resize']:
-            _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
-
-        pred_rotated = False
+        data = np.load('{}/data.npy'.format(proc_params['tmpdir']))
+        data_mask = np.load('{}/data_mask.npy'.format(proc_params['tmpdir']))
+        metadata = proc_params['metadata']
+        angle = proc_params['angle']
+        slice_axis = proc_params['slice_axis']
+        num_poolings = proc_params['num_poolings']
+        gen_kwargs = proc_params['gen_kwargs']
+        predict_kwargs = proc_params['predict_kwargs']
+        data_loader = proc_params['data_loader']
+        rr = proc_params['rr']
 
         if proc_params['num_rotations'] > 1 and angle > 0:
-            pred_rotated = True
-            _Y_prediction = rotate(_Y_prediction, -angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 1))
+            if proc_params['verbose']:
+                print('{}/{} rotating by {} degrees'.format(rr+1, proc_params['num_rotations'], angle))
+            data_rot = rotate(data, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
+            data_rot = supre.zero_pad_for_dnn(data_rot, num_poolings=num_poolings)
 
-        if pred_rotated or _Y_prediction.shape[0] != data.shape[0]:
-            y_pred = _Y_prediction[..., 0]
-            y_pred = supre.center_crop(y_pred, data[:, 0, ...])
-            _Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+            if data_mask is not None:
+                data_mask_rot = rotate(data_mask, angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 2))
+                data_mask_rot = supre.zero_pad_for_dnn(data_mask_rot, num_poolings=num_poolings)
+            else:
+                data_mask_rot = None
+        else:
+            data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
+            if data_mask is not None:
+                data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
+            else:
+                data_mask_rot = None
 
-    gpu_pool.put(gpu_id)
-    return _Y_prediction
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            data_file = '{}/data.h5'.format(tmpdirname)
+
+            params = {
+                'metadata': metadata,
+                'data': data_rot,
+                'data_mask': data_mask_rot,
+                'h5_key': 'data'
+            }
+            utils_io.save_data_h5(data_file, **params)
+
+            gen_kwargs['data_list'] = [data_file]
+            gen_kwargs['slice_axis'] = [slice_axis]
+            prediction_generator = data_loader(**gen_kwargs)
+
+            data_ref = np.zeros_like(data_rot)
+            if slice_axis == 2:
+                data_ref = np.transpose(data_ref, (2, 1, 0, 3))
+            elif slice_axis == 3:
+                data_ref = np.transpose(data_ref, (3, 1, 0, 2))
+
+            if proc_params['reshape_for_mpr_rotate']:
+                m.img_rows = data_ref.shape[2]
+                m.img_cols = data_ref.shape[3]
+                m.verbose = False
+                m._build_model()
+                m.load_weights()
+
+            predict_kwargs['generator'] = prediction_generator
+            _Y_prediction = m.model.predict_generator(**predict_kwargs)
+            # N, x, y, 1
+
+            if slice_axis == 0:
+                pass
+            elif slice_axis == 2:
+                _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
+            elif slice_axis == 3:
+                _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
+
+            ns, _, nx, ny = data.shape
+
+            if proc_params['resize']:
+                _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
+
+            pred_rotated = False
+
+            if proc_params['num_rotations'] > 1 and angle > 0:
+                pred_rotated = True
+                _Y_prediction = rotate(_Y_prediction, -angle, reshape=proc_params['reshape_for_mpr_rotate'], axes=(0, 1))
+
+            if pred_rotated or _Y_prediction.shape[0] != data.shape[0]:
+                y_pred = _Y_prediction[..., 0]
+                y_pred = supre.center_crop(y_pred, data[:, 0, ...])
+                _Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        return _Y_prediction
+
+    except Exception as e:
+        print('Exception in thread', e)
+        traceback.print_exc()
+        return []
+
+    finally:
+        gpu_pool.put(gpu_id)
 
 def init_gpu_pool(local_gpu_q):
     global gpu_pool
@@ -398,34 +406,42 @@ def inference_process(args):
         del mkwargs['loss_function']
         del mkwargs['metrics_monitor']
 
-        proc_params = {
-            'model_name': args.model_name,
-            'data': data,
-            'data_mask': data_mask,
-            'metadata': metadata,
-            'num_poolings': num_poolings,
-            'gen_kwargs': gen_kwargs,
-            'predict_kwargs': predict_kwargs,
-            'mkwargs': mkwargs,
-            'data_loader': data_loader,
-            'num_rotations': args.num_rotations,
-            'reshape_for_mpr_rotate': args.reshape_for_mpr_rotate,
-            'resize': args.resize,
-            'verbose': args.verbose,
-            'keras_memory': args.keras_memory
-        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            proc_params = {
+                'model_name': args.model_name,
+                'metadata': metadata,
+                'num_poolings': num_poolings,
+                'gen_kwargs': gen_kwargs,
+                'predict_kwargs': predict_kwargs,
+                'mkwargs': mkwargs,
+                'data_loader': data_loader,
+                'num_rotations': args.num_rotations,
+                'reshape_for_mpr_rotate': args.reshape_for_mpr_rotate,
+                'resize': args.resize,
+                'verbose': args.verbose,
+                'keras_memory': args.keras_memory,
+                'tmpdir': tmpdir
+            }
 
-        parallel_params = []
+            parallel_params = []
 
-        for rr, angle in enumerate(angles):
-            for ii, slice_axis in enumerate(slice_axes):
-                proc_params['angle'] = angle
-                proc_params['rr'] = rr
-                proc_params['slice_axis'] = slice_axis
+            for rr, angle in enumerate(angles):
+                for ii, slice_axis in enumerate(slice_axes):
+                    proc_params['angle'] = angle
+                    proc_params['rr'] = rr
+                    proc_params['slice_axis'] = slice_axis
 
-                parallel_params.append(proc_params)
+                    parallel_params.append(proc_params)
 
-        proc_results = np.array(process_pool.map(process_mpr, parallel_params))
+            # need to write data and data_mask to npy files to avoid struct.error
+            # multiprocessing has a 2GB limit to send files through the process pipe
+            np.save('{}/data.npy'.format(tmpdir), data)
+            np.save('{}/data_mask.npy'.format(tmpdir), data_mask)
+
+            proc_results = np.array(process_pool.map(process_mpr, parallel_params))
+            process_pool.close()
+            process_pool.join()
+
         Y_predictions = proc_results[..., 0].transpose(1, 2, 3, 0).reshape((ns, nx, ny, len(slice_axes), args.num_rotations))
 
         if args.verbose and args.inference_mpr:
