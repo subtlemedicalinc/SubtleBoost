@@ -1,9 +1,6 @@
 {
   "train": [],
   "test": [
-    "Patient_0216",
-    "Patient_0275",
-    "Patient_0409",
-    "Patient_0545"
+    "Patient_0216"
   ]
 }
