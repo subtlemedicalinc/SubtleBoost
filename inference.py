@@ -427,11 +427,12 @@ def inference_process(args):
 
             for rr, angle in enumerate(angles):
                 for ii, slice_axis in enumerate(slice_axes):
-                    proc_params['angle'] = angle
-                    proc_params['rr'] = rr
-                    proc_params['slice_axis'] = slice_axis
+                    pobj = copy.deepcopy(proc_params)
+                    pobj['angle'] = angle
+                    pobj['rr'] = rr
+                    pobj['slice_axis'] = slice_axis
 
-                    parallel_params.append(proc_params)
+                    parallel_params.append(pobj)
 
             # need to write data and data_mask to npy files to avoid struct.error
             # multiprocessing has a 2GB limit to send files through the process pipe
