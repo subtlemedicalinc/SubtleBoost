@@ -197,6 +197,7 @@ class SliceLoader(keras.utils.Sequence):
             Y = data_Y.copy()
             Y_mask = data_Y_mask.copy()
             if self.use_enh_mask:
+                # FIXME: if percentiles are included in the numpy metadata, then use them as the "max_val_arr" that is passed to the enancement mask (for each sample in the batch)
                 enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor)
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))

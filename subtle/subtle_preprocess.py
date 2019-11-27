@@ -460,11 +460,15 @@ def enhancement_mask(X, Y, center_slice, th=.05):
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
 
-def enh_mask_smooth(X, Y, center_slice, p=1.0):
+def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None):
     'Create a smooth enhancement mask'
 
+    # max_val_arr should be length (batch_size, 1)
+
     im_diff = Y[:, 0, 0, ...].squeeze() - X[:, center_slice, 0,...].squeeze()
-    enh_mask = ((im_diff - np.min(im_diff)) / np.max(im_diff)) ** p
+    if max_val_arr is None:
+        max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
+    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
