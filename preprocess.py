@@ -601,6 +601,16 @@ def zero_pad(args, ims, metadata):
 
     return ims, metadata
 
+def calc_img_statistics(unmasked_ims, ims, metadata):
+    print(unmasked_ims.shape, ims.shape)
+    percentiles = [5, 50, 95, 99, 100]
+    p1 = np.percentile(unmasked_ims, percentiles, axis=(0,2,3))
+    p2 = np.percentile(ims, percentiles, axis=(0,2,3))
+    metadata['percentiles'] = percentiles
+    metadata['unmasked_ims_percentiles'] = p1
+    metadata['ims_percentiles'] = p2
+    return metadata
+
 def preprocess_chain(args):
     metadata = {
         'lambda': []
@@ -637,6 +647,9 @@ def preprocess_chain(args):
 
     ims, _ = zero_pad(args, ims, metadata) # dont save to metadata on masked ims
     unmasked_ims, metadata = zero_pad(args, unmasked_ims, metadata)
+
+    # calculate and save some useful image statistics
+    metadata = calc_img_statistics(unmasked_ims, ims, metadata)
 
     return unmasked_ims, ims, metadata
 
