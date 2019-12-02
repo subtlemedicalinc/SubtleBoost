@@ -11,9 +11,10 @@ import time
 import numpy as np
 import sigpy as sp
 import keras
+from expiringdict import ExpiringDict
 
 from subtle.utils.slice import build_slice_list, get_num_slices
-from subtle.utils.io import load_slices
+from subtle.utils.io import load_slices, load_file
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth
 
 class SliceLoader(keras.utils.Sequence):
@@ -38,6 +39,8 @@ class SliceLoader(keras.utils.Sequence):
         self.output_idx = output_idx
         self.enh_pfactor = enh_pfactor
         self.use_enh_mask = use_enh_mask
+
+        self.ims_cache = ExpiringDict(max_len=250, max_age_seconds=24*60*60)
 
         self._init_slice_info()
         self.on_epoch_end()
@@ -99,9 +102,33 @@ class SliceLoader(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
+    def _get_slices(self, fpath, slices, dim, params={'h5_key': 'all'}):
+        cache_cont = self.ims_cache.get(fpath)
+
+        if cache_cont is not None:
+            data, data_mask = cache_cont
+        else:
+            data = load_file(fpath.replace('.h5', '.npy'), file_type='npy', params=params)
+            data_mask = load_file(fpath.replace('.h5', '_mask.npy'), file_type='npy', params=params)
+            self._cache_img(fpath, data, data_mask)
+
+        if dim == 0:
+            ims = data[slices, :, :, :]
+            ims_mask = data_mask[slices, :, :, :]
+        elif dim == 2:
+            ims = data[:, :, slices, :]
+            ims_mask = data_mask[:, :, slices, :]
+        elif dim == 3:
+            ims = data[:, :, :, slices]
+            ims_mask = data_mask[:, :, :, slices]
+
+        return ims, ims_mask
+
+    def _cache_img(self, fpath, ims, ims_mask=None):
+        self.ims_cache[fpath] = (ims, ims_mask)
+
     def _data_generation(self, slice_list_files, slice_list_indexes, enforce_raw_data=False, data_npy=None):
         'Generates data containing batch_size samples'
-
         # load volumes
         # each element of the data_list contains 3 sets of 3D
         # volumes containing zero, low, and full contrast.
@@ -117,6 +144,7 @@ class SliceLoader(keras.utils.Sequence):
         for i, (f, idx_dict) in enumerate(zip(slice_list_files, slice_list_indexes)):
             c = idx_dict['index']
             ax = idx_dict['axis']
+
             ax_pos = self.slice_axis.index(ax)
 
             num_slices = [num for i, num in enumerate(self.slices_per_file_dict[f]) if i == ax_pos][0]
@@ -139,7 +167,7 @@ class SliceLoader(keras.utils.Sequence):
             else:
                 # load both full and brain-masked slices. Dimensions of each np array are [c, 3, ny, nz]
                 # FIXME: only load slices_mask if BET masking was run, and prediction is False
-                slices, slices_mask = load_slices(input_file=f, slices=idxs, dim=ax, params={'h5_key': 'all'})
+                slices, slices_mask = self._get_slices(f, idxs, ax, params={'h5_key': 'all'})
 
             if ax == 0:
                 pass
@@ -162,7 +190,6 @@ class SliceLoader(keras.utils.Sequence):
                 slices = resample_slices(slices, self.resample_size)
                 slices_mask = resample_slices(slices_mask, self.resample_size)
 
-
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
 
@@ -177,7 +204,6 @@ class SliceLoader(keras.utils.Sequence):
                 data_list_Y.append(slices_Y)
                 data_list_Y_mask.append(slices_Y_mask)
 
-        tic = time.time()
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
             data_X_mask = np.concatenate(data_list_X_mask, axis=0)
@@ -249,7 +275,6 @@ class SliceLoader(keras.utils.Sequence):
                 print('X, size = ', X.shape)
             else:
                 print('X, Y sizes = ', X.shape, Y.shape)
-
         if self.predict:
             return X
         else:
