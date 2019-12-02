@@ -3,6 +3,7 @@ import traceback
 
 import subtle.utils.experiment as utils_exp
 import subtle.subtle_args as sargs
+from subtle.dnn.helpers import clear_keras_memory, set_keras_memory
 
 from plot_grid import plot_h5, save_video
 from preprocess import execute_chain as preprocess_chain
@@ -28,6 +29,9 @@ if __name__ == '__main__':
     if args.gpu is not None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+
+    clear_keras_memory()
+    set_keras_memory(0.5)
 
     for case_num in data_list:
         print('\n-------------\n')
