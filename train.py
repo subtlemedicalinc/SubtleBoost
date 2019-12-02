@@ -231,7 +231,6 @@ def train_process(args):
 
 
     callbacks = []
-    ckp_monitor = 'model_1_loss' if args.gan_mode else 'val_l1_loss'
     ckp_monitor = None
 
     if args.gan_mode:
@@ -287,7 +286,7 @@ def train_process(args):
             'resize': args.resize,
             'resample_size': args.resample_size,
             'use_enh_mask': args.enh_mask,
-            'enh_pfactor': args.enh_pfactor,
+            'enh_pfactor': args.enh_pfactor
         }
 
     gen_kwargs = {**gen_kwargs, **gen_kw}
@@ -377,7 +376,7 @@ def train_process(args):
             shuffle=False,
             verbose=0,
             residual_mode=False,
-            slices_per_input=7,
+            slices_per_input=args.slices_per_input,
             slice_axis=[0]
         )
 
