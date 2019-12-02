@@ -382,19 +382,22 @@ def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=Fals
             h5_params['data'] = data_mask
             f.create_dataset('data_mask', **h5_params)
 
-        if metadata:
-            for key in metadata.keys():
-                _h5_key = 'metadata/{}'.format(key)
-                metakey = metadata[key]
-                if callable(metakey):
-                    metakey = metakey.__name__
-                h5_params['data'] = metakey
-                f.create_dataset(_h5_key, **h5_params)
-
         f.close()
 
     return 0
 
+def save_meta_h5(output_file, metadata):
+    h5_params = {}
+    with h5py.File(output_file, 'w') as f:
+        for key in metadata.keys():
+            _h5_key = 'metadata/{}'.format(key)
+            metakey = metadata[key]
+            if callable(metakey):
+                metakey = metakey.__name__
+            h5_params['data'] = metakey
+            f.create_dataset(_h5_key, **h5_params)
+        f.close()
+    return 0
 
 def save_data(output_file, data, file_type=None, params={'h5_key': 'data', 'compress': False}):
     ''' Save data to output file using file type format

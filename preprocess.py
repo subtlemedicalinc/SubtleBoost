@@ -34,7 +34,6 @@ import subtle.subtle_preprocess as sup
 import subtle.utils.io as utils_io
 import subtle.subtle_args as sargs
 
-
 from glob import glob
 
 def fetch_args():
@@ -46,10 +45,6 @@ def fetch_args():
                         help='output to npy file', default='out.npy')
 
     args = parser.parse_args()
-
-    if args.gpu is not None:
-        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     return args
 
 def assert_and_get_init_vars(args):
@@ -658,7 +653,9 @@ def execute_chain(args):
     print(args.debug_print())
     print('------\n\n\n')
     ims, ims_mask, metadata = preprocess_chain(args)
-    utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data', metadata=metadata)
+
+    utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data')
+    utils_io.save_meta_h5(args.out_file.replace('.h5', '_meta.h5'), metadata)
 
 if __name__ == '__main__':
     args = fetch_args()
