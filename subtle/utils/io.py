@@ -459,7 +459,10 @@ def get_shape(input_file, file_type=None, params={'h5_key': 'data'}):
 
 def get_shape_npy(input_file):
     f = np.load(input_file, mmap_mode='r')
-    return f.shape
+    fs = f.shape
+    if len(fs) > 4:
+        return fs[-4:]
+    return fs
 
 def get_shape_h5(input_file, h5_key='data'):
     F = h5py.File(input_file, 'r')

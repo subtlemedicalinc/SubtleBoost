@@ -108,10 +108,10 @@ class SliceLoader(keras.utils.Sequence):
         if cache_cont is not None:
             data, data_mask = cache_cont
         else:
-            data = load_file(fpath.replace('.h5', '.npy'), file_type='npy', params=params)
-            data_mask = load_file(fpath.replace('.h5', '_mask.npy'), file_type='npy', params=params)
+            npy_data = load_file(fpath, file_type='npy', params=params)
+            data = npy_data[0]
+            data_mask = npy_data[1]
             self._cache_img(fpath, data, data_mask)
-
         if dim == 0:
             ims = data[slices, :, :, :]
             ims_mask = data_mask[slices, :, :, :]
