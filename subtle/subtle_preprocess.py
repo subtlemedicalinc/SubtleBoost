@@ -468,6 +468,8 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None):
     if max_val_arr is None:
         max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
 
+    # FIXME: currently hard-coded to minimum value of 1. This obviates the need for the following np.divide
+    # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
 
     enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
