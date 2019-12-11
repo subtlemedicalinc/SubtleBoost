@@ -153,7 +153,7 @@ def mse_loss(y_true, y_pred, weights):
 @extract_weights
 def psnr_loss(y_true, y_pred, weights):
     denominator = tf_log(tf_constant(10.0))
-    return 20.*tf_log(K.max(y_true)) / denominator - 10. * tf_log(K.mean(K.square(y_pred - y_true))) / denominator
+    return 20. * tf_log(K.max(y_true)) / denominator - 10. * tf_log(K.mean(K.square(y_pred - y_true))) / denominator
 
 @extract_weights
 def weighted_l1_loss(y_true, y_pred, weights):

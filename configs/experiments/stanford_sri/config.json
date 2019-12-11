@@ -154,7 +154,7 @@
     "series_num": 1002,
     "stats_base": "/home/srivathsa/projects/studies/gad/stanford/inference",
     "zoom": 0,
-    "procs_per_gpu": 2,
+    "procs_per_gpu": 5,
     "512_nompr": {
       "inference_mpr": false,
       "resize": 512,
@@ -194,13 +194,13 @@
     },
     "enh_vgg": {
       "inference_mpr": true,
-      "description": "enh_vgg",
+      "description": "sford_enh_vgg",
       "num_rotations": 5,
       "slices_per_input": 7,
       "resize": 512,
-      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
       "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
-      "checkpoint": "enh_vgg.checkpoint"
+      "checkpoint": "stanford_enh_vgg.checkpoint"
     }
   }
 }

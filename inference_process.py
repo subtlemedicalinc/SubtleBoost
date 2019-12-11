@@ -24,7 +24,7 @@ if __name__ == '__main__':
         if config.dicom_inference:
             config.path_base = path_base
         else:
-            config.data_preprocess = '{}.h5'.format(path_base)
+            config.data_preprocess = '{}.npy'.format(path_base)
 
         config.path_out = '{}/{}/{}/{}_SubtleGad'.format(config.data_raw, config.out_folder, case_num, case_num)
         config.path_base = '{}/{}'.format(config.data_raw, case_num)

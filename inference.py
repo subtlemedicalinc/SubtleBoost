@@ -116,7 +116,7 @@ def process_mpr(proc_params):
                 data_mask_rot = None
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            data_file = '{}/data.h5'.format(tmpdirname)
+            data_file = '{}/data.npy'.format(tmpdirname)
 
             params = {
                 'metadata': metadata,
@@ -124,7 +124,9 @@ def process_mpr(proc_params):
                 'data_mask': data_mask_rot,
                 'h5_key': 'data'
             }
-            utils_io.save_data_h5(data_file, **params)
+
+            npy_data = np.array([data_rot, data_mask_rot])
+            utils_io.save_data_npy(data_file, npy_data)
 
             gen_kwargs['data_list'] = [data_file]
             gen_kwargs['slice_axis'] = [slice_axis]
@@ -193,10 +195,9 @@ def inference_process(args):
         if args.verbose:
             print('loading preprocessed data from', args.data_preprocess)
 
-        data = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data'})
-        data_mask = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}) if utils_io.has_h5_key(args.data_preprocess, 'data_mask') else None
+        data, data_mask = utils_io.load_file(args.data_preprocess, file_type='npy')
 
-        metadata = utils_io.load_h5_metadata(args.data_preprocess)
+        metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.npy', '_meta.h5'))
         dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
 
         args.path_zero = dicom_dirs[0]
