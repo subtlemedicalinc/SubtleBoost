@@ -154,7 +154,7 @@
     "series_num": 1002,
     "stats_base": "/home/srivathsa/projects/studies/gad/stanford/inference",
     "zoom": 0,
-    "procs_per_gpu": 5,
+    "procs_per_gpu": 4,
     "512_nompr": {
       "inference_mpr": false,
       "resize": 512,
