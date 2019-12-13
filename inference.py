@@ -195,7 +195,7 @@ def inference_process(args):
         if args.verbose:
             print('loading preprocessed data from', args.data_preprocess)
 
-        data, data_mask = utils_io.load_file(args.data_preprocess, file_type='npy')
+        data, data_mask = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
 
         metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.npy', '_meta.h5'))
         dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)

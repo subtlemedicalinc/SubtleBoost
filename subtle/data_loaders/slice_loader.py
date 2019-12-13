@@ -18,7 +18,7 @@ from subtle.utils.io import load_slices, load_file
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth
 
 class SliceLoader(keras.utils.Sequence):
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, file_ext='npy'):
 
         'Initialization'
         self.data_list = data_list
@@ -39,6 +39,7 @@ class SliceLoader(keras.utils.Sequence):
         self.output_idx = output_idx
         self.enh_pfactor = enh_pfactor
         self.use_enh_mask = use_enh_mask
+        self.file_ext = file_ext
 
         self.ims_cache = ExpiringDict(max_len=250, max_age_seconds=24*60*60)
 
@@ -108,9 +109,7 @@ class SliceLoader(keras.utils.Sequence):
         if cache_cont is not None:
             data, data_mask = cache_cont
         else:
-            npy_data = load_file(fpath, file_type='npy', params=params)
-            data = npy_data[0]
-            data_mask = npy_data[1]
+            data, data_mask = load_file(fpath, file_type=self.file_ext, params=params)
             self._cache_img(fpath, data, data_mask)
         if dim == 0:
             ims = data[slices, :, :, :]

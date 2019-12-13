@@ -654,8 +654,12 @@ def execute_chain(args):
     print('------\n\n\n')
     ims, ims_mask, metadata = preprocess_chain(args)
 
-    utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data')
-    utils_io.save_meta_h5(args.out_file.replace('.h5', '_meta.h5'), metadata)
+    if args.file_ext == 'h5':
+        utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data')
+    else:
+        npy_data = np.array([ims, ims_mask])
+        utils_io.save_data_npy(args.out_file, npy_data)
+        utils_io.save_meta_h5(args.out_file.replace('.h5', '_meta.h5'), metadata)
 
 if __name__ == '__main__':
     args = fetch_args()

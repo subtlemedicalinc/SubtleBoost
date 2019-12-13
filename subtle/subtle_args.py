@@ -105,7 +105,7 @@ def _train_args(parser):
 
     parser.add_argument('--data_list', action='store', dest='data_list_file', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
-    parser.add_argument('--file_ext', action='store', dest='file_ext', type=str, help='file extension of data', default=None)
+    parser.add_argument('--file_ext', action='store', dest='file_ext', type=str, help='file extension of data', default='npy')
     parser.add_argument('--num_epochs', action='store', dest='num_epochs', type=int, help='number of epochs to run', default=10)
     parser.add_argument('--batch_size', action='store', dest='batch_size', type=int, help='batch size', default=8)
     parser.add_argument('--tbimage_batch_size', action='store', dest='tbimage_batch_size', type=int, help='TBImage batch size', default=8)

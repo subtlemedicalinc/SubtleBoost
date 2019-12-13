@@ -96,7 +96,7 @@ def train_process(args):
     tic = time.time()
 
     case_nums = utils_exp.get_experiment_data(args.experiment, dataset='train')
-    data_list = ['{}/{}.npy'.format(args.data_dir, cnum) for cnum in case_nums]
+    data_list = ['{}/{}.{}'.format(args.data_dir, cnum, args.file_ext) for cnum in case_nums]
 
     # each element of the data_list contains 3 sets of 3D
     # volumes containing zero, low, and full contrast.
@@ -286,7 +286,8 @@ def train_process(args):
             'resize': args.resize,
             'resample_size': args.resample_size,
             'use_enh_mask': args.enh_mask,
-            'enh_pfactor': args.enh_pfactor
+            'enh_pfactor': args.enh_pfactor,
+            'file_ext': args.file_ext
         }
 
     gen_kwargs = {**gen_kwargs, **gen_kw}

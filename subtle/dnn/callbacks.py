@@ -12,7 +12,7 @@ from scipy.misc import imresize
 import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None, file_ext='npy'):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -48,6 +48,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.detailed_plot = detailed_plot
         self.plot_list = plot_list
         self.tag_list = []
+        self.file_ext = file_ext
 
         self._init_generator()
 
@@ -87,6 +88,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 'resample_size': self.resample_size,
                 'use_enh_mask': self.use_enh_mask,
                 'enh_pfactor': self.enh_pfactor,
+                'file_ext': self.file_ext
             }
 
         gen_kwargs = {**gen_kwargs, **kw}
