@@ -73,6 +73,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder,row=0, col=0,
 
     output_min = np.min(output)
     if output_min < 0:
+        output = np.copy(output)
         output[np.where(output<0)] = 0
     output = output.astype(dtype)
 
