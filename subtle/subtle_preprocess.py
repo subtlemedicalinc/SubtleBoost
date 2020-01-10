@@ -9,9 +9,11 @@ Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/18
 '''
 
+import os
 import sys
 import warnings
 import time
+import tempfile
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
@@ -318,6 +320,17 @@ def nii2npy(fpath_nii, transpose=True):
 
     return img
 
+def degibbs(dcmdir, axes=2, nshift=8, min_w=0, max_w=128):
+    with tempfile.TemporaryDirectory() as tmp:
+        fpath_nii = dcm2nii(dcmdir, tmp)
+        fpath_dg = '{}/degibbs.nii'.format(tmp)
+        cmd = 'mrdegibbs {} {} -axes {} -nshift {} -minW {} -maxW {}'.format(fpath_nii, fpath_dg, axes, nshift, min_w, max_w)
+
+        os.system(cmd)
+
+        img_dg = nib.load(fpath_dg).get_fdata()
+        return img_dg.transpose(2, 1, 0)
+
 def get_brain_area_cm2(mask, spacing=[1., 1., 1.]):
     spacing_x, spacing_y = np.array(spacing[1:], dtype=np.float32)
     binary_mask = np.copy(mask).astype(np.int8)
@@ -463,7 +476,7 @@ def enhancement_mask(X, Y, center_slice, th=.05):
 def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None):
     'Create a smooth enhancement mask'
     # max_val_arr should be length (batch_size, 1)
-    
+
     im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0,...]
     if max_val_arr is None:
         max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
