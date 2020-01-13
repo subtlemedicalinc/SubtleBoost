@@ -15,6 +15,9 @@ MODEL_MAP = {
     'patch2d': {
         'model': 'adversaries.AdversaryPatch2D'
     },
+    'dense2d': {
+        'model': 'adversaries.AdversaryDense2D'
+    },
     'unet3d': {
         'model': 'generators.GeneratorUNet3D',
         'data_loader': 'block_loader.BlockLoader'

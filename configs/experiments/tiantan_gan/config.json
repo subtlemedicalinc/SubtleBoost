@@ -6,6 +6,9 @@
   "resize": 240,
   "gan_mode": true,
   "slices_per_input": 7,
+  "adversary_name": "dense2d",
+  "add_disc_noise": true,
+  "disc_loss_function": "binary_crossentropy",
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "transform_type": "rigid",

@@ -1,28 +1,27 @@
 import numpy as np
 import keras
-from keras.layers import LeakyReLU, BatchNormalization, Input, Activation
+from keras.layers import LeakyReLU, Input, Activation, Conv2D, Flatten, Dense
 from keras.optimizers import Adam
 
 from subtle.dnn.adversaries.base import AdversaryBase
-from subtle.dnn.layers.SpectralNormalization import ConvSN2D
+from subtle.subtle_loss import wasserstein_loss
 
-class AdversaryPatch2D(AdversaryBase):
+class AdversaryDense2D(AdversaryBase):
     def __init__(self, **kwargs):
-        self.model_name = 'patch2d'
-        self.patch_size = 30
+        self.model_name = 'dense2d'
 
         super().__init__(**kwargs)
         self._build_model()
 
     def get_real_gt(self, size):
-        return np.ones((size, self.patch_size, self.patch_size, 1))
+        return np.ones((size, 1))
 
     def get_fake_gt(self, size):
-        return np.zeros((size, self.patch_size, self.patch_size, 1))
+        return np.zeros((size, 1))
 
     def _conv_block(self, input, filters, idx, suffix=''):
         cname = 'conv_{}_{}'.format(idx, suffix)
-        d_out = ConvSN2D(
+        d_out = Conv2D(
             filters=filters,
             kernel_size=self.get_config('kernel_size', cname),
             strides=self.get_config('strides', cname),
@@ -35,9 +34,6 @@ class AdversaryPatch2D(AdversaryBase):
             alpha=self.get_config('lrelu_alpha', act_name), name=act_name
         )(d_out)
 
-        if self.get_config('batch_norm', cname):
-            d_out = BatchNormalization(momentum=self.bnorm_momentum)(d_out)
-
         return d_out
 
     def _build_model(self):
@@ -48,29 +44,30 @@ class AdversaryPatch2D(AdversaryBase):
         d_out = input
 
         for idx in range(self.num_convs):
-            nc = self.num_filters_first_conv * (2 ** idx)
-            d_out = self._conv_block(d_out, nc, idx=idx, suffix='a')
-            d_out = self._conv_block(d_out, nc, idx=idx, suffix='b')
+            d_out = self._conv_block(d_out, self.num_filters_first_conv, idx=idx, suffix='a')
+
             if self.verbose:
                 print(d_out)
 
-        fcname = 'final_conv'
-        val = ConvSN2D(
-            filters=self.num_channel_output,
-            kernel_size=self.get_config('kernel_size', fcname),
-            strides=self.get_config('strides', fcname),
-            padding=self.get_config('padding', fcname),
-            name=fcname
-        )(d_out)
-        val = Activation(
-            self.get_config('activation', 'adv_output'),
-            name='adv_output'
-        )(val)
+        d_out = Flatten()(d_out)
+        d_out = Dense(self.dense_filters, name='final_dense')(d_out)
+
+        dense_act = self.get_config('activation', 'final_dense')
+        if dense_act == 'relu':
+            d_out = Activation(dense_act)(d_out)
+        else:
+            d_out = LeakyReLU(alpha=self.get_config('lrelu_alpha', 'final_dense'))(d_out)
 
         if self.verbose:
-            print(val)
+            print(d_out)
 
-        model = keras.models.Model(inputs=input, outputs=val)
+        d_out = Dense(
+            self.num_channel_output,
+            activation=self.get_config('activation', 'adv_output'),
+            name='adv_output'
+        )(d_out)
+
+        model = keras.models.Model(inputs=input, outputs=d_out)
         model.summary()
         self.model = model
 
