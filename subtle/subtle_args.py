@@ -141,6 +141,7 @@ def _train_args(parser):
     parser.add_argument('--disc_lr_init', action='store', dest='disc_lr_init', type=float, help='Learning rate initialization for adversary Adam optimizer', default=2e-3)
     parser.add_argument('--disc_beta', action='store', dest='disc_beta', type=float, help='Beta value for adversary Adam optimizer', default=0.5)
     parser.add_argument('--disc_loss_function', action='store', type=str, dest='disc_loss_function', help='Loss function for adversary', default='mse')
+    parser.add_argument('--add_disc_noise', action='store_true', dest='add_gen_noise', help='If True, random noise will be added to discriminator input', default=False)
 
     return parser
 

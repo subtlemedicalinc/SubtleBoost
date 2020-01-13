@@ -8,8 +8,16 @@ from subtle.dnn.layers.SpectralNormalization import ConvSN2D
 class AdversaryPatch2D(AdversaryBase):
     def __init__(self, **kwargs):
         self.model_name = 'patch2d'
+        self.patch_size = 30
+
         super().__init__(**kwargs)
         self._build_model()
+
+    def get_real_gt(self, size):
+        return np.ones((size, self.patch_size, self.patch_size, 1))
+
+    def get_fake_gt(self, size):
+        return np.zeros((size, self.patch_size, self.patch_size, 1))
 
     def _conv_block(self, input, filters, idx, suffix=''):
         cname = 'conv_{}_{}'.format(idx, suffix)

@@ -234,7 +234,7 @@ def train_process(args):
     ckp_monitor = None
 
     if args.gan_mode:
-        ckp_monitor = 'model_1_loss'
+        ckp_monitor = 'gen_loss'
     else:
         if args.enh_mask:
             ckp_monitor = 'val_weighted_l1_loss'
@@ -337,7 +337,7 @@ def train_process(args):
         disc_m._compile_model()
         disc.trainable = False
 
-        gan.compile(loss=[loss_function, 'mse'], optimizer=Adam())
+        gan.compile(loss=[loss_function, args.disc_loss_function], optimizer=Adam())
         disc.trainable = True
 
         tb_callback = TensorBoard(tb_logdir)
@@ -360,12 +360,11 @@ def train_process(args):
         X_val = np.array(X_val)
         Y_val = np.array(Y_val)
 
-        dc = 30
-        real_val = np.ones((X_val.shape[0], dc, dc, 1))
+        real_val = disc_m.get_real_gt(X_val.shape[0])
 
-        real = np.ones((args.batch_size, dc, dc, 1))
-        fake = np.zeros((args.batch_size, dc, dc, 1))
-        real_full = np.ones((data_len * args.batch_size, dc, dc, 1))
+        real = disc_m.get_real_gt(args.batch_size)
+        fake = disc_m.get_fake_gt(args.batch_size)
+        real_full = disc_m.get_real_gt(data_len * args.batch_size)
 
         # for saving epoch output as a npy file
         fpath_h5 = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data/NO31.h5'
@@ -403,26 +402,38 @@ def train_process(args):
                 X_batch.extend(X)
                 Y_batch.extend(Y)
 
-                gauss1 = np.random.normal(Y.min(), 0.1 * Y.max(), Y.shape)
-                Y_n = Y + gauss1
+                if args.add_disc_noise:
+                    gauss1 = np.random.normal(Y.min(), 0.02 * Y.max(), Y.shape)
+                    Y_n = Y + gauss1
 
-                gauss2 = np.random.normal(gen_imgs.min(), 0.1 * gen_imgs.max(), gen_imgs.shape)
-                g_n = gen_imgs + gauss2
+                    gauss2 = np.random.normal(gen_imgs.min(), 0.02 * gen_imgs.max(), gen_imgs.shape)
+                    g_n = gen_imgs + gauss2
+                else:
+                    Y_n = Y
+                    g_n = gen_imgs
 
-                dis_inp = np.concatenate([Y_n, g_n])
-                dis_out = np.concatenate([real, fake])
+                for _ in range(args.num_disc_steps):
+                    dhist1 = disc.fit(
+                        Y_n, real,
+                        batch_size=args.batch_size,
+                        epochs=1,
+                        verbose=1,
+                        shuffle=True
+                    )
 
-                dhist = disc.fit(
-                    dis_inp, dis_out,
-                    batch_size=args.batch_size,
-                    epochs=1,
-                    verbose=1,
-                    shuffle=False
+                    dhist2 = disc.fit(
+                        g_n, fake,
+                        batch_size=args.batch_size,
+                        epochs=1,
+                        verbose=1,
+                        shuffle=True
+                    )
 
-                )
+                    dloss1 = dhist1.history['loss'][0]
+                    dloss2 = dhist1.history['loss'][0]
 
-                dloss = dhist.history['loss'][0]
-                train_dloss.append(dloss)
+                    dloss = 0.5 * np.add(dloss1, dloss2)
+                    train_dloss.append(dloss)
 
             train_dloss = np.mean(train_dloss)
 

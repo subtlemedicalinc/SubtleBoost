@@ -18,21 +18,21 @@
     "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data"
   },
   "train": {
-    "wloss_lambda": 0.5,
+    "wloss_lambda": 0,
     "max_data_sets": 100,
     "validation_split": 0.2,
     "learning_rate": 0.001,
-    "checkpoint_name": "tiantan_gan",
+    "checkpoint_name": "tiantan_gan_novgg",
     "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
     "num_epochs": 100,
     "shuffle": true,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
-    "l1_lambda": 0.15,
+    "l1_lambda": 0.6,
     "file_ext": "h5",
     "batch_size": 16,
-    "ssim_lambda": 0.15,
+    "ssim_lambda": 0.4,
     "no_save_best_only": true,
-    "perceptual_lambda": 0.2,
+    "perceptual_lambda": 0,
     "queue_size": 4
   },
   "inference": {
