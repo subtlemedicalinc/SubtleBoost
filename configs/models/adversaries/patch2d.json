@@ -2,7 +2,7 @@
   "base": {
     "num_filters_first_conv": 32,
     "bnorm_momentum": 0.8,
-    "num_convs": 4,
+    "num_convs": 5,
     "all": {
       "padding": "same",
       "lrelu_alpha": 0.2,

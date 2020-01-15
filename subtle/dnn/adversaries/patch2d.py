@@ -9,7 +9,7 @@ from subtle.dnn.layers.SpectralNormalization import ConvSN2D
 class AdversaryPatch2D(AdversaryBase):
     def __init__(self, **kwargs):
         self.model_name = 'patch2d'
-        self.patch_size = 30
+        self.patch_size = 15
 
         super().__init__(**kwargs)
         self._build_model()

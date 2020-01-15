@@ -96,6 +96,20 @@ def process_mpr(proc_params):
         predict_kwargs = proc_params['predict_kwargs']
         data_loader = proc_params['data_loader']
         rr = proc_params['rr']
+        slices_per_input = proc_params['slices_per_input']
+        adversary_name = proc_params['adversary_name']
+        gan_mode = proc_params['gan_mode']
+        checkpoint_file = proc_params['checkpoint_file']
+
+        ns, _, nx, ny = data.shape
+
+        if gan_mode:
+            gen = m.model
+            d = load_model(adversary_name)(img_rows=nx, img_cols=ny, compile_model=True)
+            disc = d.model
+
+            gan = gan_model(gen, disc, (nx, ny, 2 * slices_per_input))
+            gan.load_weights(checkpoint_file)
 
         if proc_params['num_rotations'] > 1 and angle > 0:
             if proc_params['verbose']:
@@ -130,6 +144,7 @@ def process_mpr(proc_params):
 
             gen_kwargs['data_list'] = [data_file]
             gen_kwargs['slice_axis'] = [slice_axis]
+            gen_kwargs['file_ext'] = 'npy'
             prediction_generator = data_loader(**gen_kwargs)
 
             data_ref = np.zeros_like(data_rot)
@@ -155,8 +170,6 @@ def process_mpr(proc_params):
                 _Y_prediction = np.transpose(_Y_prediction, (1, 0, 2, 3))
             elif slice_axis == 3:
                 _Y_prediction = np.transpose(_Y_prediction, (1, 2, 0, 3))
-
-            ns, _, nx, ny = data.shape
 
             if proc_params['resize']:
                 _Y_prediction = sp.util.resize(_Y_prediction, [ns, nx, ny, 1])
@@ -280,7 +293,8 @@ def inference_process(args):
     gen_kwargs = {
         'batch_size': 1,
         'shuffle': False,
-        'verbose': args.verbose
+        'verbose': args.verbose,
+        'file_ext': args.file_ext
     }
     predict_kwargs = {
         'max_queue_size': args.max_queue_size,
@@ -382,13 +396,6 @@ def inference_process(args):
         else:
             slice_axes = [args.slice_axis]
 
-        if args.gan_mode:
-            gen = m.model
-            d = load_model(args.adversary_name)(img_rows=nx, img_cols=ny, compile_model=True)
-            disc = d.model
-
-            gan = gan_model(gen, disc, (nx, ny, 2 * args.slices_per_input))
-            gan.load_weights(args.checkpoint_file)
 
         Y_predictions = np.zeros((ns, nx, ny, len(slice_axes), args.num_rotations))
 
@@ -426,7 +433,11 @@ def inference_process(args):
                 'resize': args.resize,
                 'verbose': args.verbose,
                 'keras_memory': args.keras_memory,
-                'tmpdir': tmpdir
+                'tmpdir': tmpdir,
+                'adversary_name': args.adversary_name,
+                'gan_mode': args.gan_mode,
+                'slices_per_input': args.slices_per_input,
+                'checkpoint_file': args.checkpoint_file
             }
 
             parallel_params = []
