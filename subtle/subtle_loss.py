@@ -180,13 +180,50 @@ def perceptual_loss(y_true, y_pred, weights, img_shape):
     loss_model.trainable = False
     return K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
 
+def gram_matrix(x):
+    features = K.batch_flatten(K.permute_dimensions(x, (2, 0, 1)))
+    gram = K.dot(features, K.transpose(features))
+    return gram
+
+def compute_style_loss(style, combination, img_shape):
+    style = gram_matrix(style)
+    combination = gram_matrix(combination)
+    size = img_shape[0] * img_shape[1]
+    return K.sum(K.square(style - combination)) / (4. * (img_shape[2] ** 2) * (size ** 2))
+
+@extract_weights
+def style_loss(y_true, y_pred, weights, img_shape):
+    # From https://github.com/gsurma/style_transfer/blob/master/style-transfer.ipynb
+
+    y_true_3c = K.concatenate([y_true, y_true, y_true])
+    y_true_3c = vgg_preprocess(y_true_3c)
+
+    combi_img = K.placeholder((1, img_shape[0], img_shape[1], 3))
+    input_tensor = K.concatenate([y_true_3c, y_true_3c, combi_img], axis=0)
+
+    model = VGG19(input_tensor=input_tensor, include_top=False, weights='imagenet')
+
+    layers = dict([(layer.name, layer.output) for layer in model.layers])
+    style_layers = [
+        "block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3", "block5_conv3"
+    ]
+
+    loss = K.variable(0.)
+    for layer_name in style_layers:
+        layer_features = layers[layer_name]
+        style_features = layer_features[1, :, :, :]
+        combination_features = layer_features[2, :, :, :]
+        loss.assign_add(compute_style_loss(style_features, combination_features, img_shape))
+
+    return loss
+
 @extract_weights
 def wasserstein_loss(y_true, y_pred, weights):
     return K.mean(y_true * y_pred)
 
-def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, img_shape=(240, 240, 3), enh_mask=False):
+def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, style_lambda=0.0, img_shape=(240, 240, 3), enh_mask=False):
     l1_fn = l1_loss if not enh_mask else weighted_l1_loss
 
-    if perceptual_lambda > 0 or wloss_lambda > 0:
-        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y)
+    if perceptual_lambda > 0 or wloss_lambda > 0 or style_lambda > 0:
+        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
     return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda

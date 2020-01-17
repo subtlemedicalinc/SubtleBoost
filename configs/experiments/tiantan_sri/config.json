@@ -76,6 +76,14 @@
     "hyp_search": {
       "slices_per_input": 7,
       "checkpoint_name": "hyp_loss_weights"
+    },
+    "style_loss": {
+      "slices_per_input": 7,
+      "l1_lambda": 0.25,
+      "ssim_lambda": 0.25,
+      "perceptual_lambda": 0.25,
+      "style_lambda": 0.25,
+      "checkpoint_name": "vgg_style_loss"
     }
   },
   "inference": {
@@ -84,6 +92,8 @@
     "slices_per_input": 7,
     "description": "nonzero_init",
     "num_rotations": 5,
+    "procs_per_gpu": 3,
+    "file_ext": "h5",
     "checkpoint": "nonzero_init_7ch.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
@@ -99,6 +109,10 @@
       "model_name": "multires2d",
       "description": "mres_fix",
       "checkpoint": "mres_fix.checkpoint"
+    },
+    "style_loss": {
+      "description": "vgg_style_loss",
+      "checkpoint": "vgg_style_loss.checkpoint"
     }
   }
 }

@@ -102,6 +102,7 @@ def _train_args(parser):
     parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)
     parser.add_argument('--perceptual_lambda', action='store', type=float, dest='perceptual_lambda', help='Loss from VGG19 ImageNet model', default=0.)
     parser.add_argument('--wloss_lambda', action='store', type=float, dest='wloss_lambda', help='Wasserstein loss', default=0.)
+    parser.add_argument('--style_lambda', action='store', type=float, dest='style_lambda', help='Style or texture loss lambda', default=0.)
 
     parser.add_argument('--data_list', action='store', dest='data_list_file', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
