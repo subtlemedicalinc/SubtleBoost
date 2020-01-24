@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 import subtle.subtle_metrics as sumetrics
 
 try:
-    sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
     import SimpleITK as sitk
 except:
     warnings.warn('SimpleITK not found!')
