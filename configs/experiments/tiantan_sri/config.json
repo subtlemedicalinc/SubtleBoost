@@ -62,11 +62,12 @@
       "slices_per_input": 7
     },
     "enh_vgg": {
+      "slices_per_input": 7,
       "ssim_lambda": 0.25,
       "l1_lambda": 0.25,
       "perceptual_lambda": 0.5,
       "enh_mask": true,
-      "checkpoint_name": "enh_vgg"
+      "checkpoint_name": "enh_vgg_multi"
     },
     "mres_fix": {
       "model_name": "mres2d",
@@ -102,8 +103,9 @@
     "zoom": 0,
     "series_num": 1002,
     "enh_mask": {
-      "description": "enh_vgg",
-      "checkpoint": "enh_vgg.checkpoint"
+      "slices_per_input": 7,
+      "description": "enh_vgg_multi",
+      "checkpoint": "enh_vgg_multi.checkpoint"
     },
     "mres_fix": {
       "model_name": "multires2d",
