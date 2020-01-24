@@ -2,8 +2,6 @@ scipy==1.1.0
 nipype==1.2.0
 tqdm==4.32.2
 nibabel==2.4.1
-tensorflow-gpu==1.14.0
-tensorboard==1.15.0
 Keras==2.2.4
 dicom2nifti==2.1.5
 h5py==2.9.0
@@ -20,7 +18,3 @@ expiringdict==1.1.4
 SimpleITK==1.2.2
 dicom==0.9.9.post1
 scikit_learn==0.21.3
-torch==1.1.0
-test_tube
-gpustat
-flask==1.1.1

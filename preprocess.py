@@ -22,12 +22,9 @@ import time
 import pydicom
 
 from scipy.ndimage import zoom
-# from nipype.interfaces import fsl
-# fsl.FSLCommand.set_default_output_type('NIFTI')
 
 from deepbrain import Extractor as BrainExtractor
 
-sys.path.insert(0, '/home/subtle/jon/tools/SimpleElastix/build/SimpleITK-build/Wrapping/Python/Packaging/build/lib.linux-x86_64-3.5/SimpleITK')
 import SimpleITK as sitk
 
 import subtle.subtle_preprocess as sup
