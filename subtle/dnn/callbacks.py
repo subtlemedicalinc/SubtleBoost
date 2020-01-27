@@ -238,13 +238,25 @@ class HparamsCallback(keras.callbacks.TensorBoard):
 
         exp_id = self.log_dir.split('/')[-3]
         hypmonitor_port = str(os.environ['HYPMONITOR_PORT'])
-        disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:{hypmonitor_port}/experiment?id={exp_id})\n'''
-        disp += f'''| *Hyperparameter* | *Value* |\n'''
-        disp += f'''| --------------- | ------- |\n'''
+
+        # Markdown formatting commented because app environment supports only python 3.5 for now; formatting requires python 3.6+
+        
+        # disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:{hypmonitor_port}/experiment?id={exp_id})\n'''
+        # disp += f'''| *Hyperparameter* | *Value* |\n'''
+        # disp += f'''| --------------- | ------- |\n'''
+        #
+        # for k, v in self.tunable_args.items():
+        #     v = '{:.3f}'.format(v)
+        #     disp += f'''| {k} | {v} |\n'''
+
+        disp = 'Hyperparameter Summary (Detailed logs - http://localhost:{}/experiment?id={}))\n'.format(hypmonitor_port, exp_id)
+
+        disp += '| Hyperparameter | Value |\n'
+        disp += '| -------------- | ----- |\n'
 
         for k, v in self.tunable_args.items():
             v = '{:.3f}'.format(v)
-            disp += f'''| {k} | {v} |\n'''
+            disp += '| {} | {} |\n'.format(k, v)
 
         tensor =  tf.convert_to_tensor(disp)
         summary = tf.summary.text("Trial {}".format(self.trial_id), tensor)
