@@ -5,11 +5,11 @@ Network architecture for SubtleGad project.
 Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
+
 import tensorflow as tf
 import keras.models
 import keras.callbacks
 from keras.optimizers import Adam
-from tensorboard.plugins.hparams import keras as hp_keras
 
 from warnings import warn
 import numpy as np

@@ -1,6 +1,12 @@
 import os
 import json
-from test_tube import HyperOptArgumentParser
+import warnings
+
+try:
+    from test_tube import HyperOptArgumentParser
+except:
+    warnings.warn('Module test_tube not found - hyperparameter related functions cannot be used')
+
 from . import experiment as utils_exp
 from . import misc as utils_misc
 
