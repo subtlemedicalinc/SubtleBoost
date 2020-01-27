@@ -53,4 +53,10 @@ else
   exp_str="--experiment ${exparg}"
 fi
 
-python batch_preprocess.py ${exp_str} ${GPU} > ${logfile} 2>${errfile}
+if [[ $PYTHON == '' ]]; then
+  python="python"
+else
+  python=$PYTHON
+fi
+
+$PYTHON batch_preprocess.py ${exp_str} ${GPU} > ${logfile} 2>${errfile}
