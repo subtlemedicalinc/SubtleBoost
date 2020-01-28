@@ -18,7 +18,23 @@
     "scale_matching": true,
     "skip_hist_norm": true,
     "out_dir": "/home/data",
-    "fsl_mask": true,
-    "fsl_mask_all_ims": true
+    "fsl_mask": false,
+    "fsl_mask_all_ims": false
+  },
+  "inference": {
+    "learn_residual": false,
+    "inference_mpr": true,
+    "inference_mpr_avg": "mean",
+    "data_raw": "/home/data",
+    "series_num": 1002,
+    "file_ext": "h5",
+    "stats_base": "/home/logs",
+    "checkpoint_dir": "/home/models",
+    "checkpoint": "stanford_enh_vgg.checkpoint",
+    "zoom": 0,
+    "procs_per_gpu": 2,
+    "num_rotations": 5,
+    "resize": 512,
+    "dicom_inference": true
   }
 }
