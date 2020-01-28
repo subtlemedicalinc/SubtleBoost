@@ -20,10 +20,14 @@ import tempfile
 import datetime
 import time
 import pydicom
+import warnings
 
 from scipy.ndimage import zoom
 
-from deepbrain import Extractor as BrainExtractor
+try:
+    from deepbrain import Extractor as BrainExtractor
+except:
+    warnings.warn('Module deepbrain not found - cannot perform brain extraction')
 
 import SimpleITK as sitk
 
