@@ -229,8 +229,17 @@ def inference_process(args):
             metadata['inference_only'] = True
     else:
         if args.verbose:
-            print('pre-processing data')
-        data, data_mask, metadata = preprocess_chain(args)
+            print('pre-processing data - using preprocess args from {}/{}'.format(args.experiment, args.sub_experiment))
+
+        pre_args = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
+        pre_args.path_base = args.path_base
+
+        data, data_mask, metadata = preprocess_chain(pre_args)
+
+        args.path_zero = pre_args.path_zero
+        args.path_low = pre_args.path_low
+        args.path_full = pre_args.path_full
+
         if args.verbose:
             print('done')
 
