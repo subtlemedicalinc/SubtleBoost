@@ -234,6 +234,9 @@ def inference_process(args):
         pre_args = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
         pre_args.path_base = args.path_base
 
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu.split(',')[0]
+
         data, data_mask, metadata = preprocess_chain(pre_args)
 
         args.path_zero = pre_args.path_zero
