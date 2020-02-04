@@ -20,6 +20,7 @@
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
+    "file_ext": "h5",
     "batch1": {
       "data_batch": "0,56"
     },
