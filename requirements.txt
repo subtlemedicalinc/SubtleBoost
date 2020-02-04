@@ -18,4 +18,5 @@ expiringdict==1.1.4
 dicom==0.9.9.post1
 scikit_learn==0.21.3
 tensorflow-gpu==1.12.0
+deepbrain
 pandas
