@@ -18,8 +18,8 @@
     "scale_matching": true,
     "skip_hist_norm": true,
     "out_dir": "/home/data",
-    "fsl_mask": false,
-    "fsl_mask_all_ims": false
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true
   },
   "inference": {
     "learn_residual": false,
