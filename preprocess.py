@@ -34,6 +34,7 @@ import SimpleITK as sitk
 import subtle.subtle_preprocess as sup
 import subtle.utils.io as utils_io
 import subtle.subtle_args as sargs
+from subtle.utils.misc import processify
 
 from glob import glob
 
@@ -445,6 +446,7 @@ def _mask_npy(img_npy):
     mask = sup.get_largest_connected_component(segment_probs > 0.5)
     return mask
 
+@processify
 def fsl_brain_mask(args, ims):
     mask = None
 
