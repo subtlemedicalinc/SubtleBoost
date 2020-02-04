@@ -54,9 +54,9 @@ else
 fi
 
 if [[ $PYTHON == '' ]]; then
-  python="python"
+  python_cmd="python"
 else
-  python=$PYTHON
+  python_cmd=$PYTHON
 fi
 
-$PYTHON batch_preprocess.py ${exp_str} ${GPU} > ${logfile} 2>${errfile}
+${python_cmd} batch_preprocess.py ${exp_str} ${GPU} > ${logfile} 2>${errfile}
