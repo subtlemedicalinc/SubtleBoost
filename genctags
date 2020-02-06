@@ -1,1 +1,0 @@
-ctags --python-kinds=-i *.py --extra=+f `find . -regex '.*\.[py]*' -print`

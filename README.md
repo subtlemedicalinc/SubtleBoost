@@ -1,6 +1,10 @@
 # SubtleGad
-Gadolinium Contrast Enhancement using Deep Learning
+Training/inference pipeline for Gadolinium Contrast Enhancement using Deep Learning
 
+## App
+Production code for SubtleGad app
+
+## Training module
 
 - [Install](#install)
 - [Structure](#structure)
@@ -27,7 +31,7 @@ pip install tensorflow-gpu==1.14.0
 ```
 
 ## Structure
-The `subtle` submodule contains all shared code for I/O, models and generators, data processing, plotting, and command-line arguments.  
+The `train.subtle` submodule contains all shared code for I/O, models and generators, data processing, plotting, and command-line arguments.  
 The three main programs that use this submodule are `preprocess.py`, `train.py`, and `inference.py`. Each gets its parameters from the respective experiment configs and `subtle/subtle_args.py`, though not all are used.
 
 ## Usage
