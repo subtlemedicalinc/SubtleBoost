@@ -229,8 +229,6 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     return im_out, param_map_out
 
 def apply_reg_transform(img, spacing, transform_params):
-    transform_filter = sitk.TransformixImageFilter()
-
     simg = sitk.GetImageFromArray(img)
     simg.SetSpacing(spacing)
 
