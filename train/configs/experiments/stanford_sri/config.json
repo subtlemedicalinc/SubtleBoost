@@ -106,7 +106,7 @@
     "shuffle": true,
     "hist_dir": "/home/srivathsa/projects/studies/gad/stanford/train/history",
     "l1_lambda": 0.8,
-    "file_ext": "npy",
+    "file_ext": "h5",
     "ssim_lambda": 0.2,
     "batch_size": 8,
     "no_save_best_only": true,

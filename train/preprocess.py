@@ -421,22 +421,6 @@ def global_norm(args, ims, ims_mod, metadata):
 
     return ims, metadata
 
-def _mask_nii(fpath_nii, outdir, fsl_threshold):
-    bet_out_name = '{}_bet'.format(fpath_nii.split('/')[-1].replace('.nii', ''))
-    bet_outfile = '{}/{}.nii'.format(outdir, bet_out_name)
-
-    bet_node = fsl.BET(frac=fsl_threshold, reduce_bias=False, mask=True)
-
-    bet_node.inputs.in_file = fpath_nii
-    bet_node.inputs.out_file = bet_outfile
-
-    res = bet_node.run()
-
-    # FIXME: use res.outputs.mask_file ?
-    mask = sup.nii2npy('{}/{}_mask.nii'.format(outdir, bet_out_name))
-
-    return mask
-
 def _mask_npy(img_npy):
     ext = BrainExtractor()
 
@@ -446,8 +430,14 @@ def _mask_npy(img_npy):
     mask = sup.get_largest_connected_component(segment_probs > 0.5)
     return mask
 
-@processify
 def fsl_brain_mask(args, ims):
+    return _brain_mask(args, ims)
+
+@processify
+def fsl_brain_mask_processify(args, ims):
+    return _brain_mask(args, ims)
+
+def _brain_mask(args, ims):
     mask = None
 
     if args.fsl_mask:
@@ -621,7 +611,10 @@ def preprocess_chain(args):
     ims, mask, metadata = mask_images(args, ims, metadata)
 
     # next apply a BET mask to remove non-brain tissue
-    fsl_mask = fsl_brain_mask(args, ims)
+    if not args.dicom_inference:
+        fsl_mask = fsl_brain_mask(args, ims)
+    else:
+        fsl_mask = fsl_brain_mask_processify(args, ims)
     ims = apply_fsl_mask(args, ims, fsl_mask)
 
     # scale and register images based on BET images
