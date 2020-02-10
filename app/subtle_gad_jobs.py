@@ -418,7 +418,7 @@ class SubtleGADJobType(BaseJobType):
         # use pixels inside the noise mask of zero dose
 
         ref_mask = noise_mask[0, idx_center]
-        
+
         context_img_zero = scale_images[0, idx_center, ...][ref_mask != 0].ravel()
         context_img_low = scale_images[1, idx_center, ...][ref_mask != 0].ravel()
 

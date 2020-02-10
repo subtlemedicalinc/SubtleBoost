@@ -7,15 +7,22 @@ all_reports: True
 warn_unmatched_series: False
 
 jobs:
+<<<<<<< HEAD
   - job_name: "reduce_contrast"
     series_required:
       - "zero_dose_series"
       - "low_dose_series"
+=======
+  - job_name: "low_dose"
+    series_required:
+      - "gad_series"
+>>>>>>> Base files for SubtleGad APP
     slice_location_tolerance: "none"
     fov_tolerance: "inf"
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
+<<<<<<< HEAD
       series_desc_suffix: ":LOW_CONTRAST"
       model_id: "stanford_gad"
 
@@ -29,6 +36,14 @@ series:
     equidistance_tolerance: "none"
   - name: "low_dose_series"
     reg_match: "lowdose"
+=======
+      series_desc_suffix: ":LOWDOSE"
+      model_id: "stanford_gad"
+
+series:
+  - name: "gad_series"
+    reg_match: "BRAVO"
+>>>>>>> Base files for SubtleGad APP
     reg_exclude: ""
     slice_range: [1, 400]
     frame_range: [1, 1]
