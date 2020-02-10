@@ -89,6 +89,8 @@ class SubtleGADJobType(BaseJobType):
 
         self.task = task
 
+        self.task = task
+
         # define and prepare config
         proc_config = self.default_processing_config_gad.copy()
 
