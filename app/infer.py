@@ -107,19 +107,18 @@ class SubtleGADApp(SubtleApp):
 
         exit_codes = {}
         # execute each task
+
         for i_task, task in enumerate(tasks):
             task_id = "{}:{}".format(i_task, task.job_name)
             try:
-                exec_config = task.job_definition.exec_config
-                
                 # update execution specific configuration with app-wide configuration
-                exec_config.update(self._config)
-                model_id = exec_config["model_id"]
+                task.job_definition.exec_config.update(self._config)
                 # clear exec_config from unused args
-                _ = exec_config.pop('jobs')
-                _ = exec_config.pop('series')
+                _ = task.job_definition.exec_config.pop('jobs')
+                _ = task.job_definition.exec_config.pop('series')
 
                 # save model version to file as an info to platform
+                model_id = task.job_definition.exec_config["model_id"]
                 self._save_model_ver(model_id)
 
                 model_dir = os.path.join(SCRIPT_DIR, "models", model_id)
@@ -128,8 +127,7 @@ class SubtleGADApp(SubtleApp):
 
                 # create the task's job object and execute it
                 job_obj = subtle_gad_jobs.SubtleGADJobType(
-                    name=task.job_name,
-                    config=exec_config,
+                    task=task,
                     model_dir=model_dir,
                     decrypt_key_hex=hashlib.sha256(
                         "{appName}::{appId}::{version}".format(
@@ -139,7 +137,8 @@ class SubtleGADApp(SubtleApp):
                         ).encode()
                     ).hexdigest(),
                 )
-                job_obj(task.ds_lists, output_path_dicom)
+                
+                job_obj(_, output_path_dicom)
                 exit_codes[task_id] = 0
                 self._handle_error(0, "Success")
 
