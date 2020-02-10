@@ -1,6 +1,6 @@
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation, ReLU, LeakyReLU
+from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation
 from keras.layers.merge import add as keras_add
 
 from subtle.dnn.generators.base import GeneratorBase
@@ -27,10 +27,10 @@ class GeneratorUNet2D(GeneratorBase):
 
         if activation == 'relu':
             act_name = 'relu_{}'.format(name)
-            act_fn = ReLU(name=act_name)
+            act_fn = Activation('relu', name=act_name)
         elif activation == 'leaky_relu':
             act_name = 'lrelu_{}'.format(name)
-            act_fn = LeakyReLU(
+            act_fn = Activation('leaky_relu',
                 alpha=self.get_config('lrelu_alpha', name),
                 name=act_name
             )

@@ -47,7 +47,7 @@ class GeneratorBase:
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='./configs/models')
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/train/configs/models')
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}

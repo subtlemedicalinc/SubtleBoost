@@ -2,7 +2,7 @@ scipy==1.1.0
 nipype==1.2.0
 tqdm==4.32.2
 nibabel==2.4.1
-Keras==2.2.4
+Keras==2.3.1
 dicom2nifti==2.1.5
 h5py==2.9.0
 imageio==2.5.0
