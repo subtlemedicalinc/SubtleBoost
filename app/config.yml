@@ -1,0 +1,28 @@
+version: "0.0.1"
+
+disable_openvino: True
+not_for_clinical_use: True
+enable_multiple_jobs: True
+all_reports: True
+warn_unmatched_series: False
+
+jobs:
+  - job_name: "low_dose"
+    series_required:
+      - "gad_series"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":LOWDOSE"
+      model_id: "stanford_gad"
+
+series:
+  - name: "gad_series"
+    reg_match: "BRAVO"
+    reg_exclude: ""
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
