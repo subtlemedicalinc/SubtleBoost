@@ -301,7 +301,7 @@ def prescale_process(args, ims, mask, metadata):
     im0, im1, im2 = ims[idx_scale, 0, :, :], ims[idx_scale, 1, :, :], ims[idx_scale, 2, :, :]
 
     if not args.skip_mask:
-        m = mask[idx_scale, 0, :, :]
+        m = mask[idx_scale, :, :]
     else:
         m = np.ones(im0.shape)
 
@@ -623,7 +623,7 @@ def preprocess_chain(args):
     ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = zoom_process(args, ims, metadata)
 
-    ims, ims_mod, metadata = prescale_process(args, ims, mask, metadata)
+    ims, ims_mod, metadata = prescale_process(args, ims, fsl_mask, metadata)
     ims, ims_mod, metadata = match_scales(args, ims, ims_mod, metadata)
     ims, metadata = global_norm(args, ims, ims_mod, metadata)
 
