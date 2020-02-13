@@ -86,9 +86,6 @@ class SubtleGADJobType(BaseJobType):
         # update model config with app config:
         # to update tunable parameters, job parameters and app parameters
         self._model.update_config(task.job_definition.exec_config)
-
-        self.task = task
-
         self.task = task
 
         # define and prepare config
@@ -132,7 +129,6 @@ class SubtleGADJobType(BaseJobType):
 
         # dictionary of the data to process by frame
         dict_pixel_data = self._preprocess_raw_pixel_data()
-
         return dict_pixel_data
 
     # pylint: disable=arguments-differ
@@ -207,7 +203,6 @@ class SubtleGADJobType(BaseJobType):
         # get dictionary of sorted datasets by frame
 
         self._input_series = (zero_dose_series, low_dose_series)
-
         self._input_datasets = (
             zero_dose_series.get_dict_sorted_datasets(),
             low_dose_series.get_dict_sorted_datasets()
