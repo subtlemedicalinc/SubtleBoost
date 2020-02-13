@@ -39,7 +39,7 @@ class SubtleGADJobType(BaseJobType):
             "normalize_fun": "mean",
 
             "perform_noise_mask": True,
-            "noise_mask_threshold": 0.08,
+            "noise_mask_threshold": 0.1,
             "noise_mask_area": False,
             "noise_mask_selem": False,
 
@@ -211,6 +211,7 @@ class SubtleGADJobType(BaseJobType):
     def _get_raw_pixel_data(self):
         for frame_seq_name, _ in self._input_datasets[0].items():
             zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
+
             low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
 
             self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
@@ -235,7 +236,10 @@ class SubtleGADJobType(BaseJobType):
             preprocess_single_series.mask_bg_noise(ims[idx], threshold, mask_area, use_selem))
 
             for idx in range(images.shape[0]):
-                noise_mask = mask_fn(idx)(images)
+                noise_mask = preprocess_single_series.mask_bg_noise(
+                    img=images[idx], threshold=threshold, noise_mask_area=mask_area,
+                    use_selem=use_selem
+                )
                 images[idx, ...] *= noise_mask
                 mask.append(noise_mask)
 
@@ -440,9 +444,6 @@ class SubtleGADJobType(BaseJobType):
         context_img = context_img.transpose(1, 0)
         scale_images = scale_images.transpose(1, 0, 2, 3)
 
-        print('context img', context_img.shape)
-        print('scale images', scale_images.shape)
-
         norm_axis = (0, 1) if self._proc_config.joint_normalize else (0, )
 
         if self._proc_config.scale_ref_zero_img:
@@ -451,9 +452,7 @@ class SubtleGADJobType(BaseJobType):
         else:
             norm_img = context_img
 
-        print('norm image shape', norm_img.shape)
-        print('norm axis', norm_axis)
-
+        norm_img[norm_img < 0] = 0
         global_scale = np.mean(norm_img, axis=norm_axis)
         for a in norm_axis:
             global_scale = np.expand_dims(global_scale, axis=a)
@@ -516,7 +515,10 @@ class SubtleGADJobType(BaseJobType):
             input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
-            np.save('/home/srivathsa/app_output/debug/final.npy', input_data_full)
+
+            # TODO: REMOVE TEMP CODE
+            final_gad = np.array([input_data_full[0], input_data_full[1], input_data_full[1]]).transpose(1, 0, 2, 3)
+            np.save('/home/srivathsa/app_output/debug/final_gad.npy', final_gad)
 
             # TEMP
             input_data = np.array([input_data_full[0, 180:194]]).transpose(0, 2, 3, 1)
