@@ -13,6 +13,7 @@ from itertools import groupby
 import pydicom
 import pydicom.errors
 import numpy as np
+from deepbrain import Extractor as BrainExtractor
 
 from subtle.util.inference_job_utils import BaseJobType, GenericInferenceModel
 from subtle.procutil import preprocess_single_series, postprocess_single_series
@@ -34,15 +35,24 @@ class SubtleGADJobType(BaseJobType):
             "not_for_clinical_use": True,
 
             # preprocessing params:
-            "transform_type": "rigid",
             "normalize": True,
             "normalize_fun": "mean",
-            "noise_mask_threshold": 0.1,
-            "noise_mask_area": True,
-            "scale_matching": True,
-            "skip_hist_norm": True,
+
+            "perform_noise_mask": True,
+            "noise_mask_threshold": 0.08,
+            "noise_mask_area": False,
+            "noise_mask_selem": False,
+
             "skull_strip": True,
-            "skull_strip_all_ims": True,
+            "skull_strip_union": True,
+            "skull_strip_prob_threshold": 0.5,
+
+            "perform_dicom_scaling": False,
+            "transform_type": "rigid",
+            "histogram_matching": True,
+            "num_scale_context_slices": 20,
+            "joint_normalize": False,
+            "scale_ref_zero_img": False,
 
             # inference params:
             "inference_mpr": True,
@@ -65,10 +75,7 @@ class SubtleGADJobType(BaseJobType):
         :param model_dir: directory of the model to load for this job
         :param decrypt_key_hex: the decrypt key
         """
-
-        name = task.job_name
-        config = task.job_definition.exec_config
-        BaseJobType.__init__(self, name, config)
+        BaseJobType.__init__(self, task, model_dir)
 
         self._logger.info("Loading model from %s...", model_dir)
         self._model = GenericInferenceModel(model_dir=model_dir,
@@ -78,7 +85,7 @@ class SubtleGADJobType(BaseJobType):
             raise NotImplementedError("Invalid model found in {}".format(model_dir))
         # update model config with app config:
         # to update tunable parameters, job parameters and app parameters
-        self._model.update_config(self.config)
+        self._model.update_config(task.job_definition.exec_config)
 
         self.task = task
 
@@ -91,7 +98,6 @@ class SubtleGADJobType(BaseJobType):
 
         self._proc_config = self.SubtleGADProcConfig(**proc_config)
 
-
         # initialize arguments to update during processing
         # dict of input datasets by frame
         # (keys = frame sequence name, values = list of pydicom datasets)
@@ -101,14 +107,23 @@ class SubtleGADJobType(BaseJobType):
         # (keys = frame sequence name, values = pixel array)
         self._raw_input = {}
 
+        # initialize dict to save intermediate values and flags
+        self._metadata = {}
+
+        # list of lambda functions constructed during preprocess
+        self._proc_lambdas = []
+
         self._output_data = {}
 
-    def _preprocess(self, _):
+    def _preprocess(self):
         """The preprocess func
 
         :param _: (in_dicom in BaseJobType by default)
         """
         self._get_dicom_data()
+
+        self._get_pixel_spacing()
+        self._get_dicom_scale_coeff()
         #
         # get original pixel data and meta data info
         self._get_raw_pixel_data()
@@ -116,14 +131,13 @@ class SubtleGADJobType(BaseJobType):
         # dictionary of the data to process by frame
         dict_pixel_data = self._preprocess_raw_pixel_data()
 
-        return dict_pixel_data, {}
+        return dict_pixel_data
 
     # pylint: disable=arguments-differ
-    def _process(self, dict_pixel_data, meta_data):
+    def _process(self, dict_pixel_data):
         """Process the pixel data with the meta data.
 
         :param dict_pixel_data: dictionary of the input pixel data (numpy arrays) by frame
-        :param meta_data: a dict containing required meta data
         :return: the processed output data
         """
         dict_output_array = {}
@@ -189,6 +203,9 @@ class SubtleGADJobType(BaseJobType):
         isinstance(low_dose_series, series_utils.DicomSeries):
             raise TypeError("Input series should be a DicomSeries object")
         # get dictionary of sorted datasets by frame
+
+        self._input_series = (zero_dose_series, low_dose_series)
+
         self._input_datasets = (
             zero_dose_series.get_dict_sorted_datasets(),
             low_dose_series.get_dict_sorted_datasets()
@@ -196,18 +213,8 @@ class SubtleGADJobType(BaseJobType):
 
     def _get_raw_pixel_data(self):
         for frame_seq_name, _ in self._input_datasets[0].items():
-            list_data_zero = [
-                pydicom_utils.get_pixel_data_slice(dcm)[np.newaxis, :, :]
-                for dcm in self._input_datasets[0][frame_seq_name]
-            ]
-
-            list_data_low = [
-                pydicom_utils.get_pixel_data_slice(dcm)[np.newaxis, :, :]
-                for dcm in self._input_datasets[1][frame_seq_name]
-            ]
-
-            zero_data_np = np.concatenate(list_data_zero, axis=0)
-            low_data_np = np.concatenate(list_data_low, axis=0)
+            zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
+            low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
 
             self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
 
@@ -216,6 +223,277 @@ class SubtleGADJobType(BaseJobType):
                     self._raw_input[frame_seq_name].shape
                 )
             )
+
+    def _mask_noise(self, images):
+        mask = []
+
+        if self._proc_config.perform_noise_mask:
+            self._logger.info('Performing noise masking...')
+
+            threshold = self._proc_config.noise_mask_threshold
+            mask_area = self._proc_config.noise_mask_area
+            use_selem = self._proc_config.noise_mask_selem
+
+            mask_fn = lambda idx: (lambda ims: ims[idx] * \
+            preprocess_single_series.mask_bg_noise(ims[idx], threshold, mask_area, use_selem))
+
+            for idx in range(images.shape[0]):
+                noise_mask = mask_fn(idx)(images)
+                images[idx, ...] *= noise_mask
+                mask.append(noise_mask)
+
+            self._proc_lambdas.append({
+                'name': 'noise_mask',
+                'fn': [mask_fn(0), mask_fn(1)]
+            })
+
+        return images, np.array(mask)
+
+    def _strip_skull_npy_vol(self, img_npy):
+        brain_ext = BrainExtractor()
+
+        img_scaled = np.interp(img_npy, (img_npy.min(), img_npy.max()), (0, 1))
+        segment_probs = brain_ext.run(img_scaled)
+
+        th = self._proc_config.skull_strip_prob_threshold
+        return preprocess_single_series.get_largest_connected_component(segment_probs > th)
+
+    def _strip_skull(self, images):
+        brain_mask = None
+
+        if self._proc_config.skull_strip:
+            self._logger.info('Performing skull stripping for zero dose...')
+            mask_zero = self._strip_skull_npy_vol(images[0])
+
+            if self._proc_config.skull_strip_union:
+                self._logger.info('Performing skull stripping for low dose...')
+                mask_low = self._strip_skull_npy_vol(images[1])
+                brain_mask = ((mask_zero > 0) | (mask_low > 0))
+            else:
+                brain_mask = mask_zero
+
+        return brain_mask
+
+    def _apply_brain_mask(self, images, brain_mask):
+        self._logger.info('Applying computed brain mask on images')
+        masked_images = np.copy(images)
+
+        masked_images[0] *= brain_mask
+        masked_images[1] *= brain_mask
+        return masked_images
+
+    def _has_dicom_scaling_info(self):
+        header_zero, _ = self._get_dicom_header()
+        return 'RescaleSlope' in header_zero
+
+    def _get_dicom_header(self):
+        for frame_seq_name, _ in self._input_datasets[0].items():
+            header_zero = self._input_datasets[0][frame_seq_name][0]
+            header_low = self._input_datasets[1][frame_seq_name][0]
+
+            return (header_zero, header_low)
+
+    def _get_dicom_scale_coeff(self):
+        if not self._has_dicom_scaling_info():
+            self._dicom_scale_coeff = {
+                'zero': {
+                    'rescale_slope': 1.0,
+                    'rescale_intercept': 0.0,
+                    'scale_slope': 0.0
+                },
+                'low': {
+                    'rescale_slope': 1.0,
+                    'rescale_intercept': 0.0,
+                    'scale_slope': 0.0
+                }
+            }
+
+        else:
+            header_zero, header_low = self._get_dicom_header()
+
+            self._dicom_scale_coeff = [{
+                'rescale_slope': float(header_zero.RescaleSlope),
+                'rescale_intercept': float(header_zero.RescaleIntercept),
+                'scale_slope': float(header_zero[0x2005, 0x100e].value)
+            }, {
+                'rescale_slope': float(header_low.RescaleSlope),
+                'rescale_intercept': float(header_low.RescaleIntercept),
+                'scale_slope': float(header_low[0x2005, 0x100e].value)
+            }]
+
+    @staticmethod
+    def _scale_slope_intercept(img, rescale_slope, rescale_intercept, scale_slope):
+        return (img * rescale_slope + rescale_intercept) / (rescale_slope * scale_slope)
+
+    def _scale_intensity_with_dicom_tags(self, images):
+        if self._proc_config.perform_dicom_scaling and self._has_dicom_scaling_info():
+            self._logger.info('Performing intensity scaling using DICOM tags...')
+
+            scaled_images = np.copy(images)
+
+            scale_fn = lambda idx: (
+                lambda ims: SubtleGADJobType._scale_slope_intercept(ims[idx],
+                **self._dicom_scale_coeff[idx])
+            )
+
+            scaled_images[0] = scale_fn(0)(scaled_images)
+            scaled_images[1] = scale_fn(1)(scaled_images)
+
+            self._proc_lambdas.append({
+                'name': 'dicom_scaling',
+                'fn': [scale_fn(0), scale_fn(1)]
+            })
+
+            return scaled_images
+
+        return images
+
+    def _get_pixel_spacing(self):
+        header_zero, header_low = self._get_dicom_header()
+
+        x_zero, y_zero = header_zero.PixelSpacing
+        z_zero = header_zero.SliceThickness
+
+        x_low, y_low = header_low.PixelSpacing
+        z_low = header_low.SliceThickness
+
+        self._pixel_spacing = [(x_zero, y_zero, z_zero), (x_low, y_low, z_low)]
+
+    def _register(self, images):
+        self._logger.info('Performing registration of low dose with respect to zero dose...')
+
+        reg_images = np.copy(images)
+
+        # register the low dose image with respect to the zero dose image
+        reg_images[1], reg_params = preprocess_single_series.register(
+            fixed_img=reg_images[0], moving_img=reg_images[1],
+            fixed_spacing=self._pixel_spacing[0], moving_spacing=self._pixel_spacing[1],
+            transform_type=self._proc_config.transform_type
+        )
+
+        idty_fn = lambda ims: ims[0]
+
+        apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
+        self._pixel_spacing[1], reg_params)
+
+        self._proc_lambdas.append({
+            'name': 'register',
+            'fn': [idty_fn, apply_reg]
+        })
+
+        return reg_images
+
+    def _match_histogram(self, images):
+        if self._proc_config.histogram_matching:
+            self._logger.info('Matching histogram of low dose with respect to zero dose...')
+            hist_images = np.copy(images)
+
+            hist_images[1] = preprocess_single_series.match_histogram(
+                img=hist_images[1], ref_img=hist_images[0]
+            )
+
+            idty_fn = lambda ims: ims[0]
+            hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
+
+            self._proc_lambdas.append({
+                'name': 'histogram_matching',
+                'fn': [idty_fn, hist_match_fn]
+            })
+
+            return hist_images
+
+        return images
+
+    def _scale_intensity(self, images, noise_mask):
+        scale_images = np.copy(images)
+
+        self._logger.info('Performing intensity scaling...')
+        num_slices = scale_images.shape[1]
+
+        idx_center = range(
+            num_slices//2 - self._proc_config.num_scale_context_slices//2,
+            num_slices//2 + self._proc_config.num_scale_context_slices//2
+        )
+
+        # use pixels inside the noise mask of zero dose
+
+        ref_mask = noise_mask[0, idx_center]
+        
+        context_img_zero = scale_images[0, idx_center, ...][ref_mask != 0].ravel()
+        context_img_low = scale_images[1, idx_center, ...][ref_mask != 0].ravel()
+
+        context_img = np.stack((context_img_zero, context_img_low), axis=0)
+
+        scale_factor = preprocess_single_series.get_intensity_scale(
+            img=context_img[0], ref_img=context_img[1], levels=np.linspace(.5, 1.5, 30)
+        )
+
+        self._logger.info('Computed intensity scale factor is %s', scale_factor)
+
+        scale_images[1] *= scale_factor
+        context_img[1] *= scale_factor
+
+        sfactors = [1, scale_factor]
+        match_scales_fn = lambda idx: (lambda ims: ims[idx] * sfactors[idx])
+        self._proc_lambdas.append({
+            'name': 'match_scales',
+            'fn': [match_scales_fn(0), match_scales_fn(1)]
+        })
+
+        context_img = context_img.transpose(1, 0)
+        scale_images = scale_images.transpose(1, 0, 2, 3)
+
+        print('context img', context_img.shape)
+        print('scale images', scale_images.shape)
+
+        norm_axis = (0, 1) if self._proc_config.joint_normalize else (0, )
+
+        if self._proc_config.scale_ref_zero_img:
+            norm_img = context_img[..., 0]
+            norm_axis = (0, )
+        else:
+            norm_img = context_img
+
+        print('norm image shape', norm_img.shape)
+        print('norm axis', norm_axis)
+
+        global_scale = np.mean(norm_img, axis=norm_axis)
+        for a in norm_axis:
+            global_scale = np.expand_dims(global_scale, axis=a)
+
+        # repeat the computed scale such that its shape is always (1, 2)
+        if global_scale.ndim == 1:
+            global_scale = np.repeat([global_scale], repeats=scale_images.shape[1], axis=1)
+        elif global_scale.ndim == 2 and global_scale.shape[1] == 1:
+            global_scale = np.repeat(global_scale, repeats=scale_images.shape[1], axis=1)
+
+        global_scale = global_scale[:, :, None, None]
+        self._logger.info('Computed global scale %s with shape %s', global_scale, \
+        global_scale.shape)
+
+        scale_images /= global_scale
+        global_scale_fn = lambda idx: (
+            lambda ims: (ims[idx] / global_scale[:, idx])
+        )
+
+        self._proc_lambdas.append({
+            'name': 'global_scale',
+            'fn': [global_scale_fn(0), global_scale_fn(1)]
+        })
+
+        return scale_images.transpose(1, 0, 2, 3)
+
+    def _apply_proc_lambdas(self, unmasked_data):
+        self._logger.info('Applying all preprocessing steps on full brain images...')
+        processed_data = np.copy(unmasked_data)
+
+        for proc_lambda in self._proc_lambdas:
+            self._logger.info('::APPLY PROC LAMBDAS::%s', proc_lambda['name'])
+
+            for idx, fn in enumerate(proc_lambda['fn']):
+                processed_data[idx] = fn(processed_data)
+
+        return processed_data
 
     def _preprocess_raw_pixel_data(self):
         """
@@ -227,14 +505,24 @@ class SubtleGADJobType(BaseJobType):
         dict_input_data = {}
 
         for frame_seq_name, data_array in self._raw_input.items():
-            input_data = data_array.copy()
+            input_data_full = data_array.copy()
 
             # write preprocess chain here
-            zero_input = np.array([input_data[0, 180:187, ...].transpose(1, 2, 0)])
-            low_input = np.array([input_data[1, 180:187, ...].transpose(1, 2, 0)])
-            input_data = np.concatenate([zero_input, low_input], axis=3)
+            input_data_mask, noise_mask = self._mask_noise(input_data_full)
 
-            print('input data shape', input_data.shape)
+            brain_mask = self._strip_skull(input_data_mask)
+            input_data_mask = self._apply_brain_mask(input_data_mask, brain_mask)
+
+            input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask)
+            input_data_mask = self._register(input_data_mask)
+            input_data_mask = self._match_histogram(input_data_mask)
+            input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
+
+            input_data_full = self._apply_proc_lambdas(input_data_full)
+            np.save('/home/srivathsa/app_output/debug/final.npy', input_data_full)
+
+            # TEMP
+            input_data = np.array([input_data_full[0, 180:194]]).transpose(0, 2, 3, 1)
 
             dict_input_data[frame_seq_name] = input_data
 
