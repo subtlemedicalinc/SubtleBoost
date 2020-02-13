@@ -9,6 +9,7 @@ Created on 2020/02/06
 import os
 from typing import Tuple, Optional
 import hashlib
+import traceback
 
 from subtle.dcmutil.dicom_filter import DicomFilter
 from subtle.dcmutil.dcm_report import exit_code_log_level
@@ -137,8 +138,8 @@ class SubtleGADApp(SubtleApp):
                         ).encode()
                     ).hexdigest(),
                 )
-                
-                job_obj(_, output_path_dicom)
+
+                job_obj(output_path_dicom)
                 exit_codes[task_id] = 0
                 self._handle_error(0, "Success")
 
@@ -153,6 +154,7 @@ class SubtleGADApp(SubtleApp):
                     list(task.list_series[0].datasets)[0][0],
                 )
                 exit_codes[task_id] = task_exit_code
+                print(traceback.format_exc())
                 # continue to next task in the loop
                 continue
 
