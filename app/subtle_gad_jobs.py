@@ -143,12 +143,9 @@ class SubtleGADJobType(BaseJobType):
         self._logger.info("starting inference (job type: %s)", self.name)
 
         for frame_seq_name, pixel_data in dict_pixel_data.items():
-            # update pixel shape
-            if pixel_data.ndim == 3:
-                pixel_data = pixel_data[..., None]
-
             # update model input shape
             self._model.update_input_shape(pixel_data.shape)
+
             # perform inference with default input format (NHWC)
             output_array = self._model.predict(pixel_data)
             dict_output_array[frame_seq_name] = output_array
@@ -417,7 +414,6 @@ class SubtleGADJobType(BaseJobType):
         )
 
         # use pixels inside the noise mask of zero dose
-
         ref_mask = noise_mask[0, idx_center]
 
         context_img_zero = scale_images[0, idx_center, ...][ref_mask != 0].ravel()
@@ -522,7 +518,6 @@ class SubtleGADJobType(BaseJobType):
 
             # TEMP
             input_data = np.array([input_data_full[0, 180:194]]).transpose(0, 2, 3, 1)
-
             dict_input_data[frame_seq_name] = input_data
 
         return dict_input_data
