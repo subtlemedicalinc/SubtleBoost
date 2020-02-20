@@ -13,7 +13,9 @@ from itertools import groupby
 import pydicom
 import pydicom.errors
 import numpy as np
+import sigpy as sp
 from deepbrain import Extractor as BrainExtractor
+from scipy.ndimage.interpolation import rotate
 
 from subtle.util.inference_job_utils import BaseJobType, GenericInferenceModel, DataLoader2pt5D
 from subtle.procutil import preprocess_single_series, postprocess_single_series
@@ -59,6 +61,9 @@ class SubtleGADJobType(BaseJobType):
             "num_rotations": 5,
             "slices_per_input": 7,
             "resize": 512,
+            "mpr_angle_start": 0,
+            "mpr_angle_end": 90,
+            "reshape_for_mpr_rotate": False,
 
             # post processing params
             "series_desc_prefix": "",
@@ -145,14 +150,39 @@ class SubtleGADJobType(BaseJobType):
         for frame_seq_name, pixel_data in dict_pixel_data.items():
             # update model input shape
             self._model.update_input_shape(pixel_data.shape)
-
-            data_loader = DataLoader2pt5D(
-                input_data=pixel_data, slices_per_input=self._proc_config.slices_per_input,
-                batch_size=self._model.model_config["batch_size"]
-            )
-
             # perform inference with default input format (NHWC)
-            output_array = self._model.predict_generator(data_loader)
+
+            angle_start = self._proc_config.mpr_angle_start
+            angle_end = self._proc_config.mpr_angle_end
+            num_rotations = self._proc_config.num_rotations
+
+            predictions = []
+
+            for angle in np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
+                self._logger.info('Running MPR inference for angle=%s', angle)
+
+                mpr_predictions = []
+                for slice_axis in np.arange(1, 4):
+                    prediction = self._process_mpr(pixel_data, angle, slice_axis)
+                    mpr_predictions.append(prediction)
+
+                predictions.append(mpr_predictions)
+
+            self._logger.info('Averaging all MPR inferences...')
+            predictions = np.array(predictions)[..., 0].transpose(2, 3, 4, 1, 0)
+            # Now, predictions array has a shape of (n_slices, height, width, 3, num_rotations)
+
+            # compute a volume of shape (n_slices, height, width) which has 1 for all the pixels
+            # with pixel value > 0 and 0 otherwise - across all mpr predictions
+            mask_sum = np.sum(
+                np.array(predictions > 0, dtype=np.float), axis=(-1, -2), keepdims=False
+            )
+            # now average the mpr inferences using the non-zero mask sum
+            output_array = np.divide(
+                np.sum(predictions, axis=(-1, -2), keepdims=False),
+                mask_sum, where=(mask_sum > 0)
+            )[..., None]
+
             dict_output_array[frame_seq_name] = output_array
 
         self._logger.info("inference finished")
@@ -540,7 +570,7 @@ class SubtleGADJobType(BaseJobType):
 
             pixel_data = np.clip(pixel_data, 0, pixel_data.max())
             pixel_data = self._undo_global_scale_fn(pixel_data)
-            
+
             if self._proc_config.perform_dicom_scaling:
                 pixel_data = self._undo_dicom_scale_fn(pixel_data)
 
@@ -548,6 +578,34 @@ class SubtleGADJobType(BaseJobType):
             pixel_data.max(), pixel_data.mean())
             # write post processing here
             self._output_data[frame_seq_name] = pixel_data
+
+    def _process_mpr(self, data, angle, slice_axis):
+        reshape = self._proc_config.reshape_for_mpr_rotate
+
+        if angle > 0.0:
+            data_rot = rotate(data, angle, reshape=reshape, axes=(1, 2))
+        else:
+            data_rot = np.copy(data)
+
+        data_loader = DataLoader2pt5D(
+            input_data=data_rot, slices_per_input=self._proc_config.slices_per_input,
+            batch_size=self._model.model_config["batch_size"], slice_axis=slice_axis,
+            resize=(data.shape[2], data.shape[3])
+        )
+        model_pred = self._model.predict_generator(data_loader)
+
+        if slice_axis == 2:
+            model_pred = model_pred.transpose(1, 0, 2, 3)
+        elif slice_axis == 3:
+            model_pred = model_pred.transpose(1, 2, 0, 3)
+
+        resize_shape = list(data.shape[1:]) + [self._model.model_config["batch_size"]]
+        model_pred = sp.util.resize(model_pred, resize_shape)
+
+        if angle > 0.0:
+            model_pred = rotate(model_pred, -angle, reshape=reshape, axes=(0, 1))
+
+        return model_pred
 
     def _save_data(self,
                    dict_pixel_data: Dict,
