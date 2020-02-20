@@ -163,10 +163,6 @@ class SubtleGADJobType(BaseJobType):
         """
         # check input size
         for frame_seq_name in self._input_datasets[0]:
-
-            # TEMP CODE
-            dict_pixel_data[frame_seq_name] = np.repeat(dict_pixel_data[frame_seq_name], len(self._input_datasets[0][frame_seq_name]), axis=0)
-
             self._logger.info('postprocess shape %s', dict_pixel_data[frame_seq_name].shape)
 
             if (
@@ -511,14 +507,7 @@ class SubtleGADJobType(BaseJobType):
             input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
-
-            # TODO: REMOVE TEMP CODE
-            final_gad = np.array([input_data_full[0], input_data_full[1], input_data_full[1]]).transpose(1, 0, 2, 3)
-            np.save('/home/srivathsa/app_output/debug/final_gad.npy', final_gad)
-
-            # TEMP
-            input_data = np.array([input_data_full[0, 180:194]]).transpose(0, 2, 3, 1)
-            dict_input_data[frame_seq_name] = input_data
+            dict_input_data[frame_seq_name] = input_data_full
 
         return dict_input_data
 
