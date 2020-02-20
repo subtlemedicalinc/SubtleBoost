@@ -15,7 +15,7 @@ import pydicom.errors
 import numpy as np
 from deepbrain import Extractor as BrainExtractor
 
-from subtle.util.inference_job_utils import BaseJobType, GenericInferenceModel
+from subtle.util.inference_job_utils import BaseJobType, GenericInferenceModel, DataLoader2pt5D
 from subtle.procutil import preprocess_single_series, postprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
 
@@ -146,8 +146,13 @@ class SubtleGADJobType(BaseJobType):
             # update model input shape
             self._model.update_input_shape(pixel_data.shape)
 
+            data_loader = DataLoader2pt5D(
+                input_data=pixel_data, slices_per_input=self._proc_config.slices_per_input,
+                batch_size=self._model.model_config["batch_size"]
+            )
+
             # perform inference with default input format (NHWC)
-            output_array = self._model.predict(pixel_data)
+            output_array = self._model.predict_generator(data_loader)
             dict_output_array[frame_seq_name] = output_array
 
         self._logger.info("inference finished")
