@@ -324,6 +324,10 @@ class SubtleGADJobType(BaseJobType):
     def _scale_slope_intercept(img, rescale_slope, rescale_intercept, scale_slope):
         return (img * rescale_slope + rescale_intercept) / (rescale_slope * scale_slope)
 
+    @staticmethod
+    def _rescale_slope_intercept(img, rescale_slope, rescale_intercept, scale_slope):
+        return (img * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
+
     def _scale_intensity_with_dicom_tags(self, images):
         if self._proc_config.perform_dicom_scaling and self._has_dicom_scaling_info():
             self._logger.info('Performing intensity scaling using DICOM tags...')
@@ -342,6 +346,9 @@ class SubtleGADJobType(BaseJobType):
                 'name': 'dicom_scaling',
                 'fn': [scale_fn(0), scale_fn(1)]
             })
+
+            self._undo_dicom_scale_fn = lambda img: SubtleGADJobType._rescale_slope_intercept(img,
+            **self._dicom_scale_coeff[0])
 
             return scaled_images
 
@@ -469,6 +476,8 @@ class SubtleGADJobType(BaseJobType):
             lambda ims: (ims[idx] / global_scale[:, idx])
         )
 
+        self._undo_global_scale_fn = lambda img: img * global_scale[:, 0]
+
         self._proc_lambdas.append({
             'name': 'global_scale',
             'fn': [global_scale_fn(0), global_scale_fn(1)]
@@ -529,6 +538,14 @@ class SubtleGADJobType(BaseJobType):
             if len(pixel_data.shape) == 4:
                 pixel_data = pixel_data[..., 0]
 
+            pixel_data = np.clip(pixel_data, 0, pixel_data.max())
+            pixel_data = self._undo_global_scale_fn(pixel_data)
+            
+            if self._proc_config.perform_dicom_scaling:
+                pixel_data = self._undo_dicom_scale_fn(pixel_data)
+
+            self._logger.info('Pixel range after undoing global scale %s %s %s', pixel_data.min(),\
+            pixel_data.max(), pixel_data.mean())
             # write post processing here
             self._output_data[frame_seq_name] = pixel_data
 
@@ -631,11 +648,11 @@ class SubtleGADJobType(BaseJobType):
                 out_dataset.SOPInstanceUID = sop_uid
 
                 # save new pixel data to dataset
-                # new scale is always False for MR images
                 slice_pixel_data = pixel_data[i_slice]
-                pydicom_utils.save_float_to_dataset(
-                    out_dataset, slice_pixel_data, new_rescale=False
-                )
+                slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
+                slice_pixel_data[slice_pixel_data < 0] = 0
+
+                out_dataset.PixelData = slice_pixel_data.tostring()
 
                 # save in output folder
                 out_path = os.path.join(
