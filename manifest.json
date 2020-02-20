@@ -32,9 +32,9 @@
         }
     },
     "defaultModels": [
-        "stanford_gad"
+        "stanford_gad", "tiantan_gad"
     ],
     "compatibleModels": [
-        "stanford_gad"
+        "stanford_gad", "tiantan_gad"
     ]
 }
