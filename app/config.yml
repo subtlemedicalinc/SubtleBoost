@@ -16,7 +16,7 @@ jobs:
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":LOW_CONTRAST"
+      series_desc_suffix: ":research_only"
       model_id: "tiantan_gad"
 
 series:
