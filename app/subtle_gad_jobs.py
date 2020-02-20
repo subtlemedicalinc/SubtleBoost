@@ -32,7 +32,7 @@ class SubtleGADJobType(BaseJobType):
             "model_id": "None",
 
             # general params
-            "not_for_clinical_use": True,
+            "not_for_clinical_use": False,
 
             # preprocessing params:
             "normalize": True,
