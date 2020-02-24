@@ -15,6 +15,7 @@ from multiprocessing import Pool, Queue
 import pydicom
 import pydicom.errors
 import numpy as np
+import sigpy as sp
 from deepbrain import Extractor as BrainExtractor
 from scipy.ndimage.interpolation import rotate
 
@@ -45,9 +46,6 @@ class SubtleGADJobType(BaseJobType):
             "not_for_clinical_use": False,
 
             # preprocessing params:
-            "normalize": True,
-            "normalize_fun": "mean",
-
             "perform_noise_mask": True,
             "noise_mask_threshold": 0.1,
             "noise_mask_area": False,
@@ -59,7 +57,7 @@ class SubtleGADJobType(BaseJobType):
 
             "perform_dicom_scaling": False,
             "transform_type": "rigid",
-            "histogram_matching": True,
+            "histogram_matching": False,
             "num_scale_context_slices": 20,
             "joint_normalize": False,
             "scale_ref_zero_img": False,
@@ -71,7 +69,7 @@ class SubtleGADJobType(BaseJobType):
             "mpr_angle_start": 0,
             "mpr_angle_end": 90,
             "reshape_for_mpr_rotate": True,
-            "num_procs_per_gpu": 3,
+            "num_procs_per_gpu": 2,
 
             # post processing params
             "series_desc_prefix": "SubtleGAD:",
@@ -666,6 +664,10 @@ class SubtleGADJobType(BaseJobType):
                 model_pred = model_pred.transpose(1, 0, 2, 3)
             elif params['slice_axis'] == 3:
                 model_pred = model_pred.transpose(1, 2, 0, 3)
+
+            if not reshape:
+                resize_shape = list(params["data"].shape[1:]) + [model.model_config["batch_size"]]
+                model_pred = sp.util.resize(model_pred, resize_shape)
 
             if params['angle'] > 0.0:
                 model_pred = rotate(model_pred, -params['angle'], reshape=reshape, axes=(0, 1))
