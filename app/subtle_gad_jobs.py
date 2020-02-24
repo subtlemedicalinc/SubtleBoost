@@ -7,19 +7,27 @@ Created on 2020/02/06
 
 import os
 from typing import Dict, Optional
+import copy
 from collections import OrderedDict, namedtuple
 from itertools import groupby
+from multiprocessing import Pool, Queue
 
 import pydicom
 import pydicom.errors
 import numpy as np
-import sigpy as sp
 from deepbrain import Extractor as BrainExtractor
 from scipy.ndimage.interpolation import rotate
 
-from subtle.util.inference_job_utils import BaseJobType, GenericInferenceModel, DataLoader2pt5D
+from subtle.util.inference_job_utils import (
+    BaseJobType, GenericInferenceModel, DataLoader2pt5D, set_keras_memory
+)
+from subtle.util.multiprocess_utils import processify
 from subtle.procutil import preprocess_single_series, postprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
+
+def _init_gpu_pool(local_gpu_q):
+    global gpu_pool
+    gpu_pool = local_gpu_q
 
 class SubtleGADJobType(BaseJobType):
     """The job type of SubtleGAD dose reduction"""
@@ -60,13 +68,13 @@ class SubtleGADJobType(BaseJobType):
             "inference_mpr": True,
             "num_rotations": 5,
             "slices_per_input": 7,
-            "resize": 512,
             "mpr_angle_start": 0,
             "mpr_angle_end": 90,
-            "reshape_for_mpr_rotate": False,
+            "reshape_for_mpr_rotate": True,
+            "num_procs_per_gpu": 3,
 
             # post processing params
-            "series_desc_prefix": "",
+            "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
             "series_number_offset": 100,
          }
@@ -80,23 +88,16 @@ class SubtleGADJobType(BaseJobType):
         :param model_dir: directory of the model to load for this job
         :param decrypt_key_hex: the decrypt key
         """
-        BaseJobType.__init__(self, task, model_dir)
+        self.model_dir = model_dir
+        self.decrypt_key_hex = decrypt_key_hex
 
-        self._logger.info("Loading model from %s...", model_dir)
-        self._model = GenericInferenceModel(model_dir=model_dir,
-                                            decrypt_key_hex=decrypt_key_hex)
-        self._logger.info("Loaded %s model.", self._model.model_type)
-        if self._model.model_type == 'invalid':
-            raise NotImplementedError("Invalid model found in {}".format(model_dir))
-        # update model config with app config:
-        # to update tunable parameters, job parameters and app parameters
-        self._model.update_config(task.job_definition.exec_config)
+        BaseJobType.__init__(self, task, self.model_dir)
+
         self.task = task
 
         # define and prepare config
         proc_config = self.default_processing_config_gad.copy()
 
-        proc_config.update(self._model.model_config)
         k = list(proc_config.keys())
         _ = [proc_config.pop(f) for f in k if f not in self.SubtleGADProcConfig._fields]
 
@@ -147,30 +148,51 @@ class SubtleGADJobType(BaseJobType):
 
         self._logger.info("starting inference (job type: %s)", self.name)
 
+        avail_gpu_ids = os.environ["CUDA_VISIBLE_DEVICES"].split(',')
+        gpu_repeat = [[id] * self._proc_config.num_procs_per_gpu for id in avail_gpu_ids]
+        gpu_ids = [item for sublist in gpu_repeat for item in sublist]
+
+        gpu_q = Queue()
+        for gid in gpu_ids:
+            gpu_q.put(gid)
+
+        process_pool = Pool(processes=len(gpu_ids), initializer=_init_gpu_pool, initargs=(gpu_q, ))
+
         for frame_seq_name, pixel_data in dict_pixel_data.items():
-            # update model input shape
-            self._model.update_input_shape(pixel_data.shape)
             # perform inference with default input format (NHWC)
 
             angle_start = self._proc_config.mpr_angle_start
             angle_end = self._proc_config.mpr_angle_end
             num_rotations = self._proc_config.num_rotations
 
-            predictions = []
+            mpr_params = []
 
+            param_obj = {
+                'model_dir': self.model_dir,
+                'decrypt_key_hex': self.decrypt_key_hex,
+                'exec_config': self.task.job_definition.exec_config,
+                'slices_per_input': self._proc_config.slices_per_input,
+                'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
+                'data': pixel_data
+            }
+
+            _, n_slices, height, width = pixel_data.shape
+
+            slice_axes = np.arange(1, 4)
             for angle in np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
-                self._logger.info('Running MPR inference for angle=%s', angle)
+                for slice_axis in slice_axes:
+                    pobj = copy.deepcopy(param_obj)
+                    pobj['angle'] = angle
+                    pobj['slice_axis'] = slice_axis
 
-                mpr_predictions = []
-                for slice_axis in np.arange(1, 4):
-                    prediction = self._process_mpr(pixel_data, angle, slice_axis)
-                    mpr_predictions.append(prediction)
+                    mpr_params.append(pobj)
 
-                predictions.append(mpr_predictions)
-
-            self._logger.info('Averaging all MPR inferences...')
+            predictions = process_pool.map(SubtleGADJobType._process_mpr, mpr_params)
+            # Convert the array to a shape of (n_slices, height, width, 3, num_rotations)
+            predictions = np.array(predictions).reshape(
+                len(slice_axes), num_rotations, n_slices, height, width, 1
+            )
             predictions = np.array(predictions)[..., 0].transpose(2, 3, 4, 1, 0)
-            # Now, predictions array has a shape of (n_slices, height, width, 3, num_rotations)
 
             # compute a volume of shape (n_slices, height, width) which has 1 for all the pixels
             # with pixel value > 0 and 0 otherwise - across all mpr predictions
@@ -182,7 +204,6 @@ class SubtleGADJobType(BaseJobType):
                 np.sum(predictions, axis=(-1, -2), keepdims=False),
                 mask_sum, where=(mask_sum > 0)
             )[..., None]
-
             dict_output_array[frame_seq_name] = output_array
 
         self._logger.info("inference finished")
@@ -278,6 +299,7 @@ class SubtleGADJobType(BaseJobType):
 
         return images, np.array(mask)
 
+    @processify
     def _strip_skull_npy_vol(self, img_npy):
         brain_ext = BrainExtractor()
 
@@ -507,7 +529,6 @@ class SubtleGADJobType(BaseJobType):
         )
 
         self._undo_global_scale_fn = lambda img: img * global_scale[:, 0]
-
         self._proc_lambdas.append({
             'name': 'global_scale',
             'fn': [global_scale_fn(0), global_scale_fn(1)]
@@ -526,6 +547,37 @@ class SubtleGADJobType(BaseJobType):
                 processed_data[idx] = fn(processed_data)
 
         return processed_data
+
+    @staticmethod
+    def _get_crop_range(shape_num):
+        if shape_num % 2 == 0:
+            start = end = shape_num // 2
+        else:
+            start = (shape_num + 1) // 2
+            end = (shape_num - 1) // 2
+
+        return (start, end)
+
+    @staticmethod
+    def _center_crop(img, ref_img):
+        s = []
+        e = []
+
+        for i, sh in enumerate(img.shape):
+            if sh > ref_img.shape[i]:
+                diff = sh - ref_img.shape[i]
+                if diff == 1:
+                    s.append(0)
+                    e.append(sh-1)
+                else:
+                    start, end = SubtleGADJobType._get_crop_range(diff)
+                    s.append(start)
+                    e.append(-end)
+            else:
+                s.append(0)
+                e.append(sh)
+
+        return img[s[0]:e[0], s[1]:e[1], s[2]:e[2]]
 
     def _preprocess_raw_pixel_data(self):
         """
@@ -579,33 +631,55 @@ class SubtleGADJobType(BaseJobType):
             # write post processing here
             self._output_data[frame_seq_name] = pixel_data
 
-    def _process_mpr(self, data, angle, slice_axis):
-        reshape = self._proc_config.reshape_for_mpr_rotate
+    @staticmethod
+    def _process_mpr(params):
+        global gpu_pool
+        gpu_id = gpu_pool.get(block=True)
 
-        if angle > 0.0:
-            data_rot = rotate(data, angle, reshape=reshape, axes=(1, 2))
-        else:
-            data_rot = np.copy(data)
+        try:
+            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
-        data_loader = DataLoader2pt5D(
-            input_data=data_rot, slices_per_input=self._proc_config.slices_per_input,
-            batch_size=self._model.model_config["batch_size"], slice_axis=slice_axis,
-            resize=(data.shape[2], data.shape[3])
-        )
-        model_pred = self._model.predict_generator(data_loader)
+            set_keras_memory(allow_growth=True)
 
-        if slice_axis == 2:
-            model_pred = model_pred.transpose(1, 0, 2, 3)
-        elif slice_axis == 3:
-            model_pred = model_pred.transpose(1, 2, 0, 3)
+            reshape = params['reshape_for_mpr_rotate']
+            model = GenericInferenceModel(
+                model_dir=params['model_dir'], decrypt_key_hex=params['decrypt_key_hex']
+            )
+            model.update_config(params['exec_config'])
+            model.update_input_shape(params['data'].shape)
 
-        resize_shape = list(data.shape[1:]) + [self._model.model_config["batch_size"]]
-        model_pred = sp.util.resize(model_pred, resize_shape)
+            if params['angle'] > 0.0:
+                data_rot = rotate(params['data'], params['angle'], reshape=reshape, axes=(1, 2))
+            else:
+                data_rot = np.copy(params['data'])
 
-        if angle > 0.0:
-            model_pred = rotate(model_pred, -angle, reshape=reshape, axes=(0, 1))
+            data_loader = DataLoader2pt5D(
+                input_data=data_rot, slices_per_input=params['slices_per_input'],
+                batch_size=model._model_config['batch_size'], slice_axis=params['slice_axis'],
+                resize=(params['data'].shape[2], params['data'].shape[3])
+            )
 
-        return model_pred
+            model_pred = model.predict_generator(data_loader)
+
+            if params['slice_axis'] == 2:
+                model_pred = model_pred.transpose(1, 0, 2, 3)
+            elif params['slice_axis'] == 3:
+                model_pred = model_pred.transpose(1, 2, 0, 3)
+
+            if params['angle'] > 0.0:
+                model_pred = rotate(model_pred, -params['angle'], reshape=reshape, axes=(0, 1))
+
+            if model_pred.shape[0] != params['data'].shape[1]:
+                model_pred = SubtleGADJobType._center_crop(model_pred[..., 0], params['data'][0])
+                model_pred = model_pred[..., None]
+
+            return model_pred
+        except Exception as e:
+            raise Exception('Error in process_mpr', e)
+            return []
+        finally:
+            gpu_pool.put(gpu_id)
 
     def _save_data(self,
                    dict_pixel_data: Dict,
