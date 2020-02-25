@@ -7,29 +7,58 @@ all_reports: True
 warn_unmatched_series: False
 
 jobs:
-  - job_name: "reduce_contrast"
+  - job_name: "gad_ge"
     series_required:
-      - "zero_dose_series"
-      - "low_dose_series"
+      - "zero_dose_ge"
+      - "low_dose_ge"
     slice_location_tolerance: "none"
     fov_tolerance: "inf"
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "stanford_gad"
+      model_id: "ge"
+  - job_name: "gad_philips"
+    series_required:
+      - "zero_dose_philips"
+      - "low_dose_philips"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips"
 
 series:
-  - name: "zero_dose_series"
+  - name: "zero_dose_ge"
     reg_match: "zerodose"
     reg_exclude: ""
+    manufacturer_match: "ge"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "low_dose_series"
+  - name: "low_dose_ge"
     reg_match: "lowdose"
     reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zero_dose_philips"
+    reg_match: "zerodose"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_philips"
+    reg_match: "lowdose"
+    reg_exclude: ""
+    manufacturer_match: "philips"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"

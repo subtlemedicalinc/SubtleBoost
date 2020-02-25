@@ -241,8 +241,17 @@ class SubtleGADJobType(BaseJobType):
 
         assert len(self.task.dict_required_series) == 2, "More than two input series found - only zero dose and low dose series are allowed"
 
-        zero_dose_series = self.task.dict_required_series['zero_dose_series']
-        low_dose_series = self.task.dict_required_series['low_dose_series']
+        zero_dose_series = None
+        low_dose_series = None
+
+        for series_key in self.task.dict_required_series.keys():
+            if 'zero_dose' in series_key:
+                zero_dose_series = self.task.dict_required_series[series_key]
+            if 'low_dose' in series_key:
+                low_dose_series = self.task.dict_required_series[series_key]
+
+        if zero_dose_series is None or low_dose_series is None:
+            raise TypeError("Cannot find one or more required series")
 
         if not isinstance(zero_dose_series, series_utils.DicomSeries) or not \
         isinstance(low_dose_series, series_utils.DicomSeries):

@@ -32,9 +32,9 @@
         }
     },
     "defaultModels": [
-        "stanford_gad", "tiantan_gad"
+        "ge", "philips"
     ],
     "compatibleModels": [
-        "stanford_gad", "tiantan_gad"
+        "ge", "philips"
     ]
 }
