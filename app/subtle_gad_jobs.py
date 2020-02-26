@@ -11,6 +11,7 @@ import copy
 from collections import OrderedDict, namedtuple
 from itertools import groupby
 from multiprocessing import Pool, Queue
+import re
 
 import pydicom
 import pydicom.errors
@@ -32,50 +33,87 @@ def _init_gpu_pool(local_gpu_q):
 
 class SubtleGADJobType(BaseJobType):
     """The job type of SubtleGAD dose reduction"""
-    default_processing_config_gad = \
-        {
-            # app params
-            "app_name": "SubtleGAD",
-            "app_id": 3000,
-            "app_version": "0.0.0",
+    default_processing_config_gad = {
+        # app params
+        "app_name": "SubtleGAD",
+        "app_id": 3000,
+        "app_version": "0.0.0",
 
-            # model params
-            "model_id": "None",
+        # model params
+        "model_id": "None",
 
-            # general params
-            "not_for_clinical_use": False,
+        # general params
+        "not_for_clinical_use": False,
 
-            # preprocessing params:
+        # preprocessing params:
+
+        # manufacturer specific - these are the default values
+        "perform_noise_mask": True,
+        "noise_mask_threshold": 0.1,
+        "noise_mask_area": False,
+        "noise_mask_selem": False,
+        "perform_dicom_scaling": False,
+        "transform_type": "rigid",
+        "histogram_matching": False,
+        "joint_normalize": False,
+        "scale_ref_zero_img": False,
+
+        # not manufacturer specific
+        "skull_strip": True,
+        "skull_strip_union": True,
+        "skull_strip_prob_threshold": 0.5,
+        "num_scale_context_slices": 20,
+
+        # inference params:
+        "inference_mpr": True,
+        "num_rotations": 5,
+        "slices_per_input": 7,
+        "mpr_angle_start": 0,
+        "mpr_angle_end": 90,
+        "reshape_for_mpr_rotate": True,
+        "num_procs_per_gpu": 2,
+
+        # post processing params
+        "series_desc_prefix": "SubtleGAD:",
+        "series_desc_suffix": "",
+        "series_number_offset": 100,
+    }
+
+    mfr_specific_config = {
+        "ge": {
             "perform_noise_mask": True,
             "noise_mask_threshold": 0.1,
             "noise_mask_area": False,
             "noise_mask_selem": False,
-
-            "skull_strip": True,
-            "skull_strip_union": True,
-            "skull_strip_prob_threshold": 0.5,
-
             "perform_dicom_scaling": False,
             "transform_type": "rigid",
             "histogram_matching": False,
-            "num_scale_context_slices": 20,
             "joint_normalize": False,
-            "scale_ref_zero_img": False,
-
-            # inference params:
-            "inference_mpr": True,
-            "num_rotations": 5,
-            "slices_per_input": 7,
-            "mpr_angle_start": 0,
-            "mpr_angle_end": 90,
-            "reshape_for_mpr_rotate": True,
-            "num_procs_per_gpu": 2,
-
-            # post processing params
-            "series_desc_prefix": "SubtleGAD:",
-            "series_desc_suffix": "",
-            "series_number_offset": 100,
-         }
+            "scale_ref_zero_img": False
+        },
+        "siemens": {
+            "perform_noise_mask": True,
+            "noise_mask_threshold": 0.1,
+            "noise_mask_area": True,
+            "noise_mask_selem": True,
+            "perform_dicom_scaling": False,
+            "transform_type": "affine",
+            "histogram_matching": False,
+            "joint_normalize": True,
+            "scale_ref_zero_img": False
+        },
+        "philips": {
+            "perform_noise_mask": True,
+            "noise_mask_threshold": 0.08,
+            "noise_mask_area": False,
+            "noise_mask_selem": False,
+            "perform_dicom_scaling": False,
+            "transform_type": "rigid",
+            "histogram_matching": True,
+            "joint_normalize": False,
+            "scale_ref_zero_img": False
+        }
+    }
 
     SubtleGADProcConfig = namedtuple("SubtleGADProcConfig", ' '.join(list(default_processing_config_gad.keys())))
 
@@ -124,6 +162,7 @@ class SubtleGADJobType(BaseJobType):
         :param _: (in_dicom in BaseJobType by default)
         """
         self._get_dicom_data()
+        self._set_mfr_specific_config()
 
         self._get_pixel_spacing()
         self._get_dicom_scale_coeff()
@@ -259,10 +298,37 @@ class SubtleGADJobType(BaseJobType):
         # get dictionary of sorted datasets by frame
 
         self._input_series = (zero_dose_series, low_dose_series)
+
         self._input_datasets = (
             zero_dose_series.get_dict_sorted_datasets(),
             low_dose_series.get_dict_sorted_datasets()
         )
+
+    def _set_mfr_specific_config(self):
+        mfr_match = False
+        matched_key = None
+
+        if not self._input_series[0].manufacturer or not self._input_series[1].manufacturer:
+            raise TypeError("One or more input DICOMs does not have valid manufacturer tag")
+
+        if (self._input_series[0].manufacturer.lower() !=
+            self._input_series[1].manufacturer.lower()):
+            raise TypeError("Input DICOMs manufacturer tags do not match")
+
+        for mfr_name in self.mfr_specific_config.keys():
+            if re.search(mfr_name, self._input_series[0].manufacturer, re.IGNORECASE):
+                mfr_match = True
+                matched_key = mfr_name
+                break
+
+        if not mfr_match:
+            self._logger.info("No matching manufacturer config found. Using the default config")
+            return
+
+        self._logger.info("Using manufacturer specific config defined for '%s'", matched_key)
+        proc_config = dict(self._proc_config._asdict())
+        new_proc_config = {**proc_config, **self.mfr_specific_config[matched_key]}
+        self._proc_config = self.SubtleGADProcConfig(**new_proc_config)
 
     def _get_raw_pixel_data(self):
         for frame_seq_name, _ in self._input_datasets[0].items():
