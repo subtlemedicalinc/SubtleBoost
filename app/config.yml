@@ -29,6 +29,17 @@ jobs:
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
       model_id: "philips"
+  - job_name: "gad_siemens"
+    series_required:
+      - "zero_dose_siemens"
+      - "low_dose_siemens"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips"
 
 series:
   - name: "zero_dose_ge"
@@ -59,6 +70,22 @@ series:
     reg_match: "lowdose"
     reg_exclude: ""
     manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zero_dose_siemens"
+    reg_match: "zerodose"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_siemens"
+    reg_match: "lowdose"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"

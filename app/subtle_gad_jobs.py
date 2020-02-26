@@ -94,8 +94,8 @@ class SubtleGADJobType(BaseJobType):
         "siemens": {
             "perform_noise_mask": True,
             "noise_mask_threshold": 0.1,
-            "noise_mask_area": True,
-            "noise_mask_selem": True,
+            "noise_mask_area": False,
+            "noise_mask_selem": False,
             "perform_dicom_scaling": False,
             "transform_type": "affine",
             "histogram_matching": False,
@@ -718,11 +718,15 @@ class SubtleGADJobType(BaseJobType):
             set_keras_memory(allow_growth=True)
 
             reshape = params['reshape_for_mpr_rotate']
+            model_input_shape = (
+                1, params['data'].shape[2], params['data'].shape[3], 2 * params['slices_per_input']
+            )
+
             model = GenericInferenceModel(
-                model_dir=params['model_dir'], decrypt_key_hex=params['decrypt_key_hex']
+                model_dir=params['model_dir'], decrypt_key_hex=params['decrypt_key_hex'],
+                input_shape=model_input_shape
             )
             model.update_config(params['exec_config'])
-            model.update_input_shape(params['data'].shape)
 
             if params['angle'] > 0.0:
                 data_rot = rotate(params['data'], params['angle'], reshape=reshape, axes=(1, 2))
