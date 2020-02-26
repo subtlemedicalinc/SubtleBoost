@@ -13,3 +13,4 @@ tags
 *.log
 tags
 app/models
+app/manifest.json

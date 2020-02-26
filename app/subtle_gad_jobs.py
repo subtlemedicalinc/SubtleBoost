@@ -140,9 +140,11 @@ class SubtleGADJobType(BaseJobType):
         self._proc_config = self.SubtleGADProcConfig(**proc_config)
 
         # initialize arguments to update during processing
-        # dict of input datasets by frame
+        # tuple of dict of input datasets by frame
         # (keys = frame sequence name, values = list of pydicom datasets)
-        self._input_datasets = {}  # reference dataset list
+        self._input_datasets = ()  # reference dataset list
+
+        self._input_series = ()
 
         # dict of input arrays by frame
         # (keys = frame sequence name, values = pixel array)
@@ -331,7 +333,7 @@ class SubtleGADJobType(BaseJobType):
         self._proc_config = self.SubtleGADProcConfig(**new_proc_config)
 
     def _get_raw_pixel_data(self):
-        for frame_seq_name, _ in self._input_datasets[0].items():
+        for frame_seq_name in self._input_datasets[0].keys():
             zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
 
             low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
@@ -423,12 +425,12 @@ class SubtleGADJobType(BaseJobType):
                 'zero': {
                     'rescale_slope': 1.0,
                     'rescale_intercept': 0.0,
-                    'scale_slope': 0.0
+                    'scale_slope': 1.0
                 },
                 'low': {
                     'rescale_slope': 1.0,
                     'rescale_intercept': 0.0,
-                    'scale_slope': 0.0
+                    'scale_slope': 1.0
                 }
             }
 
@@ -761,8 +763,7 @@ class SubtleGADJobType(BaseJobType):
     def _save_data(self,
                    dict_pixel_data: Dict,
                    dict_template_ds: Dict,
-                   out_dicom_dir: str,
-                   enable_thru_plane: bool = False):
+                   out_dicom_dir: str):
         """
         Save pixel data to the output directory
         based on a reference dicom dataset list
@@ -797,41 +798,9 @@ class SubtleGADJobType(BaseJobType):
             # get slice position information
             nslices, nrow, ncol = pixel_data.shape
 
-            # get slice location information if through-plane acceleration
-            if enable_thru_plane:
-                slice_thickness, list_slice_location, list_ipp = self._get_slice_location(
-                    pixel_data, frame_seq_name
-                )
-            else:
-                list_slice_location, list_ipp, slice_thickness = None, None, None
-
             # save all individual slices
             for i_slice in range(nslices):
-                # get the right dataset reference
-                if enable_thru_plane:
-                    # get slice specific values
-                    slice_loc = str(list_slice_location[i_slice])
-                    ipp = list_ipp[i_slice]
-                    instance_number = str(i_instance)
-
-                    # get correct reference dataset
-                    distance_to_slices = [
-                        np.abs(ds.SliceLocation - slice_loc)
-                        for ds in dict_template_ds[frame_seq_name]
-                    ]
-                    i_ref = distance_to_slices.index(min(distance_to_slices))
-                    out_dataset = dict_template_ds[frame_seq_name][i_ref]
-
-                    # set slice specific metadata
-                    out_dataset.SliceLocation = slice_loc
-                    out_dataset.ImagePositionPatient[0] = str(ipp[0])
-                    out_dataset.ImagePositionPatient[1] = str(ipp[1])
-                    out_dataset.ImagePositionPatient[2] = str(ipp[2])
-                    out_dataset.InstanceNumber = instance_number
-                    out_dataset.SliceThickness = slice_thickness
-
-                else:
-                    out_dataset = dict_template_ds[frame_seq_name][i_slice]
+                out_dataset = dict_template_ds[frame_seq_name][i_slice]
 
                 # add model and app info to output dicom file
                 for tag in self.private_tag:
