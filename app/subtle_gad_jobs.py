@@ -6,7 +6,7 @@ Created on 2020/02/06
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import copy
 from collections import OrderedDict, namedtuple
 from itertools import groupby
@@ -27,7 +27,13 @@ from subtle.util.multiprocess_utils import processify
 from subtle.procutil import preprocess_single_series, postprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
 
-def _init_gpu_pool(local_gpu_q):
+def _init_gpu_pool(local_gpu_q: Queue):
+    """
+    Local function to initialize a global variable to commonly access the GPU IDs by different
+    child thread in parallel MPR processing
+
+    :param local_gpu_q: the local GPU queue that is set with the allocated GPUs
+    """
     global gpu_pool
     gpu_pool = local_gpu_q
 
@@ -117,12 +123,12 @@ class SubtleGADJobType(BaseJobType):
 
     SubtleGADProcConfig = namedtuple("SubtleGADProcConfig", ' '.join(list(default_processing_config_gad.keys())))
 
-    def __init__(self, task, model_dir, decrypt_key_hex: Optional[str] = None):
-        """Initialize the job type object
+    def __init__(self, task: object, model_dir: str, decrypt_key_hex: Optional[str] = None):
+        """Initialize the job type object and initialize all the required variables
 
         :param task: subtle.dcmutils.dicom_filter.Task object of the task to execute
         :param model_dir: directory of the model to load for this job
-        :param decrypt_key_hex: the decrypt key
+        :param decrypt_key_hex: the decrypt key hexadecimal
         """
         self.model_dir = model_dir
         self.decrypt_key_hex = decrypt_key_hex
@@ -158,17 +164,20 @@ class SubtleGADJobType(BaseJobType):
 
         self._output_data = {}
 
-    def _preprocess(self):
-        """The preprocess func
+    def _preprocess(self) -> Dict:
+        """
+        Preprocess function called by the __call__ method of BaseJobType. Before calling the actual
+        preprocessing logic, this method calls a bunch of initialization functions to get DICOM
+        data, set manufacturer specific config, get the DICOM pixel spacing, get the DICOM scaling
+        information and finally get the raw pixel data
 
-        :param _: (in_dicom in BaseJobType by default)
         """
         self._get_dicom_data()
         self._set_mfr_specific_config()
 
         self._get_pixel_spacing()
         self._get_dicom_scale_coeff()
-        #
+
         # get original pixel data and meta data info
         self._get_raw_pixel_data()
 
@@ -177,8 +186,11 @@ class SubtleGADJobType(BaseJobType):
         return dict_pixel_data
 
     # pylint: disable=arguments-differ
-    def _process(self, dict_pixel_data):
-        """Process the pixel data with the meta data.
+    def _process(self, dict_pixel_data: Dict) -> Dict:
+        """
+        Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
+        the parallel inference jobs are over, average the results and return the output data.
+        This method is called by the __call__ method of BaseJobType
 
         :param dict_pixel_data: dictionary of the input pixel data (numpy arrays) by frame
         :return: the processed output data
@@ -250,15 +262,17 @@ class SubtleGADJobType(BaseJobType):
         return dict_output_array
 
     # pylint: disable=arguments-differ
-    def _postprocess(self, dict_pixel_data, out_dicom_dir):
-        """Postprocessing step of the job.
+    def _postprocess(self, dict_pixel_data: Dict, out_dicom_dir: str):
+        """
+        Undo some of the preprocessing (scaling) steps for the DICOM pixel data to match that
+        of the input data. This method is called by the __call__ method of the BaseJobType
 
         :param dict_pixel_data: dict of the result pixel data in a numpy array by frame.
         :param out_dicom_dir: the directory or tarball of output DICOM files
         """
         # check input size
         for frame_seq_name in self._input_datasets[0]:
-            self._logger.info('postprocess shape %s', dict_pixel_data[frame_seq_name].shape)
+            self._logger.info("postprocess shape %s", dict_pixel_data[frame_seq_name].shape)
 
             if (
                     len(self._input_datasets[0][frame_seq_name])
@@ -277,7 +291,6 @@ class SubtleGADJobType(BaseJobType):
         """
         Get dicom datasets from the DicomSeries passed through the task as a dictionary of sorted
         datasets by frame: keys are frame sequence name and values are lists of pydicom datasets
-        :return:
         """
 
         assert len(self.task.dict_required_series) == 2, "More than two input series found - only zero dose and low dose series are allowed"
@@ -307,6 +320,10 @@ class SubtleGADJobType(BaseJobType):
         )
 
     def _set_mfr_specific_config(self):
+        """
+        Read the manufacturer DICOM tag in the input series and set the pre-processing
+        configuration according to the manufacturer
+        """
         mfr_match = False
         matched_key = None
 
@@ -333,9 +350,11 @@ class SubtleGADJobType(BaseJobType):
         self._proc_config = self.SubtleGADProcConfig(**new_proc_config)
 
     def _get_raw_pixel_data(self):
+        """
+        Read the input series and set raw pixel data as a numpy array
+        """
         for frame_seq_name in self._input_datasets[0].keys():
             zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
-
             low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
 
             self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
@@ -346,11 +365,17 @@ class SubtleGADJobType(BaseJobType):
                 )
             )
 
-    def _mask_noise(self, images):
+    def _mask_noise(self, images: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Perform noise masking which removes noise around the brain caused due to interference,
+        eye blinking etc.
+        :param images: Input zero and low dose images as a numpy array
+        :return: A tuple of the masked image and the binary mask computed
+        """
         mask = []
 
         if self._proc_config.perform_noise_mask:
-            self._logger.info('Performing noise masking...')
+            self._logger.info("Performing noise masking...")
 
             threshold = self._proc_config.noise_mask_threshold
             mask_area = self._proc_config.noise_mask_area
@@ -375,7 +400,18 @@ class SubtleGADJobType(BaseJobType):
         return images, np.array(mask)
 
     @processify
-    def _strip_skull_npy_vol(self, img_npy):
+    def _strip_skull_npy_vol(self, img_npy: np.ndarray) -> np.ndarray:
+        """
+        This method performs skull stripping using deepbrain library's BrainExtractor class. Once
+        the BrainExtractor returns the probability maps, threshold it at a configured level and
+        return only the largest connected component. This method has a @processify decorator which
+        makes it run as a separate process - this is required because the BrainExtractor uses a GPU
+        and once the execution is complete, tensorflow does not clear the GPU memory by default
+        which will block the GPU for the inference process.
+
+        :param img_npy: Input image as a numpy array
+        :return: Numpy array of the skull mask
+        """
         brain_ext = BrainExtractor()
 
         img_scaled = np.interp(img_npy, (img_npy.min(), img_npy.max()), (0, 1))
@@ -384,15 +420,22 @@ class SubtleGADJobType(BaseJobType):
         th = self._proc_config.skull_strip_prob_threshold
         return preprocess_single_series.get_largest_connected_component(segment_probs > th)
 
-    def _strip_skull(self, images):
+    def _strip_skull(self, images: np.ndarray) -> np.ndarray:
+        """
+        Helper function to perform skull stripping on zero and low dose images and take a
+        union of the skull masks.
+
+        :param images: Zero and low dose images as numpy array
+        :return: Numpy array of binary mask of the brain
+        """
         brain_mask = None
 
         if self._proc_config.skull_strip:
-            self._logger.info('Performing skull stripping for zero dose...')
+            self._logger.info("Performing skull stripping for zero dose...")
             mask_zero = self._strip_skull_npy_vol(images[0])
 
             if self._proc_config.skull_strip_union:
-                self._logger.info('Performing skull stripping for low dose...')
+                self._logger.info("Performing skull stripping for low dose...")
                 mask_low = self._strip_skull_npy_vol(images[1])
                 brain_mask = ((mask_zero > 0) | (mask_low > 0))
             else:
@@ -400,19 +443,34 @@ class SubtleGADJobType(BaseJobType):
 
         return brain_mask
 
-    def _apply_brain_mask(self, images, brain_mask):
-        self._logger.info('Applying computed brain mask on images')
+    def _apply_brain_mask(self, images: np.ndarray, brain_mask: np.ndarray) -> np.ndarray:
+        """
+        Method to apply the computed brain mask on the zero and low dose images
+
+        :param images: Zero and low dose images as a numpy array
+        :param brain_mask: The computed skull stripped brain mask
+        :return: The skull stripped brain images
+        """
+        self._logger.info("Applying computed brain mask on images")
         masked_images = np.copy(images)
 
         masked_images[0] *= brain_mask
         masked_images[1] *= brain_mask
         return masked_images
 
-    def _has_dicom_scaling_info(self):
+    def _has_dicom_scaling_info(self) -> bool:
+        """
+        Use the DICOM header of the input dataset to find whether scaling information is available
+        :return: Boolean indicating whether scaling information is available
+        """
         header_zero, _ = self._get_dicom_header()
         return 'RescaleSlope' in header_zero
 
-    def _get_dicom_header(self):
+    def _get_dicom_header(self) -> Tuple[object, object]:
+        """
+        Get the DICOM header (pydicom.dataset) of the zero and low dose images
+        :return: Tuple of pydicom dataset objects of zero and low dose images
+        """
         for frame_seq_name, _ in self._input_datasets[0].items():
             header_zero = self._input_datasets[0][frame_seq_name][0]
             header_low = self._input_datasets[1][frame_seq_name][0]
@@ -420,6 +478,10 @@ class SubtleGADJobType(BaseJobType):
             return (header_zero, header_low)
 
     def _get_dicom_scale_coeff(self):
+        """
+        Sets the scale coefficient attribute with the scaling information present in the DICOM
+        header. If scaling information is not available, this method returns the default values.
+        """
         if not self._has_dicom_scaling_info():
             self._dicom_scale_coeff = {
                 'zero': {
@@ -436,7 +498,6 @@ class SubtleGADJobType(BaseJobType):
 
         else:
             header_zero, header_low = self._get_dicom_header()
-
             self._dicom_scale_coeff = [{
                 'rescale_slope': float(header_zero.RescaleSlope),
                 'rescale_intercept': float(header_zero.RescaleIntercept),
@@ -448,16 +509,51 @@ class SubtleGADJobType(BaseJobType):
             }]
 
     @staticmethod
-    def _scale_slope_intercept(img, rescale_slope, rescale_intercept, scale_slope):
+    def _scale_slope_intercept(
+        img: np.ndarray, rescale_slope: float, rescale_intercept: float, scale_slope: float
+    ) -> np.ndarray:
+        """
+        Static method to scale the input image with the given rescale slope and intercept and scale
+        slope
+
+        :param img: Input image as numpy array
+        :param rescale_slope: Slope part of the linear transformation of pixels from disk
+        representation to memory representation
+        :param rescale_intercept: Intercept part of the linear transformation of pixels from disk
+        representation to memory representation
+        :param scale_slope: Private philips tag for scale slope information
+        :return: Scaled image as numpy array
+        """
+
         return (img * rescale_slope + rescale_intercept) / (rescale_slope * scale_slope)
 
     @staticmethod
-    def _rescale_slope_intercept(img, rescale_slope, rescale_intercept, scale_slope):
+    def _rescale_slope_intercept(
+        img: np.ndarray, rescale_slope: float, rescale_intercept: float, scale_slope: float
+    ) -> np.ndarray:
+        """
+        Static method to undo the dicom scaling
+
+        :param img: Input image as numpy array
+        :param rescale_slope: Slope part of the linear transformation of pixels from disk
+        representation to memory representation
+        :param rescale_intercept: Intercept part of the linear transformation of pixels from disk
+        representation to memory representation
+        :param scale_slope: Private philips tag for scale slope information
+        :return: Rescaled image as numpy array
+        """
+
         return (img * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
 
-    def _scale_intensity_with_dicom_tags(self, images):
+    def _scale_intensity_with_dicom_tags(self, images: np.ndarray) -> np.ndarray:
+        """
+        Helper function to scale the image intensity using DICOM header information
+
+        :param images: Zero and low dose images as numpy array
+        :return: The scaled images as numpy array
+        """
         if self._proc_config.perform_dicom_scaling and self._has_dicom_scaling_info():
-            self._logger.info('Performing intensity scaling using DICOM tags...')
+            self._logger.info("Performing intensity scaling using DICOM tags...")
 
             scaled_images = np.copy(images)
 
@@ -482,6 +578,10 @@ class SubtleGADJobType(BaseJobType):
         return images
 
     def _get_pixel_spacing(self):
+        """
+        Obtains the pixel spacing information from DICOM header of input dataset and sets it to the
+        local pixel spacing attribute
+        """
         header_zero, header_low = self._get_dicom_header()
 
         x_zero, y_zero = header_zero.PixelSpacing
@@ -492,8 +592,13 @@ class SubtleGADJobType(BaseJobType):
 
         self._pixel_spacing = [(x_zero, y_zero, z_zero), (x_low, y_low, z_low)]
 
-    def _register(self, images):
-        self._logger.info('Performing registration of low dose with respect to zero dose...')
+    def _register(self, images: np.ndarray) -> np.ndarray:
+        """
+        Performs image registration of low dose image by having the zero dose as the reference
+        :param images: Input zero dose and low dose images as numpy array
+        :return: Registered images as numpy array
+        """
+        self._logger.info("Performing registration of low dose with respect to zero dose...")
 
         reg_images = np.copy(images)
 
@@ -516,9 +621,14 @@ class SubtleGADJobType(BaseJobType):
 
         return reg_images
 
-    def _match_histogram(self, images):
+    def _match_histogram(self, images: np.ndarray) -> np.ndarray:
+        """
+        Performs histogram matching of low dose by having zero dose as reference
+        :param images: Input zero dose and low dose images as numpy array
+        :return: Histogram matched images as numpy array
+        """
         if self._proc_config.histogram_matching:
-            self._logger.info('Matching histogram of low dose with respect to zero dose...')
+            self._logger.info("Matching histogram of low dose with respect to zero dose...")
             hist_images = np.copy(images)
 
             hist_images[1] = preprocess_single_series.match_histogram(
@@ -537,10 +647,18 @@ class SubtleGADJobType(BaseJobType):
 
         return images
 
-    def _scale_intensity(self, images, noise_mask):
+    def _scale_intensity(self, images: np.ndarray, noise_mask: np.ndarray) -> np.ndarray:
+        """
+        Performs relative and global scaling of images by using the pixel values inside the
+        noise mask previously computed
+
+        :param images: Input zero dose and low dose images as numpy array
+        :param noise_mask: Binary noise mask computed in an earlier step of pre-processing
+        :return: Scaled images as numpy array
+        """
         scale_images = np.copy(images)
 
-        self._logger.info('Performing intensity scaling...')
+        self._logger.info("Performing intensity scaling...")
         num_slices = scale_images.shape[1]
 
         idx_center = range(
@@ -560,7 +678,7 @@ class SubtleGADJobType(BaseJobType):
             img=context_img[0], ref_img=context_img[1], levels=np.linspace(.5, 1.5, 30)
         )
 
-        self._logger.info('Computed intensity scale factor is %s', scale_factor)
+        self._logger.info("Computed intensity scale factor is %s", scale_factor)
 
         scale_images[1] *= scale_factor
         context_img[1] *= scale_factor
@@ -595,7 +713,7 @@ class SubtleGADJobType(BaseJobType):
             global_scale = np.repeat(global_scale, repeats=scale_images.shape[1], axis=1)
 
         global_scale = global_scale[:, :, None, None]
-        self._logger.info('Computed global scale %s with shape %s', global_scale, \
+        self._logger.info("Computed global scale %s with shape %s", global_scale, \
         global_scale.shape)
 
         scale_images /= global_scale
@@ -611,12 +729,20 @@ class SubtleGADJobType(BaseJobType):
 
         return scale_images.transpose(1, 0, 2, 3)
 
-    def _apply_proc_lambdas(self, unmasked_data):
-        self._logger.info('Applying all preprocessing steps on full brain images...')
+    def _apply_proc_lambdas(self, unmasked_data: np.ndarray) -> np.ndarray:
+        """
+        All the preprocessing functions are executed on the skull stripped images and are cached in
+        the _proc_lambdas as an array of lambda functions with the respective parameters. In this
+        method, all the cached functions are executed in order, on the full-brain images.
+
+        :param unmasked_data: "Un-skull-stripped" full brain images as numpy array
+        :return: Processed data after applying all preprocess functions in order
+        """
+        self._logger.info("Applying all preprocessing steps on full brain images...")
         processed_data = np.copy(unmasked_data)
 
         for proc_lambda in self._proc_lambdas:
-            self._logger.info('::APPLY PROC LAMBDAS::%s', proc_lambda['name'])
+            self._logger.info("::APPLY PROC LAMBDAS::%s", proc_lambda['name'])
 
             for idx, fn in enumerate(proc_lambda['fn']):
                 processed_data[idx] = fn(processed_data)
@@ -624,7 +750,14 @@ class SubtleGADJobType(BaseJobType):
         return processed_data
 
     @staticmethod
-    def _get_crop_range(shape_num):
+    def _get_crop_range(shape_num: int) -> Tuple[int, int]:
+        """
+        Gets starting and ending range of indices for a given shape number. Helps in center
+        cropping an image
+
+        :param shape_num: The shape number for which the range needs to be computed
+        :return: Computed range with start and end indices
+        """
         if shape_num % 2 == 0:
             start = end = shape_num // 2
         else:
@@ -634,7 +767,13 @@ class SubtleGADJobType(BaseJobType):
         return (start, end)
 
     @staticmethod
-    def _center_crop(img, ref_img):
+    def _center_crop(img: np.ndarray, ref_img: np.ndarray) -> np.ndarray:
+        """
+        Performs center cropping of a given image, to the shape of the given ref_img
+        :param img: Numpy array of the input image which needs to be center cropped
+        :param ref_img: The input img is center cropped to resemble the shape of ref_img
+        :return: Center cropped image as numpy array
+        """
         s = []
         e = []
 
@@ -654,10 +793,9 @@ class SubtleGADJobType(BaseJobType):
 
         return img[s[0]:e[0], s[1]:e[1], s[2]:e[2]]
 
-    def _preprocess_raw_pixel_data(self):
+    def _preprocess_raw_pixel_data(self) -> Dict:
         """
-        get pixel data from dicom datasets
-        and resample the pixel data to the specified shape
+        Apply all preprocessing steps on the raw input data
         :return: preprocessed pixel data
         """
         # apply preprocessing for each frame of the dictionary
@@ -682,12 +820,10 @@ class SubtleGADJobType(BaseJobType):
 
         return dict_input_data
 
-    def _postprocess_data(self, dict_pixel_data):
+    def _postprocess_data(self, dict_pixel_data: Dict):
         """
-        Post process the pixel data. i.e. rescale based on SUV scale
-        and resample to reference size, pixel spacing and slice positions
+        Post process the pixel data by undoing certain scaling operations
         :param dict_pixel_data: dict of data to post process by frame
-        :return: post processed data
         """
 
         for frame_seq_name, pixel_data in dict_pixel_data.items():
@@ -701,13 +837,27 @@ class SubtleGADJobType(BaseJobType):
             if self._proc_config.perform_dicom_scaling:
                 pixel_data = self._undo_dicom_scale_fn(pixel_data)
 
-            self._logger.info('Pixel range after undoing global scale %s %s %s', pixel_data.min(),\
+            self._logger.info("Pixel range after undoing global scale %s %s %s", pixel_data.min(),\
             pixel_data.max(), pixel_data.mean())
             # write post processing here
             self._output_data[frame_seq_name] = pixel_data
 
     @staticmethod
-    def _process_mpr(params):
+    def _process_mpr(params: Dict) -> np.ndarray:
+        """
+        Processes single instance of an MPR inference, with the given params dict
+        :param params: The input params for the mpr inference with the following keys
+         - 'model_dir': Directory path of the model to be loaded
+         - 'decrypt_key_hex': The hexadecimal key to decrypt license
+         - 'exec_config': The execution config object to be updated in the model
+         - 'slices_per_input': Number of context slices for 2.5D processing
+         - 'reshape_for_mpr_rotate': Boolean which specifies whether reshape needs to be enabled
+            when rotating the input volume
+         - 'data': Input data volume
+         - 'angle': Angle by which the input data needs to be rotated for MPR processing
+         - 'slice_axis': Slice axis of orientation for the input volume
+         :return: Prediction from the specified model with the given MPR parameters
+        """
         global gpu_pool
         gpu_id = gpu_pool.get(block=True)
 
@@ -764,17 +914,13 @@ class SubtleGADJobType(BaseJobType):
         finally:
             gpu_pool.put(gpu_id)
 
-    def _save_data(self,
-                   dict_pixel_data: Dict,
-                   dict_template_ds: Dict,
-                   out_dicom_dir: str):
+    def _save_data(self, dict_pixel_data: Dict, dict_template_ds: Dict, out_dicom_dir: str):
         """
         Save pixel data to the output directory
         based on a reference dicom dataset list
         :param dict_pixel_data: dict of array of data by frame to save to output directory
         :param dict_template_ds: dict of template dataset to use to save pixel data
         :param out_dicom_dir: path to output directory
-        :return: None
         """
         # save data frame by frame but with the same series UID and a shared UID pool
         # create output directory
