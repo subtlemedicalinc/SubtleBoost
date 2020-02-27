@@ -104,8 +104,10 @@
     "series_num": 1002,
     "enh_mask": {
       "slices_per_input": 7,
-      "description": "enh_vgg_multi",
-      "checkpoint": "enh_vgg_multi.checkpoint"
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "description": "enh_vgg_1r",
+      "checkpoint": "enh_vgg.checkpoint"
     },
     "mres_fix": {
       "model_name": "multires2d",
