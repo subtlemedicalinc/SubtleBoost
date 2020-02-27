@@ -85,7 +85,10 @@ class SubtleGADApp(SubtleApp):
         if not tasks:
             return 11, "No job matched in the input data"
 
-        if unmatched_series and self._config["enable_multiple_jobs"] and self._config["warn_unmatched_series"]:
+        if (
+            unmatched_series and self._config["enable_multiple_jobs"] and
+            self._config["warn_unmatched_series"]
+        ):
             # if some series were not matched with any job, notify the user with a warning:
             for series in unmatched_series:
                 self._handle_error(
@@ -146,7 +149,8 @@ class SubtleGADApp(SubtleApp):
             # pylint: disable=broad-except
             except Exception as exc:
                 task_exit_code = 100
-                # TODO: do not generate error report before all tasks completed + so that no need to delete
+                # TODO: do not generate error report before all tasks completed + so that no need
+                # to delete
                 # catch all exceptions to handle them
                 self._handle_error(
                     task_exit_code,

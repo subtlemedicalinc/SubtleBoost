@@ -8,23 +8,20 @@ Created on 2020/02/06
 import os
 from typing import Dict, Optional, Tuple
 import copy
-from collections import OrderedDict, namedtuple
-from itertools import groupby
+from collections import namedtuple
 from multiprocessing import Pool, Queue
 import re
 
-import pydicom
-import pydicom.errors
 import numpy as np
 import sigpy as sp
-from deepbrain import Extractor as BrainExtractor
 from scipy.ndimage.interpolation import rotate
+from deepbrain import Extractor as BrainExtractor
 
 from subtle.util.inference_job_utils import (
     BaseJobType, GenericInferenceModel, DataLoader2pt5D, set_keras_memory
 )
 from subtle.util.multiprocess_utils import processify
-from subtle.procutil import preprocess_single_series, postprocess_single_series
+from subtle.procutil import preprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
 
 def _init_gpu_pool(local_gpu_q: Queue):
@@ -34,9 +31,11 @@ def _init_gpu_pool(local_gpu_q: Queue):
 
     :param local_gpu_q: the local GPU queue that is set with the allocated GPUs
     """
+    # pylint: disable=global-variable-undefined
     global gpu_pool
     gpu_pool = local_gpu_q
 
+# pylint: disable=too-many-instance-attributes
 class SubtleGADJobType(BaseJobType):
     """The job type of SubtleGAD dose reduction"""
     default_processing_config_gad = {
@@ -121,7 +120,9 @@ class SubtleGADJobType(BaseJobType):
         }
     }
 
-    SubtleGADProcConfig = namedtuple("SubtleGADProcConfig", ' '.join(list(default_processing_config_gad.keys())))
+    SubtleGADProcConfig = namedtuple(
+        "SubtleGADProcConfig", ''.join(list(default_processing_config_gad.keys()))
+    )
 
     def __init__(self, task: object, model_dir: str, decrypt_key_hex: Optional[str] = None):
         """Initialize the job type object and initialize all the required variables
@@ -156,9 +157,6 @@ class SubtleGADJobType(BaseJobType):
         # (keys = frame sequence name, values = pixel array)
         self._raw_input = {}
 
-        # initialize dict to save intermediate values and flags
-        self._metadata = {}
-
         # list of lambda functions constructed during preprocess
         self._proc_lambdas = []
 
@@ -186,6 +184,7 @@ class SubtleGADJobType(BaseJobType):
         return dict_pixel_data
 
     # pylint: disable=arguments-differ
+    # pylint: disable=too-many-locals
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
@@ -240,10 +239,11 @@ class SubtleGADJobType(BaseJobType):
 
             predictions = process_pool.map(SubtleGADJobType._process_mpr, mpr_params)
             # Convert the array to a shape of (n_slices, height, width, 3, num_rotations)
-            predictions = np.array(predictions).reshape(
-                len(slice_axes), num_rotations, n_slices, height, width, 1
-            )
-            predictions = np.array(predictions)[..., 0].transpose(2, 3, 4, 1, 0)
+            _reshape_tuple = (len(slice_axes), num_rotations, n_slices, height, width, 1)
+            predictions = np.array(predictions).reshape(_reshape_tuple)
+
+            tx_order = (2, 3, 4, 1, 0)
+            predictions = np.array(predictions)[..., 0].transpose(tx_order)
 
             # compute a volume of shape (n_slices, height, width) which has 1 for all the pixels
             # with pixel value > 0 and 0 otherwise - across all mpr predictions
@@ -293,7 +293,8 @@ class SubtleGADJobType(BaseJobType):
         datasets by frame: keys are frame sequence name and values are lists of pydicom datasets
         """
 
-        assert len(self.task.dict_required_series) == 2, "More than two input series found - only zero dose and low dose series are allowed"
+        assert len(self.task.dict_required_series) == 2, "More than two input series found - only\
+        zero dose and low dose series are allowed"
 
         zero_dose_series = None
         low_dose_series = None
@@ -334,7 +335,7 @@ class SubtleGADJobType(BaseJobType):
             self._input_series[1].manufacturer.lower()):
             raise TypeError("Input DICOMs manufacturer tags do not match")
 
-        for mfr_name in self.mfr_specific_config.keys():
+        for mfr_name, _ in self.mfr_specific_config.items():
             if re.search(mfr_name, self._input_series[0].manufacturer, re.IGNORECASE):
                 mfr_match = True
                 matched_key = mfr_name
@@ -358,12 +359,7 @@ class SubtleGADJobType(BaseJobType):
             low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
 
             self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
-
-            self._logger.info(
-                "the shape of array {}".format(
-                    self._raw_input[frame_seq_name].shape
-                )
-            )
+            self._logger.info("the shape of array %s", self._raw_input[frame_seq_name].shape)
 
     def _mask_noise(self, images: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -858,6 +854,7 @@ class SubtleGADJobType(BaseJobType):
          - 'slice_axis': Slice axis of orientation for the input volume
          :return: Prediction from the specified model with the given MPR parameters
         """
+        # pylint: disable=global-variable-undefined
         global gpu_pool
         gpu_id = gpu_pool.get(block=True)
 
@@ -910,7 +907,6 @@ class SubtleGADJobType(BaseJobType):
             return model_pred
         except Exception as e:
             raise Exception('Error in process_mpr', e)
-            return []
         finally:
             gpu_pool.put(gpu_id)
 
