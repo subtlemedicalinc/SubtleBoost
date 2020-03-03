@@ -54,7 +54,7 @@ class SubtleGADJobType(BaseJobType):
 
         # manufacturer specific - these are the default values
         "perform_noise_mask": True,
-        "noise_mask_threshold": 0.1,
+        "noise_mask_threshold": 0.05,
         "noise_mask_area": False,
         "noise_mask_selem": False,
         "perform_dicom_scaling": False,
@@ -121,7 +121,7 @@ class SubtleGADJobType(BaseJobType):
     }
 
     SubtleGADProcConfig = namedtuple(
-        "SubtleGADProcConfig", ''.join(list(default_processing_config_gad.keys()))
+        "SubtleGADProcConfig", ' '.join(list(default_processing_config_gad.keys()))
     )
 
     def __init__(self, task: object, model_dir: str, decrypt_key_hex: Optional[str] = None):
@@ -400,10 +400,12 @@ class SubtleGADJobType(BaseJobType):
         """
         This method performs skull stripping using deepbrain library's BrainExtractor class. Once
         the BrainExtractor returns the probability maps, threshold it at a configured level and
-        return only the largest connected component. This method has a @processify decorator which
-        makes it run as a separate process - this is required because the BrainExtractor uses a GPU
-        and once the execution is complete, tensorflow does not clear the GPU memory by default
-        which will block the GPU for the inference process.
+        return only the largest connected component.
+
+        This method has a @processify decorator which makes it run as a separate process - this is
+        required because the BrainExtractor uses a GPU and once the execution is complete,
+        tensorflow does not clear the GPU memory by default which will block the GPU for the
+        inference process.
 
         :param img_npy: Input image as a numpy array
         :return: Numpy array of the skull mask
@@ -479,18 +481,15 @@ class SubtleGADJobType(BaseJobType):
         header. If scaling information is not available, this method returns the default values.
         """
         if not self._has_dicom_scaling_info():
-            self._dicom_scale_coeff = {
-                'zero': {
-                    'rescale_slope': 1.0,
-                    'rescale_intercept': 0.0,
-                    'scale_slope': 1.0
-                },
-                'low': {
-                    'rescale_slope': 1.0,
-                    'rescale_intercept': 0.0,
-                    'scale_slope': 1.0
-                }
-            }
+            self._dicom_scale_coeff = [{
+                'rescale_slope': 1.0,
+                'rescale_intercept': 0.0,
+                'scale_slope': 1.0
+            }, {
+                'rescale_slope': 1.0,
+                'rescale_intercept': 0.0,
+                'scale_slope': 1.0
+            }]
 
         else:
             header_zero, header_low = self._get_dicom_header()
