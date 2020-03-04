@@ -63,9 +63,37 @@ node {
     }
 
     stage("Download Models") {
+        sh 'echo downloading models from ${APP_BUCKET}'
+        sh "rm -rf default_models"
+        sh "rm -rf opt_models"
+        sh "mkdir -p default_models"
+        sh "mkdir -p opt_models"
+
         manifest = readJSON file: 'manifest.json'
         APP_ID = manifest["appId"]
         APP_NAME = manifest["aeTitle"]
+
+        for (model in manifest["defaultModels"]) {
+            def zip_file = model + ".zip"
+            withAWS(region: AWS_REGION){
+                s3Download(file:"default_models/${zip_file}", bucket:APP_BUCKET, path:"models/${APP_ID}/${zip_file}", force:true)
+            }
+            sh "mkdir default_models/${model}"
+            sh "unzip -o default_models/${zip_file} -d default_models/${model}"
+            sh "ls -l default_models/${model}/"
+            sh "rm -rf default_models/${zip_file}"
+        }
+
+        for (model in manifest["compatibleModels"]) {
+            def zip_file = model + ".zip"
+            withAWS(region: AWS_REGION){
+                s3Download(file:"opt_models/${zip_file}", bucket:APP_BUCKET, path:"models/${APP_ID}/${zip_file}", force:true)
+            }
+            sh "mkdir opt_models/${model}"
+            sh "unzip -o opt_models/${zip_file} -d opt_models/${model}"
+            sh "ls -l opt_models/${model}/"
+            sh "rm -rf opt_models/${zip_file}"
+        }
     }
 
     stage("Download and Build Utilities") {
