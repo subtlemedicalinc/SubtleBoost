@@ -1,0 +1,108 @@
+node {
+
+    // node env
+    env.NODEJS_HOME = "${tool 'Node8.x'}"
+    env.PATH="${env.NODEJS_HOME}/bin:${env.PATH}"
+    env.NODE_OPTIONS="--max-old-space-size=8092"
+    env.TRT="False"
+
+    // Platform Vars
+    def ENV = ""
+    def AWS_REGION = "us-east-1"
+    def GIT_CREDS_ID = ""
+    def PACKAGE = "true"
+
+    def identity = awsIdentity()
+    stage("Platform Env Setup") {
+        if (identity.account == "701903242341") {
+            ENV = "prod"
+            // AWS region is different only for the app artifact bucket in stage
+            AWS_REGION = "us-west-1"
+        } else if (identity.account == "574639283692") {
+            ENV = "stage"
+            // AWS region is different only for the app artifact bucket in stage
+            AWS_REGION = "us-west-2"
+        } else if (identity.account == "347052790049") {
+            ENV = "dev"
+            if (env.BRANCH_NAME != "develop") {
+                PACKAGE = "false"
+            }
+        }
+
+        GIT_CREDS_ID = env.GIT_CREDS_ID
+
+        dir('subtle-platform-utils') {
+            git(
+                url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git',
+                credentialsId: GIT_CREDS_ID,
+                branch: "master"
+            )
+        }
+    }
+
+    // App env
+    def manifest = ""
+    // TODO: make sure those buckets exist for staging and prod env later
+    def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
+    def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
+    def TEST_DATA_TIMESTAMP = "20200303"
+    def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
+    def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
+    def APP_ID = ""
+    def APP_NAME = ""
+
+    stage("Checkout") {
+        checkout scm
+
+        /* get version */
+        if (env.BRANCH_NAME ==~ /(master|release\/(.*)|hotfix\/(.*))/) {
+            def branch_name = env.BRANCH_NAME
+            sh 'git log -n 1 ${branch_name} --pretty=format:"%H" > GIT_COMMIT'
+            GIT_COMMIT = readFile('GIT_COMMIT').toString()
+        }
+    }
+
+    stage("Download and Build Utilities") {
+        sh 'echo Cloning subtle-app-utilities dependence'
+        def app_utilities_version = manifest["app_utilities_version"]
+        // remove app utilities if it exists to guarantee latest version
+        sh """
+        if [ -r subtle_app_utilities/ ]; then
+            rm -rf subtle_app_utilities
+        fi
+        """
+        dir('subtle-app-utilities') {
+            git(url: 'https://github.com/subtlemedicalinc/subtle-app-utilities.git', credentialsId: GIT_CREDS_ID, branch: "master")
+        }
+        sh """
+            echo "Get correct branch/version"
+            cd subtle-app-utilities
+            git checkout ${app_utilities_version}
+            cd ..
+        """
+
+        echo "Building subtle-app-utilities dependence"
+        s3Download(
+            force: true,
+            file: "subtle-app-utilities/subtle_python_packages/dldt-build/build/dldt-artifacts.zip",
+            bucket: PUBLIC_BUCKET,
+            path: "dldt/dldt-artifacts.zip"
+        )
+        docker.image('python:3.5-stretch').inside {
+            sh """
+                cd subtle-app-utilities/subtle_python_packages
+                python dldt-build/install_subtle.py
+                python setup.py bdist_wheel
+                cd ../..
+            """
+        }
+
+        sh """
+        if [ -r subtle_app_utilities_bdist/ ]; then
+            rm -rf subtle_app_utilities_bdist
+        fi
+        mkdir subtle_app_utilities_bdist
+        cp subtle-app-utilities/**/dist/*.whl subtle_app_utilities_bdist/
+        """
+    }
+}
