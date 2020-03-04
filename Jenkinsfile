@@ -45,7 +45,7 @@ node {
     // TODO: make sure those buckets exist for staging and prod env later
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
-    def TEST_DATA_TIMESTAMP = "20200303"
+    def TEST_DATA_TIMESTAMP = "20200304"
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -161,6 +161,35 @@ node {
                 pylint --rcfile pylintrc subtle/ || true
                 pytest -v -m "build or subtleapp or subtlemr" --junitxml xunit-reports/xunit-result-py35.xml --html=html-reports/xunit-result-py35.html --self-contained-html
             '''
+        }
+
+        sh 'echo "tests..."'
+        def zip_file = "unit_test_data.zip"
+        s3Download(file:"${zip_file}", bucket:APP_DATA_BUCKET, path:"${APP_NAME}/${TEST_DATA_TIMESTAMP}/${zip_file}", force:true)
+        sh "unzip -o ${zip_file} -d app/tests"
+
+        sh '''
+        if [ -d html-reports ]; then
+            rm -rf html-reports
+        fi
+        mkdir -p html-reports
+        '''
+        docker.image("nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04").inside("--runtime=nvidia"){
+            sh '''
+                apt-get update
+                apt-get install -y python3 python3-pip
+                pip3 install --upgrade pip
+                pip install --upgrade "setuptools>=45.0.0"
+                pip install --find-links subtle_app_utilities_bdist -r app/requirements.txt
+                pip install -r app/tests/requirements.txt
+
+                python3 -m pytest -m "not post_build" app/tests/ \
+                    --junitxml xunit-reports/xunit-result-py35-pre-build.xml \
+                    --html=html-reports/xunit-result-py35-pre-build.html \
+                    --self-contained-html
+
+                pylint --rcfile=pylintrc app/ || true
+               '''
         }
     }
 }
