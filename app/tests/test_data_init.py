@@ -11,9 +11,10 @@ import unittest
 from unittest.mock import MagicMock
 import pytest
 import numpy as np
+
+from subtle.dcmutil.series_utils import dicomscan
 # pylint: disable=import-error
 from subtle_gad_jobs import SubtleGADJobType
-from subtle.dcmutil.series_utils import dicomscan
 
 @pytest.mark.processing
 class DataLoadingTest(unittest.TestCase):
