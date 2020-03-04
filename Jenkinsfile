@@ -182,9 +182,10 @@ node {
                 pip install --upgrade "setuptools>=45.0.0"
                 pip install --find-links subtle_app_utilities_bdist -r app/requirements.txt
                 pip install -r app/tests/requirements.txt
-                pip uninstall tensorflow-gpu tensorflow tensorboard
-                rm -rf /usr/lib/python3.5/site-packages/tensorflow*
+                pip uninstall -y tensorflow-gpu tensorflow tensorboard
+                rm -rf /usr/local/lib/python3.5/site-packages/tensorflow*
                 pip install —no-cache-dir tensorflow-gpu==1.12.0
+                python3 -c "import tensorflow as tf; print(tf.__version__); print(tf.test.is_gpu_available()); print('tf successfully installed');"
 
                 python3 -m pytest -m "not post_build" app/tests/ \
                     --junitxml xunit-reports/xunit-result-py35-pre-build.xml \
