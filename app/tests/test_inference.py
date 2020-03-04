@@ -17,9 +17,9 @@ import mock
 import numpy as np
 import pydicom
 
+from subtle.dcmutil.series_utils import dicomscan
 # pylint: disable=import-error
 import subtle_gad_jobs
-from subtle.dcmutil.series_utils import dicomscan
 
 @pytest.mark.processing
 class InferenceTest(unittest.TestCase):
@@ -185,7 +185,7 @@ class InferenceTest(unittest.TestCase):
             out_dicom_dir=out_dir
         )
 
-        dcm_files = [fpath for fpath in glob('{}/**/*.dcm'.format(out_dir), recursive=True)]
+        dcm_files = glob('{}/**/*.dcm'.format(out_dir), recursive=True)
         self.assertTrue(len(dcm_files) == 7)
         self.assertTrue(
             list(self.job_obj._input_datasets[0].values())[0][0].StudyInstanceUID in dcm_files[0]

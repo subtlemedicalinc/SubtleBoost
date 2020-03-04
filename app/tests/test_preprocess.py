@@ -13,9 +13,10 @@ import pytest
 import mock
 import numpy as np
 
+from subtle.dcmutil.series_utils import dicomscan
 # pylint: disable=import-error
 import subtle_gad_jobs
-from subtle.dcmutil.series_utils import dicomscan
+
 
 @pytest.mark.processing
 class PreprocessTest(unittest.TestCase):

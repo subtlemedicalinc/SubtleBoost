@@ -190,7 +190,7 @@ node {
                     --html=html-reports/xunit-result-py35-pre-build.html \
                     --self-contained-html
 
-                pylint --rcfile=pylintrc app/ || true
+                pylint --rcfile=pylintrc app/
                '''
         }
     }
