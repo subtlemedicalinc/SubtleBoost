@@ -62,6 +62,12 @@ node {
         }
     }
 
+    stage("Download Models") {
+        manifest = readJSON file: 'manifest.json'
+        APP_ID = manifest["appId"]
+        APP_NAME = manifest["aeTitle"]
+    }
+
     stage("Download and Build Utilities") {
         sh 'echo Cloning subtle-app-utilities dependence'
         def app_utilities_version = manifest["app_utilities_version"]
