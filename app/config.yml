@@ -17,7 +17,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20191209142600-gad-ge"
+      model_id: "20200304102938-gadge"
   - job_name: "gad_philips"
     series_required:
       - "zero_dose_philips"
@@ -28,7 +28,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20191024150600-gad-philips"
+      model_id: "20200304102652-gadphilips"
   - job_name: "gad_siemens"
     series_required:
       - "zero_dose_siemens"
@@ -39,7 +39,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20191024150600-gad-philips"
+      model_id: "20200304102652-gadphilips"
 
 series:
   - name: "zero_dose_ge"
