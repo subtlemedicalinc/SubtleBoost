@@ -32,9 +32,9 @@
         }
     },
     "defaultModels": [
-        "20191209142600-gad-ge", "20191024150600-gad-philips"
+        "20200304102938-gadge", "20200304102652-gadphilips"
     ],
     "compatibleModels": [
-        "20191209142600-gad-ge", "20191024150600-gad-philips"
+        "20200304102938-gadge", "20200304102652-gadphilips"
     ]
 }
