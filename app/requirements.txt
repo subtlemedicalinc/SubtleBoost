@@ -12,3 +12,4 @@ expiringdict==1.1.4
 scikit_learn==0.21.3
 tensorflow-gpu==1.12.0
 pandas
+subtle_python_packages
