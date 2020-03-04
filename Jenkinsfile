@@ -139,4 +139,28 @@ node {
         cp subtle-app-utilities/**/dist/*.whl subtle_app_utilities_bdist/
         """
     }
+
+    stage("Pre-Build Tests") {
+        def data_date = "20200113"
+        def file_name = "subtle_python_packages_tests_data.tar.gz"
+        def download_path = "/tmp/${file_name}"
+        echo 'fetching app utils test data...'
+        s3Download(
+            force: true,
+            file: "${download_path}",
+            bucket: APP_DATA_BUCKET,
+            path: "subtle_app_utilities/subtle_python_packages/${data_date}/${file_name}"
+        )
+        sh "tar xf ${download_path} -C ${env.WORKSPACE}/subtle-app-utilities/subtle_python_packages"
+        echo "testing app util..."
+        docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
+            sh '''
+                cd $WORKSPACE/subtle-app-utilities/subtle_python_packages
+                python dldt-build/install_subtle.py
+                pip install -r test_requirements.txt --find-links dist/
+                pylint --rcfile pylintrc subtle/ || true
+                pytest -v -m "build or subtleapp or subtlemr" --junitxml xunit-reports/xunit-result-py35.xml --html=html-reports/xunit-result-py35.html --self-contained-html
+            '''
+        }
+    }
 }
