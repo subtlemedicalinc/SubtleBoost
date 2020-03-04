@@ -193,5 +193,15 @@ node {
                 pylint --rcfile=pylintrc app/
                '''
         }
+
+        // upload results
+        if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
+            TESTS_PATH = "${APP_NAME}/${GIT_COMMIT}/verifications/"
+        } else if (env.BRANCH_NAME ==~ /(develop)/) {
+            TESTS_PATH = "${APP_NAME}/develop/verifications/"
+        } else {
+            TESTS_PATH = "${APP_NAME}/feature/verifications/"
+        }
+        s3Upload(file: "html-reports", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
     }
 }
