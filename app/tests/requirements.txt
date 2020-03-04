@@ -1,5 +1,6 @@
 pytest>=4.4,<4.5
 pytest-html>=1.20,<1.21
+mock==3.0.5
 pylint
 opencv-python
 pyyaml
