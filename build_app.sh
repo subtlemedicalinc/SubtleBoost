@@ -53,6 +53,7 @@ if [ ! -d "subtle_app_utilities_bdist" ]; then
 fi
 
 $PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt > /dev/null
+$PIP install --no-deps deepbrain
 
 echo ">>> installing SimpleElastix"
 
