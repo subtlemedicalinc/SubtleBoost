@@ -207,15 +207,6 @@ node {
 
     stage("Build") {
         // start building the app
-        if (env.TRT == "True") {
-            sh 'echo Downloading TensorRT dependency'
-             s3Download(
-                force: true,
-                file: "TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz",
-                bucket: PUBLIC_BUCKET,
-                path: "tensorrt/TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz"
-            )
-        }
         sh 'echo Building executable'
         docker.image("nvidia/cuda:9.0-cudnn7-runtime-centos7").inside("--runtime=nvidia"){
             sh '''
@@ -245,5 +236,35 @@ node {
         cp manifest.json dist/manifest.json
         git rev-parse --verify HEAD > dist/hash.txt
         """
+    }
+
+    stage("Post build Tests") {
+        sh '''
+        if [ -d html-reports ]; then
+            rm -rf html-reports
+        fi
+        mkdir -p html-reports
+        '''
+
+        // get post build test data
+        def zip_file = "post_build_test_data.zip"
+        s3Download(file:"${zip_file}", bucket:APP_DATA_BUCKET, path:"${APP_NAME}/${TEST_DATA_TIMESTAMP}/${zip_file}", force:true)
+        sh "unzip -o ${zip_file} -d app/tests"
+
+        docker.image("nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04").inside("--runtime=nvidia --env TO_TEST='${tests_to_run}'"){
+            sh '''
+            apt-get update
+            apt-get install -y python3 python3-pip libgtk2.0-dev
+            pip3 install --upgrade pip
+            pip install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
+            python3 app/tests/generate_test_license.py dist/
+
+            mkdir -p dist/output
+            cd dist
+            ./run.sh ../app/tests/post_build_test_data/NO26 output config.yml license_gad.json
+
+            python3 -c  "from glob import glob; dcm_files=glob('output/**/*.dcm', recursive=True); assert len(dcm_files) == 196, 'Invalid number of output DICOM files'; print('Post build test passed!!!');"
+            '''
+        }
     }
 }
