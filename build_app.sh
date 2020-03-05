@@ -61,9 +61,7 @@ CUR_DIR=$PWD
 mkdir -p elastix
 cd elastix
 wget -N https://com-subtlemedical-dev-public.s3.amazonaws.com/elastix/elastix-build.tar.gz
-if [ ! -d build/ ]; then
-    tar -zxvf elastix-build.tar.gz
-fi
+tar -zxvf elastix-build.tar.gz
 cd build
 sed -i "s@\/home\/build@$(pwd)@g" SimpleITK-build/Wrapping/Python/Packaging/setup.py
 cd SimpleITK-build/Wrapping/Python
