@@ -52,7 +52,7 @@ if [ ! -d "subtle_app_utilities_bdist" ]; then
   exit 1
 fi
 
-$PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt > /dev/null
+$PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
 $PIP install --no-deps deepbrain
 
 echo ">>> installing SimpleElastix"
@@ -68,6 +68,7 @@ cd SimpleITK-build/Wrapping/Python
 $PIP uninstall -y SimpleITK > /dev/null
 $PYTHON Packaging/setup.py install
 cd $CUR_DIR
+rm -rf elastix
 $PYTHON -c "import SimpleITK as sitk; sitk.ElastixImageFilter(); print('SimpleElastix successfully installed');"
 
 echo ">>> installing tensorflow..."
