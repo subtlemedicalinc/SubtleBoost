@@ -204,4 +204,46 @@ node {
         }
         s3Upload(file: "html-reports", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
     }
+
+    stage("Build") {
+        // start building the app
+        if (env.TRT == "True") {
+            sh 'echo Downloading TensorRT dependency'
+             s3Download(
+                force: true,
+                file: "TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz",
+                bucket: PUBLIC_BUCKET,
+                path: "tensorrt/TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz"
+            )
+        }
+        sh 'echo Building executable'
+        docker.image("nvidia/cuda:9.0-cudnn7-runtime-centos7").inside("--runtime=nvidia"){
+            sh '''
+                yum -y update && yum -y install yum-utils nvcc wget
+                yum -y groupinstall development && yum -y install https://centos7.iuscommunity.org/ius-release.rpm
+                yum -y install python35u python35u-pip python35u-devel
+                pip3.5 install --upgrade pip
+                export PYTHON=python3.5
+                export PIP=pip
+                rm -rf app/models
+                cp -r default_models app/models
+                echo "Building executable file with pyinstaller"
+                ./build_app.sh
+            '''
+        }
+        sh """
+        if [ -d dist ]; then
+            rm -rf dist
+        fi
+        mkdir dist
+        cp app/dist/infer dist/infer
+        cp -r build/libs dist/libs
+        cp app/config.yml dist/config.yml
+        cp app/run.sh dist/run.sh
+        chmod +x dist/run.sh
+        cp -r app/models dist/models
+        cp manifest.json dist/manifest.json
+        git rev-parse --verify HEAD > dist/hash.txt
+        """
+    }
 }
