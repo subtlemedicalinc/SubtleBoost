@@ -4,7 +4,7 @@ import json
 import datetime
 from subtle.util import licensing
 
-def get_license(app, serial_number, duration, fname_out):
+def get_license(app_name, ser_num, time_duration, fpath_out):
     app_dict = {
         "SubtleHello": 1000,
         "SubtlePET": 2000,
@@ -14,18 +14,18 @@ def get_license(app, serial_number, duration, fname_out):
     }
 
     date_format = '%m/%d/%Y'
-    exp_date = datetime.date.strftime(datetime.date.today() + duration, date_format)
+    exp_date = datetime.date.strftime(datetime.date.today() + time_duration, date_format)
 
-    license_dict = licensing.generate_license(app_dict[app], app, serial_number, exp_date)
+    license_dict = licensing.generate_license(app_dict[app_name], app_name, ser_num, exp_date)
 
-    with open(fname_out, 'w') as f:
+    with open(fpath_out, 'w') as f:
         json.dump(license_dict, f)
 
 if __name__ == "__main__":
     path_out = sys.argv[1]
     fname_out = os.path.join(path_out, "license_gad.json")
 
-    serial_number="test"
+    serial_number = "test"
     app = "SubtleGAD"
     duration = datetime.timedelta(days=2)
     get_license(app, serial_number, duration, fname_out)
