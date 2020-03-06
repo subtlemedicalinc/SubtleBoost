@@ -267,7 +267,7 @@ node {
         }
     }
 
-    if(PACKAGE == "true"){
+    if(PACKAGE == "true") {
         stage("Platform Package and Deploy") {
             dir('subtle-platform-utils') {
                     git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "master")
@@ -278,5 +278,6 @@ node {
             sh "npm i fs-extra aws-sdk archiver"
             sh "node ./subtle-platform-utils/build.js ${ENV} ./dist"
         }
+
     }
 }
