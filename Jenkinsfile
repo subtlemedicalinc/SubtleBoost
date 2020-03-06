@@ -4,7 +4,6 @@ node {
     env.NODEJS_HOME = "${tool 'Node8.x'}"
     env.PATH="${env.NODEJS_HOME}/bin:${env.PATH}"
     env.NODE_OPTIONS="--max-old-space-size=8092"
-    env.TRT="False"
 
     // Platform Vars
     def ENV = ""
@@ -265,6 +264,19 @@ node {
 
             python3 -c  "from glob import glob; dcm_files=glob('output/**/*.dcm', recursive=True); assert len(dcm_files) == 196, 'Invalid number of output DICOM files'; print('Post build test passed!!!');"
             '''
+        }
+    }
+
+    if(PACKAGE == "true"){
+        stage("Platform Package and Deploy") {
+            dir('subtle-platform-utils') {
+                    git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "master")
+            }
+            if (ENV == "stage"){
+                ENV = "staging"
+            }
+            sh "npm i fs-extra aws-sdk archiver"
+            sh "node ./subtle-platform-utils/build.js ${ENV} ./dist"
         }
     }
 }
