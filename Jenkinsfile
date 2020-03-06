@@ -259,6 +259,9 @@ node {
             pip install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
             python3 app/tests/generate_test_license.py dist/
 
+            // temp
+            rm app/tests/post_build_test_data/NO26/.DS_Store
+
             mkdir -p dist/output
             cd dist
             ./run.sh ../app/tests/post_build_test_data/NO26 output config.yml license_gad.json
