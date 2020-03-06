@@ -198,7 +198,8 @@ class SubtleGADJobType(BaseJobType):
 
         self._logger.info("starting inference (job type: %s)", self.name)
 
-        avail_gpu_ids = os.environ["CUDA_VISIBLE_DEVICES"].split(',')
+        gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+        avail_gpu_ids = gpu_devices.split(',')
         gpu_repeat = [[id] * self._proc_config.num_procs_per_gpu for id in avail_gpu_ids]
         gpu_ids = [item for sublist in gpu_repeat for item in sublist]
 
