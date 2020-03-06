@@ -185,11 +185,16 @@ class SubtleGADJobType(BaseJobType):
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
+    @processify
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
         the parallel inference jobs are over, average the results and return the output data.
         This method is called by the __call__ method of BaseJobType
+
+        This method has a @processify decorator which makes it run as a separate process - this is
+        required multiple jobs are run sequentially. Once a single job completes, the decorator
+        will make the process exit, which will free up the GPU memory.
 
         :param dict_pixel_data: dictionary of the input pixel data (numpy arrays) by frame
         :return: the processed output data
