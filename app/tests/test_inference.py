@@ -144,6 +144,17 @@ class InferenceTest(unittest.TestCase):
         crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
         self.assertTrue(crop_img.shape == ref_img.shape)
 
+    def test_zero_pad(self):
+        """
+        Test that center crop result matches the ref image when the input image shape is odd
+        """
+
+        img = np.ones((7, 232, 248))
+        ref_img = np.ones((7, 256, 256))
+
+        pad_img = subtle_gad_jobs.SubtleGADJobType._zero_pad(img, ref_img)
+        self.assertTrue(pad_img.shape == ref_img.shape)
+
     def test_postprocess(self):
         """
         Test that postprocess is executed correctly by checking that the undo lambda functions are
