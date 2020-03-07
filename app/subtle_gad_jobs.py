@@ -794,6 +794,26 @@ class SubtleGADJobType(BaseJobType):
 
         return img[s[0]:e[0], s[1]:e[1], s[2]:e[2]]
 
+    @staticmethod
+    def _zero_pad(img: np.ndarray, ref_img: np.ndarray, const_val: int = 0) -> np.ndarray:
+        """
+        Opposite of center cropping, pads img with const_val (by default 0) to match the shape
+        of ref_img
+        :param img: Numy array of the input image which needs to be zero padded
+        :param ref_img: The input img is zero padded to resemble the shape of ref_img
+        :return: Zero padded image as numpy array
+        """
+
+        npad = []
+        for i, sh in enumerate(ref_img.shape):
+            if img.shape[i] >= sh:
+                npad.append((0, 0))
+            else:
+                diff = (sh - img.shape[i]) // 2
+                npad.append((diff, diff))
+
+        return np.pad(img, pad_width=npad, mode='constant', constant_values=const_val)
+
     def _preprocess_raw_pixel_data(self) -> Dict:
         """
         Apply all preprocessing steps on the raw input data
@@ -870,8 +890,22 @@ class SubtleGADJobType(BaseJobType):
             set_keras_memory(allow_growth=True)
 
             reshape = params['reshape_for_mpr_rotate']
+
+            input_data = np.copy(params['data'])
+            zero_padded = False
+
+            if params['data'].shape[2] != params['data'].shape[3]:
+                zero_padded = True
+                target_shape = max(params['data'].shape[2], params['data'].shape[3])
+                input_data = SubtleGADJobType._zero_pad(
+                    img=input_data,
+                    ref_img=np.zeros(
+                        (input_data.shape[0], input_data.shape[1], target_shape, target_shape)
+                    )
+                )
+
             model_input_shape = (
-                1, params['data'].shape[2], params['data'].shape[3], 2 * params['slices_per_input']
+                1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']
             )
 
             model = GenericInferenceModel(
@@ -881,14 +915,14 @@ class SubtleGADJobType(BaseJobType):
             model.update_config(params['exec_config'])
 
             if params['angle'] > 0.0:
-                data_rot = rotate(params['data'], params['angle'], reshape=reshape, axes=(1, 2))
+                data_rot = rotate(input_data, params['angle'], reshape=reshape, axes=(1, 2))
             else:
-                data_rot = np.copy(params['data'])
+                data_rot = np.copy(input_data)
 
             data_loader = DataLoader2pt5D(
                 input_data=data_rot, slices_per_input=params['slices_per_input'],
                 batch_size=model._model_config['batch_size'], slice_axis=params['slice_axis'],
-                resize=(params['data'].shape[2], params['data'].shape[3])
+                resize=(input_data.shape[2], input_data.shape[3])
             )
 
             model_pred = model.predict_generator(data_loader)
@@ -899,13 +933,13 @@ class SubtleGADJobType(BaseJobType):
                 model_pred = model_pred.transpose(1, 2, 0, 3)
 
             if not reshape:
-                resize_shape = list(params["data"].shape[1:]) + [model.model_config["batch_size"]]
+                resize_shape = list(input_data.shape[1:]) + [model.model_config["batch_size"]]
                 model_pred = sp.util.resize(model_pred, resize_shape)
 
             if params['angle'] > 0.0:
                 model_pred = rotate(model_pred, -params['angle'], reshape=reshape, axes=(0, 1))
 
-            if model_pred.shape[0] != params['data'].shape[1]:
+            if model_pred.shape[0] != params['data'].shape[1] or zero_padded:
                 model_pred = SubtleGADJobType._center_crop(model_pred[..., 0], params['data'][0])
                 model_pred = model_pred[..., None]
 
