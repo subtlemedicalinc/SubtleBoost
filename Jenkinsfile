@@ -23,9 +23,9 @@ node {
             AWS_REGION = "us-west-2"
         } else if (identity.account == "347052790049") {
             ENV = "dev"
-            // if (env.BRANCH_NAME != "develop") {
-            //    PACKAGE = "false"
-            // }
+            if (env.BRANCH_NAME != "develop") {
+              PACKAGE = "false"
+            }
         }
 
         GIT_CREDS_ID = env.GIT_CREDS_ID
