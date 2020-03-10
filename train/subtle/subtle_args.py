@@ -79,6 +79,8 @@ def _preprocess_args(parser):
     parser.add_argument('--fsl_area_threshold_cm2', action='store', type=float,
                         dest='fsl_area_threshold_cm2', help='Reject slices which have extracted brain area (in cm2) lower than the threshold. If argument is not given, all slices will be included', default=None)
     parser.add_argument('--fsl_mask_all_ims', action='store_true', dest='fsl_mask_all_ims', help='If `fsl_mask`, perform FSL BET on all ims and take the union', default=False)
+    parser.add_argument('--use_fsl_reg', action='store_true', dest='use_fsl_reg', help='If true, the registration parameters computed from skull stripped brain will be applied on full brain, otherwise full brain will be registered separately', default=True)
+
 
     parser.add_argument('--pad_for_size', action='store', type=int,
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
