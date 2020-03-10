@@ -180,7 +180,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     return im_out
 
 
-def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200):
+def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200, return_params=True):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -226,6 +226,9 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     im_out = sitk.GetArrayFromImage(sim_out)
     im_out = np.clip(im_out, 0, im_out.max())
 
+    if not return_params:
+        return im_out
+    
     return im_out, param_map_out
 
 def apply_reg_transform(img, spacing, transform_params):
