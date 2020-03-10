@@ -3,23 +3,42 @@
   "verbose": 1,
   "gpu": 0,
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/checkpoints",
-  "resample_isotropic": 0.5,
-  "slices_per_input": 5,
+  "resample_isotropic": 1,
+  "slices_per_input": 7,
+  "file_ext": "h5",
   "preprocess": {
     "transform_type": "affine",
     "skip_hist_norm": true,
     "normalize": true,
     "normalize_fun": "mean",
-    "out_dir_plots": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots",
-    "discard_end_percent": 0,
-    "pad_for_size": 512,
+    "joint_normalize": true,
     "scale_dicom_tags": true,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
     "dicom_data": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "fsl_mask": true,
-    "discard_start_percent": 0,
+    "fsl_mask_all_ims": true,
+    "use_fsl_reg": false,
     "mask_threshold": 0.1,
     "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data"
+    "pad_for_size": 256,
+    "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
+    "batch1": {
+      "data_batch": "0,10"
+    },
+    "batch2": {
+      "data_batch": "10,20"
+    },
+    "batch3": {
+      "data_batch": "20,30"
+    },
+    "batch4": {
+      "data_batch": "30,40"
+    },
+    "batch5": {
+      "data_batch": "40,52"
+    }
   },
   "train": {
     "log_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/tb",
