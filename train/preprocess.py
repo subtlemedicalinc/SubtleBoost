@@ -247,7 +247,24 @@ def register(args, ims, metadata):
         reg_params = [None, spars1_reg, spars2_reg]
         spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
 
-        reg_transform = lambda idx: (lambda images: sup.apply_reg_transform(images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx]))
+        if args.use_fsl_reg:
+            print('Planning to apply registration params computed from skull stripped images...')
+            reg_transform = lambda idx: (
+                lambda images: sup.apply_reg_transform(
+                    images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx]
+                )
+            )
+        else:
+            print('Planning to re-run registration on full brain images...')
+            reg_transform = lambda idx: (
+                lambda images: sup.register_im(
+                    images[:, 0, :, :,], images[:, idx, :, :],
+                    param_map=spars, verbose=args.verbose,
+                    im_fixed_spacing=metadata['pixel_spacing_zero'],
+                    im_moving_spacing=metadata[spacing_keys[idx]],
+                    return_params=False
+                )
+            )
 
         eye = lambda images: images[:, 0, :, :]
 
