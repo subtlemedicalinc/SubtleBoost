@@ -181,7 +181,7 @@ def train_process(args):
 
     if plot_list is not None:
         plot_list = [
-            ('{}/{}.h5'.format(args.data_dir, p[0]), p[1])
+            ('{}/{}.{}'.format(args.data_dir, p[0], args.file_ext), p[1])
             for p in plot_list
         ]
 
@@ -215,7 +215,7 @@ def train_process(args):
 
     val_data = utils_exp.get_experiment_data(args.experiment, dataset='val')
     if len(val_data) > 0:
-        data_val_list = ['{}/{}.h5'.format(args.data_dir, v) for v in val_data]
+        data_val_list = ['{}/{}.{}'.format(args.data_dir, v, args.file_ext) for v in val_data]
         data_train_list = data_list
     else:
         data_val_list = data_list[:r]
