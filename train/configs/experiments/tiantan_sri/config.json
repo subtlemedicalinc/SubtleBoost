@@ -67,7 +67,25 @@
       "l1_lambda": 0.25,
       "perceptual_lambda": 0.5,
       "enh_mask": true,
-      "checkpoint_name": "enh_vgg_multi"
+      "checkpoint_name": "enh_vgg_weighted"
+    },
+    "enh_vgg_attn": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "checkpoint_name": "enh_vgg_attn_relu",
+      "model_config": "attn"
+    },
+    "enh_vgg_pf3": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "checkpoint_name": "enh_vgg_pf3",
+      "enh_pfactor": 3.0
     },
     "mres_fix": {
       "model_name": "mres2d",
@@ -85,6 +103,29 @@
       "perceptual_lambda": 0.25,
       "style_lambda": 0.25,
       "checkpoint_name": "vgg_style_loss"
+    },
+    "attn_unet": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "model_name": "attn_unet2d",
+      "checkpoint_name": "attn_unet2d",
+      "file_ext": "npy",
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_256",
+      "resize": 256
+    },
+    "attn_unet_enh": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "model_name": "attn_unet2d",
+      "checkpoint_name": "attn_unet2d_enh",
+      "file_ext": "npy",
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_256",
+      "resize": 256,
+      "enh_mask": true
     }
   },
   "inference": {
@@ -109,6 +150,21 @@
       "description": "enh_vgg_1r",
       "checkpoint": "enh_vgg.checkpoint"
     },
+    "enh_mask_attn": {
+      "model_config": "attn",
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "checkpoint": "enh_vgg_attn_relu.checkpoint",
+      "description": "enh_vgg_attn_relu"
+    },
+    "enh_mask_pf3": {
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "checkpoint": "enh_vgg_pf3.checkpoint",
+      "description": "enh_vgg_pf3"
+    },
     "mres_fix": {
       "model_name": "multires2d",
       "description": "mres_fix",
@@ -117,6 +173,26 @@
     "style_loss": {
       "description": "vgg_style_loss",
       "checkpoint": "vgg_style_loss.checkpoint"
+    },
+    "attn_unet": {
+      "model_name": "attn_unet2d",
+      "file_ext": "npy",
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_256",
+      "undo_pad_resample": "240,240",
+      "description": "attn_unet2d",
+      "checkpoint": "attn_unet2d.checkpoint",
+      "num_rotations": 1,
+      "resize": 256
+    },
+    "attn_unet_enh": {
+      "model_name": "attn_unet2d",
+      "file_ext": "npy",
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_256",
+      "undo_pad_resample": "240,240",
+      "description": "attn_unet2d_enh",
+      "checkpoint": "attn_unet2d_enh.checkpoint",
+      "num_rotations": 1,
+      "resize": 256
     }
   }
 }

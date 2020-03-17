@@ -1,6 +1,7 @@
 {
   "base": {
     "num_filters_first_conv": 32,
+    "upsample_mode": "default",
     "num_poolings": 3,
     "num_conv_per_pooling": 3,
     "batch_norm": false,
@@ -21,5 +22,8 @@
       "activation": "leaky_relu",
       "lrelu_alpha": 0.2
     }
+  },
+  "attn": {
+    "upsample_mode": "attention"
   }
 }
