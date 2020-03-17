@@ -1,6 +1,6 @@
 import tensorflow as tf
 import keras.models
-from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation
+from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, UpSampling2D, concatenate, Activation, add, multiply
 from keras.layers.merge import add as keras_add
 
 from subtle.dnn.generators.base import GeneratorBase
@@ -39,6 +39,35 @@ class GeneratorUNet2D(GeneratorBase):
             act_fn = Activation(activation, name=act_name)
 
         return act_fn(out)
+
+    def _upsample(self, dec_inp, enc_inp, idx):
+        ups_lname = 'upsample_{}'.format(idx + 1)
+        decoder_upsample = UpSampling2D(
+            size=self.get_config('upsample_size', ups_lname),
+            name=ups_lname
+        )(dec_inp)
+
+        if self.upsample_mode == 'attention':
+            num_ch = dec_inp.get_shape().as_list()[-1] // 4
+            enc_inp = self._attn_block(x=enc_inp, g=decoder_upsample, num_ch=num_ch)
+
+        up_decoder = concatenate(
+            [decoder_upsample, enc_inp],
+            name='cat_{}'.format(idx)
+        )
+
+        return up_decoder
+
+    def _attn_block(self, x, g, num_ch):
+        theta_x = Conv2D(num_ch, kernel_size=(1, 1), strides=(1, 1))(x)
+        phi_g = Conv2D(num_ch, kernel_size=(1, 1), strides=(1, 1))(g)
+
+        f = Activation('relu')(add([theta_x, phi_g]))
+        psi_f = Conv2D(1, kernel_size=(1, 1), strides=(1, 1))(f)
+        rate = Activation('relu')(psi_f)
+        att_x = multiply([x, rate])
+
+        return att_x
 
     def _build_model(self):
         print('Building {} model...'.format(self.model_name))
@@ -123,16 +152,7 @@ class GeneratorUNet2D(GeneratorBase):
         conv_decoders = [conv_center]
 
         for i in range(1, self.num_poolings + 1):
-            ups_lname = 'upsample_{}'.format(i + 1)
-            decoder_upsample = UpSampling2D(
-                size=self.get_config('upsample_size', ups_lname),
-                name=ups_lname
-            )(conv_decoders[-1])
-
-            up_decoder = concatenate(
-                [decoder_upsample, convs[-i]],
-                name='cat_{}'.format(i)
-            )
+            up_decoder = self._upsample(conv_decoders[-1], convs[-i], i)
             conv_decoder = up_decoder
 
             for j in range(self.num_conv_per_pooling):
@@ -163,7 +183,7 @@ class GeneratorUNet2D(GeneratorBase):
 
         # model
         model = keras.models.Model(inputs=inputs, outputs=conv_output)
-        # model.summary()
+        model.summary()
 
         if self.verbose:
             print(model)
