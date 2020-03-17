@@ -492,11 +492,31 @@ def enhancement_mask(X, Y, center_slice, th=.05):
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
 
-def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None):
+def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False):
     'Create a smooth enhancement mask'
     # max_val_arr should be length (batch_size, 1)
 
-    im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0,...]
+    im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0, ...]
+
+    if weighted:
+        # To give more weight to enhancement present in full dose but not in low dose
+        im_diff_low = X[:, center_slice, 1, ...] - X[:, center_slice, 0, ...]
+        mask_diff = (im_diff >= 0.5).astype(np.float32) - (im_diff_low >= 0.5).astype(np.float32)
+        mask_diff = (
+            np.interp(mask_diff, (mask_diff.min(), mask_diff.max()), (0, 1)) > 0.9
+        ).astype(np.float32)
+
+        mask_diff = np.array([
+            binary_dilation(mask_diff_sl, selem=square(3))
+            for mask_diff_sl in mask_diff
+        ]).astype(np.float32)
+
+        mask_diff[mask_diff == 1] = im_diff.max()
+        mask_diff[mask_diff == 0] = 1.0
+        im_diff *= mask_diff
+        im_diff = np.clip(im_diff, 0, im_diff.max())
+        ###
+
     if max_val_arr is None:
         max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
 
