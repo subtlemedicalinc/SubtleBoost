@@ -177,6 +177,21 @@
       "checkpoint": "enh_vgg_pf3.checkpoint",
       "description": "enh_vgg_pf3"
     },
+    "enh_mask_attn": {
+      "model_config": "attn",
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "checkpoint": "enh_vgg_attn_relu.checkpoint",
+      "description": "enh_vgg_attn_relu"
+    },
+    "enh_mask_pf3": {
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "checkpoint": "enh_vgg_pf3.checkpoint",
+      "description": "enh_vgg_pf3"
+    },
     "mres_fix": {
       "model_name": "multires2d",
       "description": "mres_fix",
