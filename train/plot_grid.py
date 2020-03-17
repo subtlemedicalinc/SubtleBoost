@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 from matplotlib.animation import FuncAnimation
+from scipy.ndimage.interpolation import rotate
 
 import subtle.subtle_plot as suplot
 import subtle.subtle_preprocess as sup
@@ -60,14 +61,22 @@ def save_video(input, output, h5_key='data'):
     anim = FuncAnimation(fig, _updatefig, frames=range(row1.shape[0]), interval=75)
     anim.save(output)
 
-
-def plot_h5(input, output, idx=None, h5_key='data'):
+def plot_h5(input, output, idx=None, h5_key='data', axis=0):
     if '.h5' in input:
         data = utils_io.load_file(input, params={'h5_key': h5_key})
     else:
         data_all = utils_io.load_file(input)
         data_idx = 0 if h5_key == 'data' else 1
         data = data_all[data_idx]
+
+    if axis == 0:
+        pass
+    elif axis == 1:
+        data = data.transpose(2, 1, 0, 3)
+        data = rotate(data, angle=-90.0, axes=(2, 3))
+    elif axis == 2:
+        data = data.transpose(3, 1, 0, 2)
+        data = rotate(data, angle=-90.0, axes=(2, 3))
 
     if idx is None:
         idx = data.shape[0] // 2
@@ -105,13 +114,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(usage=usage_str, description=description_str, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--slice', action='store', dest='idx', type=int, help='show this slice (Default -- middle)', default=None)
+    parser.add_argument('--axis', action='store', dest='axis', type=int, help='reformat to axis', default=0)
     parser.add_argument('--input', action='store', dest='input', type=str, help='input npy file')
     parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
     parser.add_argument('--h5_key', action='store', dest='h5_key', type=str, help='H5 key to get the images from, for plotting', default='data')
     parser.add_argument('--video', action='store_true', dest='video', help='If true, the preprocessed and difference is stored as an MP4 video', default=False)
 
     args = parser.parse_args()
-    plot_h5(args.input, args.output, args.idx, args.h5_key)
+    plot_h5(args.input, args.output, args.idx, args.h5_key, args.axis)
 
     if args.video:
         save_video(args.input, args.output, args.h5_key)
