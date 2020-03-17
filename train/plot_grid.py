@@ -78,6 +78,15 @@ def plot_h5(input, output, idx=None, h5_key='data', axis=0):
         data = data.transpose(3, 1, 0, 2)
         data = rotate(data, angle=-90.0, axes=(2, 3))
 
+    if axis == 0:
+        pass
+    elif axis == 1:
+        data = data.transpose(2, 1, 0, 3)
+        data = rotate(data, angle=-90.0, axes=(2, 3))
+    elif axis == 2:
+        data = data.transpose(3, 1, 0, 2)
+        data = rotate(data, angle=-90.0, axes=(2, 3))
+
     if idx is None:
         idx = data.shape[0] // 2
 
