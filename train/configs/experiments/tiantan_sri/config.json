@@ -106,8 +106,8 @@
       "slices_per_input": 7,
       "file_ext": "h5",
       "num_rotations": 1,
-      "description": "enh_vgg_1r",
-      "checkpoint": "enh_vgg.checkpoint"
+      "description": "enh_vgg_weighted",
+      "checkpoint": "enh_vgg_weighted.checkpoint"
     },
     "mres_fix": {
       "model_name": "multires2d",
