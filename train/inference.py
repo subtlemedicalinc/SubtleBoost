@@ -529,11 +529,6 @@ def inference_process(args):
         # Isotropic resampling leaves some artifacts around the brain which has negative values
         Y_prediction = np.clip(Y_prediction, 0, Y_prediction.max())
 
-        ypred_mask = supre.mask_im(np.copy(Y_prediction).transpose(0, 3, 1, 2), threshold=0.08, noise_mask_area=True, use_selem=False)
-        ypred_mask = ypred_mask.transpose(0, 2, 3, 1)
-
-        Y_prediction *= ypred_mask
-
         args.stats_file = None
         # Resampling the original data and mask back to the native resolution takes a long time. Hence uncommenting those two steps and making the stats_file to None so that metrics are not calculated
 
@@ -585,13 +580,6 @@ def inference_process(args):
     #     Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
     #
     #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
-
-    if args.predict_dir:
-        # save raw data
-        data_file_base = os.path.basename(args.path_out)
-        _1, _2 = os.path.splitext(data_file_base)
-        data_file_predict = '{}/{}_predict_{}.{}'.format(args.predict_dir, _1, args.job_id, args.predict_file_ext)
-        utils_io.save_data(data_file_predict, Y_prediction, file_type=args.predict_file_ext)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
 
