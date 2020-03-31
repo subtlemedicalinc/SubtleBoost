@@ -112,6 +112,7 @@ def get_dicom_dirs(base_dir, override=False):
         break
 
     dirs = os.listdir(base_dir)
+    if len(dirs) > 3: dirs = dirs[:3]
     dirs_split = np.array([d.split('_') for d in dirs])
     try:
         dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
@@ -369,7 +370,7 @@ def save_data_npy(output_file, data):
     except:
         return -1
 
-def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=False, metadata=None):
+def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=False):
     with h5py.File(output_file, 'w') as f:
         h5_params = {}
 
