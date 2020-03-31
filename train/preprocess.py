@@ -230,7 +230,7 @@ def hist_norm(args, ims, metadata):
     return ims, metadata
 
 def register(args, ims, metadata):
-    spars = sitk.GetDefaultParameterMap(args.transform_type, 2)
+    spars = sitk.GetDefaultParameterMap(args.transform_type)
 
     if not args.skip_registration:
         metadata['reg'] = 1
