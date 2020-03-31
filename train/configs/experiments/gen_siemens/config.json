@@ -7,34 +7,33 @@
   "slices_per_input": 7,
   "file_ext": "h5",
   "preprocess": {
-    "transform_type": "affine",
+    "transform_type": "rigid",
     "skip_hist_norm": true,
     "normalize": true,
     "normalize_fun": "mean",
     "joint_normalize": true,
-    "scale_dicom_tags": true,
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots",
     "discard_start_percent": 0,
     "discard_end_percent": 0,
     "dicom_data": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "fsl_mask": true,
-    "fsl_mask_all_ims": true,
+    "fsl_mask_all_ims": false,
     "use_fsl_reg": false,
     "mask_threshold": 0.1,
     "scale_matching": true,
     "pad_for_size": 256,
     "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
     "batch1": {
-      "data_batch": "0,10"
+      "data_batch": "0,5"
     },
     "batch2": {
-      "data_batch": "10,20"
+      "data_batch": "5,10"
     },
     "batch3": {
-      "data_batch": "20,30"
+      "data_batch": "10,15"
     },
     "batch4": {
-      "data_batch": "30,40"
+      "data_batch": "15,21"
     },
     "batch5": {
       "data_batch": "40,52"
@@ -56,7 +55,16 @@
     "validation_split": 0.2,
     "no_save_best_only": true,
     "learning_rate": 0.001,
-    "checkpoint_name": "mres_vgg_loss"
+    "checkpoint_name": "mres_vgg_loss",
+    "enh_vgg": {
+      "file_ext": "h5",
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "resize": 256,
+      "checkpoint_name": "siemens_enh_vgg"
+    }
   },
   "inference": {
     "inference_mpr": true,
@@ -64,13 +72,20 @@
     "description": "gen_siemens_halfmm",
     "num_rotations": 5,
     "checkpoint": "gen_siemens_halfmm.checkpoint",
-    "resample_size": 512,
     "predict_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
-    "reshape_for_mpr_rotate": true,
+    "reshape_for_mpr_rotate": false,
     "stats_base": "/home/srivathsa/projects/studies/gad/gen_siemens/inference",
     "inference_mpr_avg": "mean",
     "zoom": 0,
-    "series_num": 1002
+    "series_num": 1002,
+    "enh_vgg": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "num_rotations": 1,
+      "file_ext": "h5",
+      "checkpoint": "siemens_enh_vgg.checkpoint",
+      "description": "siemens_enh_vgg_test"
+    }
   }
 }
