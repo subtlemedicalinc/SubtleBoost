@@ -82,7 +82,7 @@ class InferenceTest(unittest.TestCase):
         self.low_path_dicom = os.path.join(self.path_data, "NO26_Philips_Gad_small", "1_lowdose")
         self.low_series_in = list(dicomscan(self.low_path_dicom).values())[0]
 
-        self.sequence_name = self.zero_series_in._default_frame_name
+        self.sequence_name = self.zero_series_in.get_frame_names()[0]
 
         self.job_obj.task.dict_required_series = {
             'zero_dose_philips': self.zero_series_in,
