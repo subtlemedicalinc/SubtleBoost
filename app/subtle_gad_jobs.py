@@ -41,7 +41,7 @@ class SubtleGADJobType(BaseJobType):
     default_processing_config_gad = {
         # app params
         "app_name": "SubtleGAD",
-        "app_id": 3000,
+        "app_id": 4000,
         "app_version": "0.0.0",
 
         # model params

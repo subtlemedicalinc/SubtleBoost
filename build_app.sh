@@ -25,9 +25,6 @@ fi
 if [ -z "$PIP" ]; then
   export PIP=pip
 fi
-if [ -z "$TRT" ]; then
-  export TRT="False"
-fi
 
 BUILD_DIR=build
 if [ -d ${BUILD_DIR} ]; then
@@ -86,23 +83,6 @@ else
   exit 1
 fi
 
-if [ $TRT = "True" ]; then
-    echo ">>> installing tensorRT..."
-    if [ ! -f "TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz" ]; then
-      echo ">>> Missing TensorRT package tar file!"
-      echo ">>> Download it from Subtle Medical AWS public bucket first!"
-      exit 1
-    fi
-    local_dir=$(pwd)
-    tar xzvf TensorRT-5.1.5.0.Red-Hat.x86_64-gnu.cuda-10.0.cudnn7.5.tar.gz
-    mv TensorRT-5.1.5.0 /opt/
-    cd /opt
-    ln -s TensorRT-5.1.5.0/ tensorrt
-    cd /opt/tensorrt/python/
-    $PIP install tensorrt-5.1.5.0-cp35-none-linux_x86_64.whl
-    cd $local_dir
-fi
-
 echo ">>> packaging SubtleGAD app..."
 cd app && \
   pyinstaller infer.spec > /dev/null && \
@@ -123,19 +103,8 @@ if [ -f /usr/local/cuda/lib64/libcublas.so.9.0 ]; then
   cp /usr/local/cuda/lib64/libcublas.so.9.0  ${BUILD_DIR}/libs/libcublas.so.9.0
 fi
 
-if [ $TRT = "True" ]; then
-    # copy TensorRT lib file to app libs
-    mkdir -p ${BUILD_DIR}/libs_trt
-    cp /opt/tensorrt/lib/libnvinfer.so.5  ${BUILD_DIR}/libs_trt/libnvinfer.so.5
-fi
-
 # export LD_LIBRARY_PATH for convert_models_to_trt to be able to use TensorRT
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${BUILD_DIR}/libs"
-
-if [ $TRT = "True" ]; then
-    ## convert models to TRT
-    $PYTHON -m subtle.util.convert_models_to_trt manifest.json app/models
-fi
 
 # encrypt model files and remove the plain text files
 $PYTHON -m subtle.util.encrypt_models --delete-original manifest.json app/models
