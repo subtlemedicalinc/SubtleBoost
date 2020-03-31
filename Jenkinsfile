@@ -140,7 +140,7 @@ node {
     }
 
     stage("Pre-Build Tests") {
-        def data_date = "20200113"
+        def data_date = "20200310"
         def file_name = "subtle_python_packages_tests_data.tar.gz"
         def download_path = "/tmp/${file_name}"
         echo 'fetching app utils test data...'
@@ -202,6 +202,11 @@ node {
             TESTS_PATH = "${APP_NAME}/feature/verifications/"
         }
         s3Upload(file: "html-reports", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
+        s3Upload(
+            file: "subtle-app-utilities/subtle_python_packages/html-reports",
+            bucket:"${TESTS_BUCKET}",
+            path:"${TESTS_PATH}subtle_python_packages"
+        )
     }
 
     stage("Build") {
