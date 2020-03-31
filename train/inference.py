@@ -214,7 +214,7 @@ def inference_process(args):
         else:
             data = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
             data_mask = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}, file_type=args.file_ext)
-            metadata = utils_io.load_h5_metadata(args.data_preprocess)
+            metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.h5', '_meta.h5'))
 
         dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
 
