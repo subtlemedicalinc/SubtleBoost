@@ -490,6 +490,16 @@ def inference_process(args):
     # End IF for 3D patch based
 
     # if 'zero_pad_size' in metadata:
+    if (
+        'original_size' in metadata and
+        'old_spacing_zero' in metadata and
+        args.resample_isotropic > 0
+    ):
+        orig_size = metadata['original_size']
+        old_spacing = metadata['old_spacing_zero']
+        args.undo_pad_resample = ','.join([str(int(r)) for r in orig_size * old_spacing[1:]])
+        print('undo pad resample', args.undo_pad_resample)
+
     if args.undo_pad_resample:
         splits = args.undo_pad_resample.split(',')
         crop_x, crop_y = int(splits[0]), int(splits[1])
