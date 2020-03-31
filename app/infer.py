@@ -12,7 +12,6 @@ import hashlib
 import traceback
 
 from subtle.dcmutil.dicom_filter import DicomFilter
-from subtle.dcmutil.dcm_report import exit_code_log_level
 from subtle.util.subtle_app import SubtleApp
 import subtle_gad_jobs
 
@@ -76,6 +75,8 @@ class SubtleGADApp(SubtleApp):
         :return: the exit code and the exit detail
         """
 
+        exit_info = []
+
         # update output path
         output_path_dicom = os.path.join(output_path, self._out_dicom_dir)
         # create list of tasks based on dicom input
@@ -83,7 +84,7 @@ class SubtleGADApp(SubtleApp):
         tasks, unmatched_series = dicom_filter_obj.process_incoming(input_path)
         # check valid number of tasks are found
         if not tasks:
-            return 11, "No job matched in the input data"
+            return [(11, "No job matched in the input data", None)]
 
         if (
             unmatched_series and self._config["enable_multiple_jobs"] and
@@ -91,25 +92,18 @@ class SubtleGADApp(SubtleApp):
         ):
             # if some series were not matched with any job, notify the user with a warning:
             for series in unmatched_series:
-                self._handle_error(
-                    13,
-                    "Series did not match any job definition: {} ({} slices - UID: {})".format(
-                        series.seriesdescription,
-                        series.nslices,
-                        series.seriesinstanceUID,
-                    ),
-                    list(series.datasets)[0][0],
+                exit_detail = "Series did not match any job definition: {} ({} slices - \
+                UID:{})".format(
+                    series.seriesdescription,
+                    series.nslices,
+                    series.seriesinstanceUID,
                 )
+                exit_info.append((13, exit_detail, list(series.datasets)[0][0]))
         elif len(tasks) > 1 and not self._config["enable_multiple_jobs"]:
-            return (
-                12,
-                "Multiple jobs matched in the input data "
-                "and 'enable_multiple_jobs' was set to {}".format(
-                        self._config["enable_multiple_jobs"]
-                ),
-            )
+            exit_detail = "Multiple jobs matched in the input data and 'enable_multiple_jobs' was\
+            set to {}".format(self._config["enable_multiple_jobs"])
+            exit_info.append((12, exit_detail, None))
 
-        exit_codes = {}
         # execute each task
 
         for i_task, task in enumerate(tasks):
@@ -143,41 +137,19 @@ class SubtleGADApp(SubtleApp):
                 )
 
                 job_obj(output_path_dicom)
-                exit_codes[task_id] = 0
-                self._handle_error(0, "Success")
+                exit_info.append((0, "Task {} finished with success!".format(task_id), None))
 
             # pylint: disable=broad-except
-            except Exception as exc:
-                task_exit_code = 100
-                # TODO: do not generate error report before all tasks completed + so that no need
-                # to delete
-                # catch all exceptions to handle them
-                self._handle_error(
-                    task_exit_code,
-                    "Unexpected App error: {}".format(str(exc)),
-                    list(task.list_series[0].datasets)[0][0],
-                )
-                exit_codes[task_id] = task_exit_code
-                print(traceback.format_exc())
+            except Exception:
+                exit_info.append((
+                    100, "Task {} had an unexpected App error: {}".format(
+                        task_id, traceback.format_exc()
+                    ), list(task.list_series[0].datasets)[0][0]
+                ))
                 # continue to next task in the loop
                 continue
 
-        if set(exit_codes.values()) == {0}:
-            return 0, "Success"
-
-        elif 0 not in exit_codes.values():
-            return list(exit_codes.values())[0], "All tasks failed, see report(s)"
-
-        else:
-            ec = list(set(exit_codes.values()))
-            list_levels = [exit_code_log_level.get(e, "error") for e in ec]
-            if "error" not in list_levels:
-                return 0, "Success with warnings"
-            elif self._config["all_reports"]:
-                ec.pop(ec.index(0))
-                return ec[0], "Partial Success"
-            else:
-                return 0, "Partial Success"
+        return exit_info
 
 
 if __name__ == "__main__":
