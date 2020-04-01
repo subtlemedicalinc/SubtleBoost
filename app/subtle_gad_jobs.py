@@ -14,7 +14,7 @@ import re
 
 import numpy as np
 import sigpy as sp
-from scipy.ndimage.interpolation import rotate
+from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from deepbrain import Extractor as BrainExtractor
 
 from subtle.util.inference_job_utils import (
@@ -23,6 +23,7 @@ from subtle.util.inference_job_utils import (
 from subtle.util.multiprocess_utils import processify
 from subtle.procutil import preprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
+from subtle.procutil import resample_utils
 
 def _init_gpu_pool(local_gpu_q: Queue):
     """
@@ -59,6 +60,7 @@ class SubtleGADJobType(BaseJobType):
         "noise_mask_selem": False,
         "perform_dicom_scaling": False,
         "transform_type": "rigid",
+        "use_mask_reg": True,
         "histogram_matching": False,
         "joint_normalize": False,
         "scale_ref_zero_img": False,
@@ -102,10 +104,12 @@ class SubtleGADJobType(BaseJobType):
             "noise_mask_area": False,
             "noise_mask_selem": False,
             "perform_dicom_scaling": False,
-            "transform_type": "affine",
+            "transform_type": "rigid",
+            "use_mask_reg": False,
             "histogram_matching": False,
             "joint_normalize": True,
-            "scale_ref_zero_img": False
+            "scale_ref_zero_img": False,
+            "skull_strip_union": False
         },
         "philips": {
             "perform_noise_mask": True,
@@ -161,6 +165,9 @@ class SubtleGADJobType(BaseJobType):
         self._proc_lambdas = []
 
         self._output_data = {}
+
+        self._original_input_shape = None
+        self._resampled_isotropic = False
 
     def _preprocess(self) -> Dict:
         """
@@ -261,6 +268,10 @@ class SubtleGADJobType(BaseJobType):
                 np.sum(predictions, axis=(-1, -2), keepdims=False),
                 mask_sum, where=(mask_sum > 0)
             )[..., None]
+
+            # undo zero padding and isotropic resampling
+            output_array = self._undo_reshape(output_array)
+
             dict_output_array[frame_seq_name] = output_array
 
         self._logger.info("inference finished")
@@ -604,16 +615,25 @@ class SubtleGADJobType(BaseJobType):
         reg_images = np.copy(images)
 
         # register the low dose image with respect to the zero dose image
+        reg_args = {
+            'fixed_spacing': self._pixel_spacing[0],
+            'moving_spacing': self._pixel_spacing[1],
+            'transform_type': self._proc_config.transform_type
+        }
         reg_images[1], reg_params = preprocess_single_series.register(
-            fixed_img=reg_images[0], moving_img=reg_images[1],
-            fixed_spacing=self._pixel_spacing[0], moving_spacing=self._pixel_spacing[1],
-            transform_type=self._proc_config.transform_type
+            fixed_img=reg_images[0], moving_img=reg_images[1], **reg_args
         )
 
         idty_fn = lambda ims: ims[0]
 
-        apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
-        self._pixel_spacing[1], reg_params)
+        if self._proc_config.use_mask_reg:
+            apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
+            self._pixel_spacing[1], reg_params)
+        else:
+            self._logger.info('Registration will be re-run for unmasked images...')
+            apply_reg = lambda ims: preprocess_single_series.register(
+                fixed_img=ims[0], moving_img=ims[1], return_params=False, **reg_args
+            )
 
         self._proc_lambdas.append({
             'name': 'register',
@@ -750,6 +770,53 @@ class SubtleGADJobType(BaseJobType):
 
         return processed_data
 
+    @processify
+    def _process_model_input_compatibility(self, input_data: np.ndarray) -> np.ndarray:
+        """
+        Check if input data is compatible with the model input shape. If not resample
+        input to isotropic resolution and zero pad to make the input work with the given model.
+
+        :param input_data: Input data numpy array
+        :return: Resampled/zero-padded data
+        """
+        # Model is initialized here only to get the default input shape
+        resampled = False
+        orig_shape = input_data.shape
+
+        model = GenericInferenceModel(
+            model_dir=self.model_dir, decrypt_key_hex=self.decrypt_key_hex
+        )
+        model.update_config(self.task.job_definition.exec_config)
+        model_input = model._model_obj.inputs[0]
+        model_shape = (int(model_input.shape[1]), int(model_input.shape[2]))
+        input_shape = (input_data.shape[-2], input_data.shape[-1])
+
+        if input_shape != model_shape:
+            pixel_spacing = np.array(self._pixel_spacing[0])[::-1]
+
+            if not np.array_equal(np.round(pixel_spacing, decimals=1), [1., 1., 1.]):
+                self._logger.info('Resampling to isotropic resolution...')
+                # resample to isotropic resolution
+                resampled = True
+                input_3d_shape = np.array(input_data.shape[1:])
+                target_size = np.round(input_3d_shape * pixel_spacing)
+                resize_factor = target_size / input_3d_shape
+                zero_resample = zoom_interp(input_data[0], resize_factor)
+                low_resample = zoom_interp(input_data[1], resize_factor)
+
+                input_data = np.array([zero_resample, low_resample])
+
+            if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
+                self._logger.info('Zero padding to fit model shape...')
+                input_data = SubtleGADJobType._zero_pad(
+                    img=input_data,
+                    ref_img=np.zeros(
+                        (input_data.shape[0], input_data.shape[1], model_shape[0], model_shape[1])
+                    )
+                )
+
+        return input_data, orig_shape, resampled
+
     @staticmethod
     def _get_crop_range(shape_num: int) -> Tuple[int, int]:
         """
@@ -837,6 +904,11 @@ class SubtleGADJobType(BaseJobType):
             input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
+            (input_data_full, self._original_input_shape, self._resampled_isotropic) = \
+            self._process_model_input_compatibility(input_data_full)
+
+            save_data = np.array([input_data_full[0], input_data_full[1], input_data_full[1]]).transpose(1, 0, 2, 3)
+            np.save('/home/srivathsa/app_output/debug/proc.npy', save_data)
             dict_input_data[frame_seq_name] = input_data_full
 
         return dict_input_data
@@ -860,8 +932,45 @@ class SubtleGADJobType(BaseJobType):
 
             self._logger.info("Pixel range after undoing global scale %s %s %s", pixel_data.min(),\
             pixel_data.max(), pixel_data.mean())
+
             # write post processing here
             self._output_data[frame_seq_name] = pixel_data
+
+    def _undo_reshape(self, pixel_data: np.ndarray) -> np.ndarray:
+        """
+        Undo zero padding and isotropic resampling based on the flags set in preprocessing
+
+        :param pixel_data: Input pixel data numpy array
+        :return: Numpy array after undoing zero padding and isotropic resampling
+        """
+        print('saving inference...')
+        np.save('/home/srivathsa/app_output/debug/infer.npy', pixel_data)
+        pixel_spacing = np.array(self._pixel_spacing[0])[::-1]
+        input_shape = np.array(self._original_input_shape[1:])
+        shape_check = np.round(pixel_spacing * input_shape).astype(np.int)
+        data = pixel_data[..., 0]
+
+        crop_ref_img = None
+        if not self._resampled_isotropic and not np.array_equal(input_shape, data.shape):
+            print('going here??...', input_shape)
+            undo_zero_pad = True
+            crop_ref_img = np.zeros(input_shape)
+
+        if self._resampled_isotropic and not np.array_equal(data.shape, shape_check):
+            undo_zero_pad = True
+            crop_ref_img = np.zeros(shape_check)
+
+        if undo_zero_pad:
+            self._logger.info('Center cropping pixel data...')
+            data = SubtleGADJobType._center_crop(data, crop_ref_img)
+
+        if self._resampled_isotropic:
+            self._logger.info('Undoing isotropic resampling...')
+            new_spacing = np.array([1., 1., 1.]) / pixel_spacing
+            data = zoom_interp(data, new_spacing)
+
+        pixel_data = data[..., None]
+        return pixel_data
 
     @staticmethod
     def _process_mpr(params: Dict) -> np.ndarray:
@@ -894,15 +1003,15 @@ class SubtleGADJobType(BaseJobType):
             input_data = np.copy(params['data'])
             zero_padded = False
 
-            if params['data'].shape[2] != params['data'].shape[3]:
-                zero_padded = True
-                target_shape = max(params['data'].shape[2], params['data'].shape[3])
-                input_data = SubtleGADJobType._zero_pad(
-                    img=input_data,
-                    ref_img=np.zeros(
-                        (input_data.shape[0], input_data.shape[1], target_shape, target_shape)
-                    )
-                )
+            # if params['data'].shape[2] != params['data'].shape[3]:
+            #     zero_padded = True
+            #     target_shape = max(params['data'].shape[2], params['data'].shape[3])
+            #     input_data = SubtleGADJobType._zero_pad(
+            #         img=input_data,
+            #         ref_img=np.zeros(
+            #             (input_data.shape[0], input_data.shape[1], target_shape, target_shape)
+            #         )
+            #     )
 
             model_input_shape = (
                 1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']

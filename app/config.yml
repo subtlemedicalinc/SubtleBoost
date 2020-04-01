@@ -39,7 +39,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20200304102652-gadphilips"
+      model_id: "gadsiemens"
 
 series:
   - name: "zero_dose_ge"
