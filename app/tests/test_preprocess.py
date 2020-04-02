@@ -56,7 +56,8 @@ class PreprocessTest(unittest.TestCase):
             "num_procs_per_gpu": 2,
             "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
-            "series_number_offset": 100
+            "series_number_offset": 100,
+            "use_mask_reg": False
         }
 
         path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
