@@ -1087,10 +1087,17 @@ class SubtleGADJobType(BaseJobType):
                 for tag in self.private_tag:
                     out_dataset.add_new(*tag)
 
+                template_desc = out_dataset.get("SeriesDescription", "")
+                # remove reg matches from the series description
+                for reg_match in [
+                    series.reg_match for series in self.task.job_definition.series_required
+                ]:
+                    template_desc = template_desc.replace('_{}'.format(reg_match), '')
+                    template_desc = template_desc.replace(reg_match, '')
+
                 # set series-wide metadata
                 out_dataset.SeriesDescription = "{}{}{}".format(
-                    self._proc_config.series_desc_prefix,
-                    out_dataset.get("SeriesDescription", ""),
+                    self._proc_config.series_desc_prefix, template_desc,
                     self._proc_config.series_desc_suffix,
                 )
                 out_dataset.SeriesInstanceUID = series_uid
