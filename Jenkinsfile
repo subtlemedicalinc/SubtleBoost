@@ -261,13 +261,15 @@ node {
             apt-get install -y python3 python3-pip libgtk2.0-dev
             pip3 install --upgrade pip
             pip install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
-            python3 app/tests/generate_test_license.py dist/
+            python3 -m subtle.util.licensing 4000 SubtleGAD test 2 > dist/test_license.json
 
             mkdir -p dist/output
             cd dist
-            ./run.sh ../app/tests/post_build_test_data/NO26 output config.yml license_gad.json
+            ./run.sh ../app/tests/post_build_test_data/NO26 output config.yml test_license.json
 
             python3 -c  "from glob import glob; dcm_files=glob('output/**/*.dcm', recursive=True); assert len(dcm_files) == 196, 'Invalid number of output DICOM files'; print('Post build test passed!!!');"
+
+            rm -f test_license.json
             '''
         }
     }
