@@ -23,7 +23,6 @@ from subtle.util.inference_job_utils import (
 from subtle.util.multiprocess_utils import processify
 from subtle.procutil import preprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
-from subtle.procutil import resample_utils
 
 def _init_gpu_pool(local_gpu_q: Queue):
     """
@@ -908,8 +907,6 @@ class SubtleGADJobType(BaseJobType):
             (input_data_full, self._original_input_shape, self._resampled_isotropic) = \
             self._process_model_input_compatibility(input_data_full)
 
-            save_data = np.array([input_data_full[0], input_data_full[1], input_data_full[1]]).transpose(1, 0, 2, 3)
-            np.save('/home/srivathsa/app_output/debug/proc.npy', save_data)
             dict_input_data[frame_seq_name] = input_data_full
 
         return dict_input_data
@@ -944,8 +941,6 @@ class SubtleGADJobType(BaseJobType):
         :param pixel_data: Input pixel data numpy array
         :return: Numpy array after undoing zero padding and isotropic resampling
         """
-        print('saving inference...')
-        np.save('/home/srivathsa/app_output/debug/infer.npy', pixel_data)
         pixel_spacing = np.array(self._pixel_spacing[0])[::-1]
         input_shape = np.array(self._original_input_shape[1:])
         shape_check = np.round(pixel_spacing * input_shape).astype(np.int)
@@ -1004,16 +999,6 @@ class SubtleGADJobType(BaseJobType):
 
             input_data = np.copy(params['data'])
             zero_padded = False
-
-            # if params['data'].shape[2] != params['data'].shape[3]:
-            #     zero_padded = True
-            #     target_shape = max(params['data'].shape[2], params['data'].shape[3])
-            #     input_data = SubtleGADJobType._zero_pad(
-            #         img=input_data,
-            #         ref_img=np.zeros(
-            #             (input_data.shape[0], input_data.shape[1], target_shape, target_shape)
-            #         )
-            #     )
 
             model_input_shape = (
                 1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']
