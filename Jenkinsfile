@@ -261,7 +261,8 @@ node {
             apt-get install -y python3 python3-pip libgtk2.0-dev
             pip3 install --upgrade pip
             pip install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
-            sh "python3 -m subtle.util.licensing 4000 SubtleGAD test 2 >> dist/test_license.json"
+            
+            python3 -c "from subtle.util.licensing import generate_license; import json; from datetime import date, timedelta; j = generate_license(4000, 'SubtleGAD', 'test', date.today() + timedelta(days=2)); f = open('/home/srivathsa/test.json', 'w'); json.dump(j,f); f.close();"
 
             mkdir -p dist/output
             cd dist
