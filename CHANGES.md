@@ -1,3 +1,11 @@
+### Changes since 0.0.2
+- Integrate the latest Siemens model
+- Zero pad and resample to isotropic resolution as required by the model
+- Optionally re-run registration for full brain instead of using params from masked brain
+registration
+- Fix the bug in swapping parameters passed to `get_scale_intensity` method
+- Incorporate latest error handling changes in `infer.py` according to app utilities dev branch
+
 ### Change in 0.0.1 and 0.0.2 (initial versions)
 
 - Added scripts and files as required by SubtleApp template
