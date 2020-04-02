@@ -109,7 +109,8 @@ class SubtleGADJobType(BaseJobType):
             "histogram_matching": False,
             "joint_normalize": True,
             "scale_ref_zero_img": False,
-            "skull_strip_union": False
+            "skull_strip_union": False,
+            "reshape_for_mpr_rotate": False,
         },
         "philips": {
             "perform_noise_mask": True,
@@ -696,7 +697,7 @@ class SubtleGADJobType(BaseJobType):
         context_img = np.stack((context_img_zero, context_img_low), axis=0)
 
         scale_factor = preprocess_single_series.get_intensity_scale(
-            img=context_img[0], ref_img=context_img[1], levels=np.linspace(.5, 1.5, 30)
+            img=context_img[1], ref_img=context_img[0], levels=np.linspace(.5, 1.5, 30)
         )
 
         self._logger.info("Computed intensity scale factor is %s", scale_factor)
@@ -951,8 +952,9 @@ class SubtleGADJobType(BaseJobType):
         data = pixel_data[..., 0]
 
         crop_ref_img = None
+        undo_zero_pad = False
+
         if not self._resampled_isotropic and not np.array_equal(input_shape, data.shape):
-            print('going here??...', input_shape)
             undo_zero_pad = True
             crop_ref_img = np.zeros(input_shape)
 
