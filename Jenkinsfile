@@ -283,6 +283,7 @@ node {
             if (ENV == "stage"){
                 ENV = "staging"
             }
+
             sh "npm i fs-extra@8.1.0 aws-sdk archiver"
             sh "node ./subtle-platform-utils/build.js ${ENV} ./dist"
         }
