@@ -80,6 +80,7 @@ def _preprocess_args(parser):
                         dest='fsl_area_threshold_cm2', help='Reject slices which have extracted brain area (in cm2) lower than the threshold. If argument is not given, all slices will be included', default=None)
     parser.add_argument('--fsl_mask_all_ims', action='store_true', dest='fsl_mask_all_ims', help='If `fsl_mask`, perform FSL BET on all ims and take the union', default=False)
     parser.add_argument('--use_fsl_reg', action='store_true', dest='use_fsl_reg', help='If true, the registration parameters computed from skull stripped brain will be applied on full brain, otherwise full brain will be registered separately', default=True)
+    parser.add_argument('--non_rigid_reg', action='store_true', dest='non_rigid_reg', help='If true, then bspline parameter map is set with affine map to perform non-rigid registration', default=False)
 
 
     parser.add_argument('--pad_for_size', action='store', type=int,

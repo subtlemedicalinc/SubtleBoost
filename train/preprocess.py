@@ -236,13 +236,13 @@ def register(args, ims, metadata):
         metadata['reg'] = 1
         metadata['transform_type'] = args.transform_type
 
-        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'])
+        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'], non_rigid=args.non_rigid_reg)
 
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
-        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'])
+        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'], non_rigid=args.non_rigid_reg)
 
         reg_params = [None, spars1_reg, spars2_reg]
         spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
@@ -262,6 +262,7 @@ def register(args, ims, metadata):
                     param_map=spars, verbose=args.verbose,
                     im_fixed_spacing=metadata['pixel_spacing_zero'],
                     im_moving_spacing=metadata[spacing_keys[idx]],
+                    non_rigid=args.non_rigid_reg,
                     return_params=False
                 )
             )
@@ -444,6 +445,7 @@ def _mask_npy(img_npy):
     img_scale = np.interp(img_npy, (img_npy.min(), img_npy.max()), (0, 1))
     segment_probs = ext.run(img_scale)
 
+    # TODO - binary fill holes
     mask = sup.get_largest_connected_component(segment_probs > 0.5)
     return mask
 
@@ -524,6 +526,7 @@ def resample_isotropic(args, ims, metadata):
         print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
         new_spacing = [args.resample_isotropic] * 3
+        # new_spacing = [1.0, 0.4688, 0.4688]
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)

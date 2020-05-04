@@ -180,7 +180,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     return im_out
 
 
-def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200, return_params=True):
+def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -201,6 +201,11 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
         if verbose:
             print("using default '{}' parameter map".format(default_transform))
         param_map = sitk.GetDefaultParameterMap(default_transform)
+
+    if non_rigid:
+        param_map = sitk.VectorOfParameterMap()
+        param_map.append(sitk.GetDefaultParameterMap('affine'))
+        param_map.append(sitk.GetDefaultParameterMap('bspline'))
 
     param_map['MaximumNumberOfIterations'] = [str(max_iter)]
 
@@ -228,7 +233,7 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
 
     if not return_params:
         return im_out
-    
+
     return im_out, param_map_out
 
 def apply_reg_transform(img, spacing, transform_params):
