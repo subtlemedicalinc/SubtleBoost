@@ -62,7 +62,12 @@ def save_video(input, output, h5_key='data'):
 
 
 def plot_h5(input, output, idx=None, h5_key='data'):
-    data = utils_io.load_file(input, params={'h5_key': h5_key})
+    if '.h5' in input:
+        data = utils_io.load_file(input, params={'h5_key': h5_key})
+    else:
+        data_all = utils_io.load_file(input)
+        data_idx = 0 if h5_key == 'data' else 1
+        data = data_all[data_idx]
 
     if idx is None:
         idx = data.shape[0] // 2

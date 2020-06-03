@@ -145,6 +145,7 @@
       "enh_mask": true,
       "resize": 512,
       "train_mpr": true,
+      "file_ext": "npy",
       "checkpoint_name": "stanford_enh_vgg"
     }
   },

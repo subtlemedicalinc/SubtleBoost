@@ -675,7 +675,7 @@ def execute_chain(args):
     else:
         npy_data = np.array([ims, ims_mask])
         utils_io.save_data_npy(args.out_file, npy_data)
-    utils_io.save_meta_h5(args.out_file.replace('.h5', '_meta.h5'), metadata)
+    utils_io.save_meta_h5(args.out_file.replace('.{}'.format(args.file_ext), '_meta.h5'), metadata)
 
 if __name__ == '__main__':
     args = fetch_args()
