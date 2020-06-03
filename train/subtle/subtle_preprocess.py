@@ -17,7 +17,7 @@ import tempfile
 
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
-from skimage.morphology import binary_dilation, binary_erosion, rectangle, square
+from skimage.morphology import binary_dilation, binary_erosion, rectangle, square, cube, binary_closing
 from scipy.ndimage.interpolation import zoom as zoom_interp
 from scipy.ndimage import label as cc_label
 import cv2
@@ -48,8 +48,9 @@ def mask_im(im, threshold=.08, noise_mask_area=False, use_selem=True):
     '''
     N, n, nx, ny = im.shape
     mask = im > (threshold * np.amax(im, axis=(2,3))[:,:,None,None])
-    # fill holes in mask
+    # fill holes and dilate in mask
     mask = binary_fill_holes(mask.reshape((n*N*nx, ny))).reshape((N, n, nx, ny))
+    mask = binary_dilation(mask.reshape((n*N, nx, ny)), selem=cube(3)).reshape((N, n, nx, ny))
 
     if noise_mask_area:
         if use_selem:
