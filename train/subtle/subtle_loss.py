@@ -247,5 +247,5 @@ def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lamb
     l1_fn = l1_loss if not enh_mask else weighted_l1_loss
 
     if perceptual_lambda > 0 or wloss_lambda > 0 or style_lambda > 0:
-        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss_multi(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
+        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
     return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda
