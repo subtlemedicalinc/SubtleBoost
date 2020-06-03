@@ -82,7 +82,6 @@ def _preprocess_args(parser):
     parser.add_argument('--use_fsl_reg', action='store_true', dest='use_fsl_reg', help='If true, the registration parameters computed from skull stripped brain will be applied on full brain, otherwise full brain will be registered separately', default=True)
     parser.add_argument('--non_rigid_reg', action='store_true', dest='non_rigid_reg', help='If true, then bspline parameter map is set with affine map to perform non-rigid registration', default=False)
 
-
     parser.add_argument('--pad_for_size', action='store', type=int,
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
 
