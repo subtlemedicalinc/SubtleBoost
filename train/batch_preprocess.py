@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
         config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='preprocess')
         config.path_base = os.path.join(config.dicom_data, case_num)
-        config.out_file = os.path.join(config.out_dir, '{}.h5'.format(case_num))
+        config.out_file = os.path.join(config.out_dir, '{}.{}'.format(case_num, config.file_ext))
 
         try:
             preprocess_chain(config)
