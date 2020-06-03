@@ -181,7 +181,9 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
     return im_out
 
 
-def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None, im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False):
+def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None,
+im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False, fixed_mask=None,
+moving_mask=None):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -213,6 +215,17 @@ def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spac
     ef = sitk.ElastixImageFilter()
     ef.SetFixedImage(sim0)
     ef.SetMovingImage(sim1)
+
+    if fixed_mask is not None:
+        fmask = sitk.GetImageFromArray(fixed_mask.astype(np.uint8))
+        fmask.SetSpacing(im_fixed_spacing)
+        ef.SetFixedMask(fmask)
+
+    if moving_mask is not None:
+        mmask = sitk.GetImageFromArray(moving_mask.astype(np.uint8))
+        mmask.SetSpacing(im_moving_spacing)
+        ef.SetMovingMask(mmask)
+
     ef.SetParameterMap(param_map)
 
     if verbose:
