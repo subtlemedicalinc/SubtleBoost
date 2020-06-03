@@ -526,7 +526,6 @@ def resample_isotropic(args, ims, metadata):
         print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
         new_spacing = [args.resample_isotropic] * 3
-        # new_spacing = [1.0, 0.4688, 0.4688]
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)
@@ -538,9 +537,19 @@ def resample_isotropic(args, ims, metadata):
 
         ims_zero, ims_low, ims_full = np.transpose(np.copy(ims), (1, 0, 2, 3))
 
-        metadata['new_spacing'] = new_spacing
+        # metadata['new_spacing'] = [0.5, spacing_zero[1], spacing_zero[2]]
+        #
+        # print('Resampling zero dose...')
+        # ims_zero, new_spacing = sup.zoom_iso(ims_zero, spacing_zero, [0.5, spacing_zero[1], spacing_zero[2]])
+        # metadata['new_spacing'] = new_spacing
+        #
+        # print('Resampling low dose...')
+        # ims_low, _ = sup.zoom_iso(ims_low, spacing_low, [0.5, spacing_low[1], spacing_low[2]])
+        #
+        # print('Resampling full dose...')
+        # ims_full, _ = sup.zoom_iso(ims_full, spacing_full, [0.5, spacing_full[1], spacing_full[2]])
 
-        print('New spacing...', new_spacing)
+        metadata['new_spacing'] = new_spacing
 
         print('Resampling zero dose...')
         ims_zero, new_spacing = sup.zoom_iso(ims_zero, spacing_zero, new_spacing)
