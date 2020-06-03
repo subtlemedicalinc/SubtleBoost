@@ -67,6 +67,7 @@
     }
   },
   "inference": {
+    "procs_per_gpu": 3,
     "inference_mpr": true,
     "learn_residual": false,
     "description": "gen_siemens_halfmm",
@@ -82,10 +83,10 @@
     "enh_vgg": {
       "resize": 256,
       "resample_isotropic": 1,
-      "num_rotations": 1,
+      "num_rotations": 3,
       "file_ext": "h5",
       "checkpoint": "siemens_enh_vgg.checkpoint",
-      "description": "siemens_enh_vgg_test"
+      "description": "siemens_enh_vgg_r3"
     }
   }
 }

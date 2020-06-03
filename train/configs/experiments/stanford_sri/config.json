@@ -161,9 +161,11 @@
     "512_nompr": {
       "inference_mpr": false,
       "resize": 512,
+      "file_ext": "npy",
+      "slices_per_input": 5,
       "resample_size": 512,
       "description": "512nompr",
-      "checkpoint": "512nompr"
+      "checkpoint": "512nompr.checkpoint"
     },
     "512_mpr": {
       "inference_mpr": true,
