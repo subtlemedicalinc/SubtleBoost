@@ -489,6 +489,24 @@ def inference_process(args):
 
     # End IF for 3D patch based
 
+    if args.resample_isotropic > 0:
+        # isotropic resampling has been done in preprocess, so need to unresample to original spacing
+        # res_iso = [args.resample_isotropic] * 3
+
+        old_spacing = metadata['old_spacing_zero']
+        res_iso = [0.5, old_spacing[1], old_spacing[2]]
+
+        y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        # Isotropic resampling leaves some artifacts around the brain which has negative values
+        Y_prediction = np.clip(Y_prediction, 0, Y_prediction.max())
+        args.stats_file = None
+        # Resampling the original data and mask back to the native resolution takes a long time. Hence uncommenting those two steps and making the stats_file to None so that metrics are not calculated
+
+        # original_data = resample_unisotropic(args, original_data, metadata)
+        # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
+
     # if 'zero_pad_size' in metadata:
     if (
         'original_size' in metadata and
@@ -519,21 +537,6 @@ def inference_process(args):
         original_data_mask = od_mask_crop
 
         print('Y prediction shape after undoing zero pad', Y_prediction.shape)
-
-    if args.resample_isotropic > 0:
-        # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        res_iso = [args.resample_isotropic] * 3
-        y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
-        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        # Isotropic resampling leaves some artifacts around the brain which has negative values
-        Y_prediction = np.clip(Y_prediction, 0, Y_prediction.max())
-
-        args.stats_file = None
-        # Resampling the original data and mask back to the native resolution takes a long time. Hence uncommenting those two steps and making the stats_file to None so that metrics are not calculated
-
-        # original_data = resample_unisotropic(args, original_data, metadata)
-        # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 
     data = data.transpose((0, 2, 3, 1))
     original_data = original_data.transpose((0, 2, 3, 1))
@@ -568,21 +571,20 @@ def inference_process(args):
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
-    # if 'zero_pad_size' in metadata:
-    #     if 'resampled_size' in metadata:
-    #         crop_size = metadata['resampled_size'][0]
-    #     else:
-    #         crop_size = metadata['original_size'][0]
-    #
-    #     y_pred = Y_prediction[..., 0]
-    #     ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
-    #     y_pred = supre.center_crop(y_pred, ref_img)
-    #     Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-    #
-    #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
+    if 'zero_pad_size' in metadata:
+        # if 'resampled_size' in metadata:
+        #     crop_size = metadata['resampled_size'][0]
+        # else:
+        crop_size = metadata['original_size'][0]
+
+        y_pred = Y_prediction[..., 0]
+        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+        y_pred = supre.center_crop(y_pred, ref_img)
+        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+
+        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-
     utils_io.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
     if args.brain_only:
