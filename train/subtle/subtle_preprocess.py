@@ -183,7 +183,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
 
 def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None,
 im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False, fixed_mask=None,
-moving_mask=None):
+moving_mask=None, ref_fixed=None, ref_moving=None):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -199,6 +199,12 @@ moving_mask=None):
 
     if im_moving_spacing is not None:
         sim1.SetSpacing(im_moving_spacing)
+
+    if ref_fixed is not None:
+        sim0.CopyInformation(ref_fixed)
+
+    if ref_moving is not None:
+        sim1.CopyInformation(ref_moving)
 
     if param_map is None:
         if verbose:
@@ -249,6 +255,17 @@ moving_mask=None):
         return im_out
 
     return im_out, param_map_out
+
+def dcm_to_sitk(fpath_dcm):
+    series_ids = sitk.ImageSeriesReader.GetGDCMSeriesIDs(fpath_dcm)
+    series_files = sitk.ImageSeriesReader.GetGDCMSeriesFileNames(fpath_dcm, series_ids[0])
+
+    img_reader = sitk.ImageSeriesReader()
+    img_reader.SetFileNames(series_files)
+    img_reader.MetaDataDictionaryArrayUpdateOn()
+    img_reader.LoadPrivateTagsOn()
+
+    return img_reader.Execute()
 
 def apply_reg_transform(img, spacing, transform_params):
     simg = sitk.GetImageFromArray(img)
