@@ -23,6 +23,7 @@ import pydicom
 import warnings
 
 from scipy.ndimage import zoom
+from skimage.morphology import binary_closing
 
 try:
     from deepbrain import Extractor as BrainExtractor
@@ -678,14 +679,68 @@ def execute_chain(args):
     print(args.debug_print())
     print('------\n\n\n')
     ims, ims_mask, metadata = preprocess_chain(args)
+    save_data(args, ims, ims_mask, metadata)
 
+def save_data(args, ims, ims_mask, metadata=None):
     if args.file_ext == 'h5':
         utils_io.save_data_h5(args.out_file, data=ims, data_mask=ims_mask, h5_key='data')
     else:
         npy_data = np.array([ims, ims_mask])
         utils_io.save_data_npy(args.out_file, npy_data)
-    utils_io.save_meta_h5(args.out_file.replace('.{}'.format(args.file_ext), '_meta.h5'), metadata)
+    if metadata is not None:
+        utils_io.save_meta_h5(args.out_file.replace('.{}'.format(args.file_ext), '_meta.h5'), metadata)
+
+def preprocess_t2(args):
+    ### Init and fetch data
+    case_num = args.path_base.split('/')[-1]
+    fpath_t1 = os.path.join(args.data_dir, '{}.{}'.format(case_num, args.file_ext))
+    t1_data = utils_io.load_file(fpath_t1, params={'h5_key': 'all'})
+
+    dcmdir_t2 = utils_io.get_dcmdir_with_kw(args.path_base, 't2')
+    assert dcmdir_t2 is not None, 'Study does not have a valid T2 scan'
+
+    dcmdir_t1_pre, _, _ = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+    t2_vol, t2_hdr = utils_io.dicom_files(dcmdir_t2)
+    t1_pre = t1_data[0, :, 0]
+
+    ### Noise masking
+    print('Noise masking...')
+    noise_mask = sup.mask_im(np.array([t2_vol]), threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)[0]
+    t2_vol = t2_vol * noise_mask
+
+    ### Registration
+    print('Registration...')
+    t1_spacing = _get_spacing_from_dicom(dcmdir_t1_pre)
+    t2_spacing = _get_spacing_from_dicom(dcmdir_t2)
+
+    reg_pmap = sitk.GetDefaultParameterMap(args.transform_type)
+    ref_fixed = sup.dcm_to_sitk(dcmdir_t1_pre)
+    ref_moving = sup.dcm_to_sitk(dcmdir_t2)
+    t2_vol, _ = sup.register_im(
+        t1_pre, t2_vol, param_map=reg_pmap, im_fixed_spacing=t1_spacing,
+        im_moving_spacing=t2_spacing, ref_fixed=ref_fixed, ref_moving=ref_moving
+    )
+
+    ### Skull stripping
+    print('Skull stripping...')
+    mask = t1_data[1, :, 2] >= 0.1
+    mask = binary_closing(mask)
+
+    t2_vol_mask = t2_vol * mask
+
+    ### Scaling
+    print('Scaling...')
+    t2_vol = np.interp(t2_vol, (t2_vol.min(), t2_vol.max()), (t1_pre.min(), t1_pre.max()))
+    t2_vol_mask = np.interp(t2_vol_mask, (t2_vol_mask.min(), t2_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
+
+    ### Saving data
+    save_data(args, t2_vol, t2_vol_mask, metadata=None)
+
 
 if __name__ == '__main__':
     args = fetch_args()
-    execute_chain(args)
+
+    if args.t2_mode:
+        preprocess_t2(args)
+    else:
+        execute_chain(args)

@@ -45,6 +45,8 @@ def _shared_args(parser):
     parser.add_argument('--output_idx', type=str, help='output indices from data', default='2')
     parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
 
+    parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
+
     return parser
 
 def _preprocess_args(parser):

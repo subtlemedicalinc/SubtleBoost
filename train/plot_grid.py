@@ -115,9 +115,71 @@ def plot_h5(input, output, idx=None, h5_key='data', axis=0):
     else:
         plt.savefig(output)
 
+def get_rgb(img):
+    img = (img - np.min(img))/np.ptp(img)
+    return np.dstack((img, img, img))
+
+def slice_preview(img_vol, interval=7):
+    n_rows = 7
+    n_cols = 6
+    idx = interval
+    all_imgs = []
+    bflag = False
+    for c in range(n_cols):
+        img_rows = []
+        for r in range(n_rows):
+            if idx >= img_vol.shape[0]:
+                img_rows.append(np.zeros_like(img_vol[0]))
+                bflag = True
+            else:
+                img_rows.append(img_vol[idx])
+            idx += interval
+
+        all_imgs.append(np.hstack(img_rows))
+        if bflag:
+            break
+
+    img_disp = np.vstack(all_imgs)
+    return img_disp
+
+def plot_t2(input, output, idx=None, h5_key='data'):
+    if '.h5' in input:
+        data = utils_io.load_file(input, params={'h5_key': h5_key})
+        data_t1 = utils_io.load_file(input.replace('_T2', ''), params={'h5_key': h5_key})
+    else:
+        data_all = utils_io.load_file(input)
+        data_t1 = utils_io.load_file(input.replace('_T2', ''))
+        data_idx = 0 if h5_key == 'data' else 1
+        data = data_all[data_idx]
+
+    plt.figure(figsize=(15, 15))
+    t2_disp = slice_preview(data_all[0])
+    plt.imshow(t2_disp, cmap='gray')
+    plt.axis('off')
+    plt.savefig(output)
+
+    csf_th = np.quantile(data_all[0], 0.90)
+    csf_mask = data_all[0] >= csf_th
+    t2_mask = data_all[1] >= 0.1
+
+    t2_csf = (t2_mask * csf_mask).astype(data_all.dtype)
+    t1_base = data_t1[0, :, 0]
+
+    t1_disp = slice_preview(t1_base)
+    t1_rgb = get_rgb(t1_disp)
+    csf_disp = slice_preview(t2_csf)
+    csf_rgb = get_rgb(csf_disp)
+    t1_rgb[..., 0] = csf_rgb[..., 0] * 0.5
+
+    disp_scale = 1.2
+    plt.clf()
+    plt.figure(figsize=(15, 15))
+    plt.imshow(disp_scale * t1_rgb, vmin=t1_base.min(), vmax=t1_base.max())
+    plt.axis('off')
+    plt.savefig(output.replace('.png', '_csf.png'))
+
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'plot grid of images from dataset'
-
 
 if __name__ == '__main__':
 

@@ -491,16 +491,17 @@ def inference_process(args):
 
     if args.resample_isotropic > 0:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        # res_iso = [args.resample_isotropic] * 3
+        res_iso = [args.resample_isotropic] * 3
 
         old_spacing = metadata['old_spacing_zero']
-        res_iso = [0.5, old_spacing[1], old_spacing[2]]
+        # res_iso = [0.5, old_spacing[1], old_spacing[2]]
 
         y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
 
         # Isotropic resampling leaves some artifacts around the brain which has negative values
         Y_prediction = np.clip(Y_prediction, 0, Y_prediction.max())
+        print('Y_pred after resample iso', Y_prediction.shape)
         args.stats_file = None
         # Resampling the original data and mask back to the native resolution takes a long time. Hence uncommenting those two steps and making the stats_file to None so that metrics are not calculated
 
