@@ -17,7 +17,15 @@
     "scale_matching": true,
     "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "fsl_mask": true,
-    "fsl_mask_all_ims": true
+    "fsl_mask_all_ims": true,
+    "override": true,
+    "old_preproc": {
+      "skip_hist_norm": true,
+      "joint_normalize": true,
+      "scale_dicom_tags": true,
+      "global_scale_ref_im0": true,
+      "fsl_mask": false
+    }
   },
   "train": {
     "max_data_sets": 100,
@@ -46,6 +54,14 @@
     "normal_2d_unet": {
       "checkpoint_name": "normal_2d_unet",
       "slices_per_input": 1
+    },
+    "enhao_2d_l1": {
+      "checkpoint_name": "enhao_2d_l1",
+      "slices_per_input": 1,
+      "l1_lambda": 1.0,
+      "ssim_lambda": 0.0,
+      "train_mpr": false,
+      "num_epochs": 50
     },
     "nz_init_lrelu": {
       "model_config": "lrelu",
@@ -155,6 +171,16 @@
       "undo_pad_resample": "256,232",
       "num_rotations": 1
     },
+    "mpr_20190711": {
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "num_rotations": 5,
+      "inference_mpr": true,
+      "gan_mode": false,
+      "resize": 240,
+      "description": "mpr_20190711_histeq",
+      "checkpoint": "mpr_20190711.checkpoint"
+    },
     "enh_mask": {
       "slices_per_input": 7,
       "file_ext": "h5",
@@ -170,12 +196,12 @@
       "checkpoint": "enh_vgg_attn_relu.checkpoint",
       "description": "enh_vgg_attn_relu"
     },
-    "enh_mask_pf3": {
+    "enh_vgg": {
       "slices_per_input": 7,
-      "file_ext": "h5",
-      "num_rotations": 1,
-      "checkpoint": "enh_vgg_pf3.checkpoint",
-      "description": "enh_vgg_pf3"
+      "file_ext": "npy",
+      "num_rotations": 3,
+      "checkpoint": "enh_vgg.checkpoint",
+      "description": "enh_vgg"
     },
     "enh_mask_attn": {
       "model_config": "attn",
@@ -220,6 +246,14 @@
       "checkpoint": "attn_unet2d_enh.checkpoint",
       "num_rotations": 1,
       "resize": 256
+    },
+    "simple_2d": {
+      "inference_mpr": false,
+      "slices_per_input": 1,
+      "file_ext": "h5",
+      "checkpoint": "enhao_2d_l1.checkpoint",
+      "description": "enhao_2d_l1",
+      "num_rotations": 1
     }
   }
 }
