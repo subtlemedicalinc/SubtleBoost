@@ -5,8 +5,8 @@ import subtle.utils.experiment as utils_exp
 import subtle.subtle_args as sargs
 from subtle.dnn.helpers import clear_keras_memory, set_keras_memory
 
-from plot_grid import plot_h5, save_video
-from preprocess import execute_chain as preprocess_chain
+from plot_grid import plot_h5, plot_t2, save_video
+from preprocess import execute_chain as preprocess_chain, preprocess_t2
 
 if __name__ == '__main__':
     parser = sargs.get_parser()
@@ -41,19 +41,27 @@ if __name__ == '__main__':
         config.path_base = os.path.join(config.dicom_data, case_num)
         config.out_file = os.path.join(config.out_dir, '{}.{}'.format(case_num, config.file_ext))
 
+        if config.t2_mode:
+            fext = '.{}'.format(config.file_ext)
+            suffix = '_T2.{}'.format(config.file_ext)
+            config.out_file = config.out_file.replace(fext, suffix)
+
         try:
-            preprocess_chain(config)
-
             outfile_png = os.path.join(config.out_dir_plots, '{}.png'.format(case_num))
-            plot_h5(input=config.out_file, output=outfile_png)
+            if config.t2_mode:
+                preprocess_t2(config)
+                plot_t2(input=config.out_file, output=outfile_png)
+            else:
+                preprocess_chain(config)
+                plot_h5(input=config.out_file, output=outfile_png)
 
-            if config.save_preprocess_video:
-                video_out = outfile_png.replace('png', 'mp4')
-                save_video(input=config.out_file, output=video_out)
+                if config.save_preprocess_video:
+                    video_out = outfile_png.replace('png', 'mp4')
+                    save_video(input=config.out_file, output=video_out)
 
-            if config.fsl_mask:
-                outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
-                plot_h5(input=config.out_file, output=outfile_png_mask, h5_key='data_mask')
+                if config.fsl_mask:
+                    outfile_png_mask = os.path.join(config.out_dir_plots, '{}_mask.png'.format(case_num))
+                    plot_h5(input=config.out_file, output=outfile_png_mask, h5_key='data_mask')
         except Exception as err:
             print('PREPROCESSING ERROR in {}'.format(case_num))
             traceback.print_exc()

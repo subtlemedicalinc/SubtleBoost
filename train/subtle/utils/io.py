@@ -112,7 +112,19 @@ def get_dicom_dirs(base_dir, override=False):
         break
 
     dirs = os.listdir(base_dir)
-    if len(dirs) > 3: dirs = dirs[:3]
+    dirs = [d for d in dirs if '.DS_Store' not in d]
+    if len(dirs) > 3:
+        kw_exc = ['T2']
+
+        dirs_filt = []
+        for d in dirs:
+            kw_found = False
+            for kw in kw_exc:
+                kw_found = (kw in d)
+            if not kw_found:
+                dirs_filt.append(d)
+        dirs = dirs_filt[:3]
+
     dirs_split = np.array([d.split('_') for d in dirs])
     try:
         dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
@@ -137,6 +149,17 @@ def get_dicom_dirs(base_dir, override=False):
 
     return dir_list
 
+def get_dcmdir_with_kw(base_dir, kw):
+    kw_dir = [d for d in glob('{}/*'.format(base_dir), recursive=True) if kw.lower() in d.lower()]
+
+    if len(kw_dir) == 0:
+        return None
+
+    if len(kw_dir) == 1:
+        return kw_dir[0]
+
+    kw_dir = sorted(kw_dir, key=lambda x: int(x.split('/')[-1].split('_')[0]))
+    return kw_dir[-1]
 
 def dicom_files(dicom_dir, normalize=False):
 
