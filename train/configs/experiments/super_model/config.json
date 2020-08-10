@@ -17,7 +17,9 @@
       "transform_type": "rigid",
       "normalize": true,
       "normalize_fun": "mean",
-      "scale_matching": true
+      "scale_matching": true,
+      "acq_plane": "SAG",
+      "blur_for_cs_streaks": true
     },
     "gen_siemens": {
       "transform_type": "rigid",
@@ -61,12 +63,13 @@
       "perceptual_lambda": 0.5,
       "enh_mask": true,
       "resize": 512,
+      "vgg_resize_shape": 256,
       "train_mpr": true,
-      "checkpoint_name": "gen_enh_vgg"
+      "checkpoint_name": "gen_enh_vgg_thk1"
     }
   },
   "inference": {
-    "inference_mpr": false,
+    "inference_mpr": true,
     "learn_residual": false,
     "description": "all_mpr_5r_fsl",
     "num_rotations": 5,
@@ -83,8 +86,8 @@
       "resample_isotropic": 0.5,
       "num_rotations": 1,
       "file_ext": "npy",
-      "checkpoint": "gen_enh_vgg.checkpoint",
-      "description": "unified_enh_vgg"
+      "checkpoint": "gen_enh_vgg_07232020.checkpoint",
+      "description": "unified_vgg_fix"
     }
   }
 }
