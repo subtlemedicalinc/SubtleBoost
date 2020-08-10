@@ -7,7 +7,7 @@
   "slices_per_input": 7,
   "file_ext": "h5",
   "preprocess": {
-    "transform_type": "rigid",
+    "transform_type": "affine",
     "skip_hist_norm": true,
     "normalize": true,
     "normalize_fun": "mean",
@@ -37,6 +37,13 @@
     },
     "batch5": {
       "data_batch": "40,52"
+    },
+    "old_preproc": {
+      "skip_hist_norm": true,
+      "joint_normalize": true,
+      "scale_dicom_tags": true,
+      "global_scale_ref_im0": true,
+      "fsl_mask": false
     }
   },
   "train": {
@@ -112,6 +119,7 @@
     "enh_vgg": {
       "resize": 256,
       "resample_isotropic": 1,
+      "undo_pad_resample": "256,232",
       "num_rotations": 3,
       "file_ext": "h5",
       "checkpoint": "siemens_enh_vgg.checkpoint",

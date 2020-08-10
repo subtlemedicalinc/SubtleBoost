@@ -8,7 +8,7 @@
   "model_config": "base",
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data",
-    "transform_type": "rigid",
+    "transform_type": "affine",
     "normalize": true,
     "normalize_fun": "mean",
     "discard_start_percent": 0,
@@ -20,7 +20,8 @@
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
-    "file_ext": "h5",
+    "use_fsl_reg": false,
+    "file_ext": "npy",
     "batch1": {
       "data_batch": "0,56"
     },
@@ -162,8 +163,25 @@
     },
     "512_nompr": {
       "resize": 512,
+      "file_ext": "npy",
       "train_mpr": false,
-      "checkpoint_name": "512nompr"
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": false,
+      "checkpoint_name": "512_onlyvgg_ds256"
+    },
+    "512_mpr_07222020": {
+      "resize": 512,
+      "file_ext": "npy",
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "checkpoint_name": "512_mpr_07222020"
     },
     "enh_vgg": {
       "ssim_lambda": 0.25,
@@ -188,18 +206,20 @@
     "512_nompr": {
       "inference_mpr": false,
       "resize": 512,
+      "num_rotations": 1,
       "file_ext": "npy",
-      "slices_per_input": 5,
-      "resample_size": 512,
-      "description": "512nompr",
-      "checkpoint": "512nompr.checkpoint"
+      "slices_per_input": 7,
+      "description": "512_onlyvgg_ds256",
+      "checkpoint": "512_onlyvgg_ds256.checkpoint"
     },
     "512_mpr": {
       "inference_mpr": true,
+      "num_rotations": 1,
       "resize": 512,
-      "resample_size": 512,
-      "description": "512mpr",
-      "checkpoint": "512mpr"
+      "file_ext": "npy",
+      "slices_per_input": 7,
+      "description": "512mpr_train_mpr_inf",
+      "checkpoint": "512_mpr_07222020.checkpoint"
     },
     "512_mpr_fsl": {
       "inference_mpr": true,
@@ -262,14 +282,69 @@
     },
     "enh_vgg": {
       "inference_mpr": true,
-      "description": "sford_enh_vgg_r1",
-      "num_rotations": 1,
+      "description": "sford_enh_vgg_5r",
+      "num_rotations": 5,
       "slices_per_input": 7,
       "file_ext": "npy",
       "resize": 512,
       "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
       "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
       "checkpoint": "stanford_enh_vgg.checkpoint"
+    },
+    "novgg_test": {
+      "inference_mpr": true,
+      "description": "novgg_test",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "sfor_novgg_test.checkpoint"
+    },
+    "vgg_0.3": {
+      "inference_mpr": true,
+      "description": "vgg_0.3",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "sfor_vgg_0.3.checkpoint"
+    },
+    "vgg_b2c2": {
+      "inference_mpr": true,
+      "description": "vgg_b2c2",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "sfor_vgg_b2c2.checkpoint"
+    },
+    "vgg_multi": {
+      "inference_mpr": true,
+      "description": "vgg_multi",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "sfor_vgg_multi.checkpoint"
+    },
+    "vgg_no_enh": {
+      "inference_mpr": true,
+      "description": "vgg_no_enh",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "vgg_no_enh.checkpoint"
     }
   }
 }
