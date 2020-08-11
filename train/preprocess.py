@@ -22,7 +22,7 @@ import time
 import pydicom
 import warnings
 
-from scipy.ndimage import zoom
+from scipy.ndimage import zoom, gaussian_filter
 from skimage.morphology import binary_closing
 
 try:
@@ -87,7 +87,12 @@ def get_images(args, metadata):
     metadata['use_base_path'] = use_base_path
 
     if use_base_path:
-        dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+        if args.blur_for_cs_streaks and not os.path.isdir(args.path_base):
+            base_path = args.path_base.replace('_blur', '')
+        else:
+            base_path = args.path_base
+
+        dicom_dirs = utils_io.get_dicom_dirs(base_path, override=args.override)
 
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
@@ -629,6 +634,26 @@ def calc_img_statistics(unmasked_ims, ims, metadata):
     metadata['ims_percentiles'] = p2
     return metadata
 
+def gaussian_blur_input(args, ims, metadata):
+    if not args.blur_for_cs_streaks:
+        return ims, metadata
+
+    blur_fn = lambda x: gaussian_filter(x, sigma=[0, 1.5])
+    ims_low = ims[:, 1, ...]
+    tr_dict = {
+        'AX': lambda x: x,
+        'SAG': lambda x: x.transpose(1, 0, 2),
+        'COR': lambda x: x.transpose(2, 0, 1)
+    }
+
+    ims_low = tr_dict[args.acq_plane](ims_low)
+    ims_blur = np.array([blur_fn(sl) for sl in ims_low])
+    ims_blur = tr_dict[args.acq_plane](ims_blur)
+    ims[:, 1, ...] = ims_blur
+
+    return ims, metadata
+
+
 def preprocess_chain(args):
     metadata = {
         'lambda': []
@@ -659,6 +684,10 @@ def preprocess_chain(args):
 
     # reapply the preprocessing chain to the unmasked images
     unmasked_ims, metadata = apply_preprocess(args, ims, unmasked_ims, metadata)
+
+    ims, _ = gaussian_blur_input(args, ims, metadata)
+    unmasked_ims, metadata = gaussian_blur_input(args, unmasked_ims, metadata)
+
 
     ims, _ = resample_isotropic(args, ims, metadata) # dont save to metadata on masked ims
     unmasked_ims, metadata = resample_isotropic(args, unmasked_ims, metadata)
