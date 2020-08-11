@@ -124,6 +124,14 @@ def get_images(args, metadata):
     if args.verbose:
         print('image sizes: ', ims_zero.shape, ims_low.shape, ims_full.shape)
 
+    nslices = [ims_zero.shape[0], ims_low.shape[0], ims_full.shape[0]]
+
+    if len(set(nslices)) > 1:
+        n_pad = np.max(nslices)
+        ims_zero = np.pad(ims_zero, pad_width=[(n_pad - nslices[0], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
+        ims_low = np.pad(ims_low, pad_width=[(n_pad - nslices[1], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
+        ims_full = np.pad(ims_full, pad_width=[(n_pad - nslices[2], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
+
     # FIXME: assert that number of slices are the same
     ns, nx, ny = ims_zero.shape
 
