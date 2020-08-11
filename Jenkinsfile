@@ -152,7 +152,7 @@ node {
         )
         sh "tar xf ${download_path} -C ${env.WORKSPACE}/subtle-app-utilities/subtle_python_packages"
         echo "testing app util..."
-        docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
+        docker.image('subtle/test_env').inside("--runtime=nvidia") {
             sh '''
                 cd $WORKSPACE/subtle-app-utilities/subtle_python_packages
                 python dldt-build/install_subtle.py
@@ -255,7 +255,7 @@ node {
         s3Download(file:"${zip_file}", bucket:APP_DATA_BUCKET, path:"${APP_NAME}/${TEST_DATA_TIMESTAMP}/${zip_file}", force:true)
         sh "unzip -o ${zip_file} -d app/tests"
 
-        docker.image("nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04").inside("--runtime=nvidia"){
+        docker.image("subtle/test_env").inside("--runtime=nvidia"){
             sh '''
             apt-get update
             apt-get install -y python3 python3-pip libgtk2.0-dev
