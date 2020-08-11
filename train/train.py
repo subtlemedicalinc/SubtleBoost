@@ -135,7 +135,7 @@ def train_process(args):
 
         print('Loss weight sum is > 1. Normalizing loss weights to add up to one. New loss weights are: \n\n# l1_lambda={:.3f}\n# ssim_lambda={:.3f}\n# perceptual_lambda={:.3f}\n# wloss_lambda={:.3f}'.format(args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda))
 
-    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, style_lambda=args.style_lambda, img_shape=(nx, ny, 3), enh_mask=args.enh_mask)
+    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, style_lambda=args.style_lambda, img_shape=(nx, ny, 3), enh_mask=args.enh_mask, vgg_resize_shape=args.vgg_resize_shape)
 
     l1_metric = suloss.l1_loss if not args.enh_mask else suloss.weighted_l1_loss
     metrics_monitor = [l1_metric, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]

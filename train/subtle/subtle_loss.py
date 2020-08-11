@@ -166,8 +166,13 @@ def l1_loss(y_true, y_pred, weights):
     return keras.losses.mean_absolute_error(y_true, y_pred)
 
 @extract_weights
-def perceptual_loss(y_true, y_pred, weights, img_shape):
+def perceptual_loss(y_true, y_pred, weights, img_shape, resize_shape):
     # From https://bit.ly/2HTb4t9
+    if resize_shape > 0:
+        # For 512x512 images, VGG-19 creates some grid artifacts because the
+        # original network is trained with 224x224 images
+        y_true = tf.image.resize(y_true, (resize_shape, resize_shape))
+        y_pred = tf.image.resize(y_pred, (resize_shape, resize_shape))
 
     y_true_3c = K.concatenate([y_true, y_true, y_true])
     y_pred_3c = K.concatenate([y_pred, y_pred, y_pred])
@@ -243,9 +248,9 @@ def style_loss(y_true, y_pred, weights, img_shape):
 def wasserstein_loss(y_true, y_pred, weights):
     return K.mean(y_true * y_pred)
 
-def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, style_lambda=0.0, img_shape=(240, 240, 3), enh_mask=False):
+def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lambda=0.0, style_lambda=0.0, img_shape=(240, 240, 3), enh_mask=False, vgg_resize_shape=0):
     l1_fn = l1_loss if not enh_mask else weighted_l1_loss
 
     if perceptual_lambda > 0 or wloss_lambda > 0 or style_lambda > 0:
-        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
+        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape, vgg_resize_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
     return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda
