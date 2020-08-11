@@ -491,10 +491,10 @@ def inference_process(args):
 
     if args.resample_isotropic > 0:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        res_iso = [args.resample_isotropic] * 3
+        # res_iso = [args.resample_isotropic] * 3
 
         old_spacing = metadata['old_spacing_zero']
-        # res_iso = [0.5, old_spacing[1], old_spacing[2]]
+        res_iso = [0.5, old_spacing[1], old_spacing[2]]
 
         y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
@@ -516,7 +516,7 @@ def inference_process(args):
     ):
         orig_size = metadata['original_size']
         old_spacing = metadata['old_spacing_zero']
-        args.undo_pad_resample = ','.join([str(int(r)) for r in orig_size * old_spacing[1:]])
+        args.undo_pad_resample = ','.join([str(int(np.ceil(r))) for r in orig_size * old_spacing[1:]])
         print('undo pad resample', args.undo_pad_resample)
 
     if args.undo_pad_resample:
@@ -599,33 +599,33 @@ def inference_process(args):
 
         utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
 
-    if args.stats_file and not metadata['inference_only']:
-        print('running stats on inference...')
-        stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
-
-        data_metrics = original_data_mask if args.brain_only else original_data
-
-        x_zero = data_metrics[...,0].squeeze()
-        x_low = data_metrics[...,1].squeeze()
-        x_full = data_metrics[...,2].squeeze()
-        x_pred = Y_prediction.squeeze().astype(np.float32)
-
-        stats['low/nrmse'].append(sumetrics.nrmse(x_full, x_low))
-        stats['low/ssim'].append(sumetrics.ssim(x_full, x_low))
-        stats['low/psnr'].append(sumetrics.psnr(x_full, x_low))
-
-        stats['pred/nrmse'].append(sumetrics.nrmse(x_full, x_pred))
-        stats['pred/ssim'].append(sumetrics.ssim(x_full, x_pred))
-        stats['pred/psnr'].append(sumetrics.psnr(x_full, x_pred))
-
-        if args.verbose:
-            for key in stats.keys():
-                print('{}: {}'.format(key, stats[key]))
-
-        print('Saving stats to {}'.format(args.stats_file))
-        with h5py.File(args.stats_file, 'w') as f:
-            for key in stats.keys():
-                f.create_dataset(key, data=stats[key])
+    # if args.stats_file and not metadata['inference_only']:
+    #     print('running stats on inference...')
+    #     stats = {'pred/nrmse': [], 'pred/psnr': [], 'pred/ssim': [], 'low/nrmse': [], 'low/psnr': [], 'low/ssim': []}
+    #
+    #     data_metrics = original_data_mask if args.brain_only else original_data
+    #
+    #     x_zero = data_metrics[...,0].squeeze()
+    #     x_low = data_metrics[...,1].squeeze()
+    #     x_full = data_metrics[...,2].squeeze()
+    #     x_pred = Y_prediction.squeeze().astype(np.float32)
+    #
+    #     stats['low/nrmse'].append(sumetrics.nrmse(x_full, x_low))
+    #     stats['low/ssim'].append(sumetrics.ssim(x_full, x_low))
+    #     stats['low/psnr'].append(sumetrics.psnr(x_full, x_low))
+    #
+    #     stats['pred/nrmse'].append(sumetrics.nrmse(x_full, x_pred))
+    #     stats['pred/ssim'].append(sumetrics.ssim(x_full, x_pred))
+    #     stats['pred/psnr'].append(sumetrics.psnr(x_full, x_pred))
+    #
+    #     if args.verbose:
+    #         for key in stats.keys():
+    #             print('{}: {}'.format(key, stats[key]))
+    #
+    #     print('Saving stats to {}'.format(args.stats_file))
+    #     with h5py.File(args.stats_file, 'w') as f:
+    #         for key in stats.keys():
+    #             f.create_dataset(key, data=stats[key])
 
 
     toc = time.time()
