@@ -47,6 +47,8 @@ def _shared_args(parser):
 
     parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
 
+    parser.add_argument('--acq_plane', action='store', type=str, dest='acq_plane', help='Plane of acquisition - AX, SAG or COR', default='AX')
+
     return parser
 
 def _preprocess_args(parser):
@@ -55,6 +57,7 @@ def _preprocess_args(parser):
     parser.add_argument('--mask_threshold', action='store', type=float, dest='mask_threshold', help='cutoff threshold for mask', default=.08)
     parser.add_argument('--noise_mask_area', action='store_true', dest='noise_mask_area', help="If True, region with the largest area will be picked as a noise mask after performing connected components", default=False)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
+    parser.add_argument('--register_with_dcm_reference', action='store_true', dest='register_with_dcm_reference', help="If true, a SITK instance derived from the DCM images will be passed as reference. This helps in passing the exact image origin, cosine direction etc.,", default=False)
     parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
     parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
     parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
@@ -89,6 +92,8 @@ def _preprocess_args(parser):
 
     parser.add_argument('--save_preprocess_video', action='store_true', dest='save_preprocess_video', help='If True, preprocess videos are saved in MP4 format', default=False)
     parser.add_argument('--data_batch', action='store', dest='data_batch', type=str, help='Argument to preprocess data in batches. This string specified the start index and the number of cases to process in a comma separated fashion. Ex: "0, 10" will process cases starting from index 0 to index 10 as defined in the experiment data.json')
+    parser.add_argument('--blur_for_cs_streaks', action='store_true', dest='blur_for_cs_streaks',
+    help='If True, then low-dose images are blurred with a one-directional gaussian blur. This is done to get rid of compressed sensing related streaks found in Tiantan Philips low-dose input', default=False)
 
     return parser
 
@@ -107,6 +112,8 @@ def _train_args(parser):
     parser.add_argument('--perceptual_lambda', action='store', type=float, dest='perceptual_lambda', help='Loss from VGG19 ImageNet model', default=0.)
     parser.add_argument('--wloss_lambda', action='store', type=float, dest='wloss_lambda', help='Wasserstein loss', default=0.)
     parser.add_argument('--style_lambda', action='store', type=float, dest='style_lambda', help='Style or texture loss lambda', default=0.)
+    parser.add_argument('--vgg_resize_shape', action='store', type=int, dest='vgg_resize_shape',
+    help='Resize input tensors to this size before computing the VGG MSE loss.', default=0)
 
     parser.add_argument('--data_list', action='store', dest='data_list_file', type=str, help='list of pre-processed files for training', default=None)
     parser.add_argument('--data_dir', action='store', dest='data_dir', type=str, help='location of data', default=None)
