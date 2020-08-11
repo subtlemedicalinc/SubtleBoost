@@ -140,7 +140,7 @@ node {
     }
 
     stage("Pre-Build Tests") {
-        def data_date = "20200310"
+        def data_date = "20200618"
         def file_name = "subtle_python_packages_tests_data.tar.gz"
         def download_path = "/tmp/${file_name}"
         echo 'fetching app utils test data...'
