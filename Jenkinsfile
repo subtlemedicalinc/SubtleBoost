@@ -282,7 +282,7 @@ node {
                 ENV = "staging"
             }
 
-            sh "npm i fs-extra@8.1.0 aws-sdk archiver"
+            sh "npm i fs-extra@8.1.0 aws-sdk archiver@4.0.2"
             sh "node ./subtle-platform-utils/build.js ${ENV} ./dist"
         }
 
