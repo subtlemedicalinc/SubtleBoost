@@ -1,7 +1,7 @@
-version: "0.0.3"
+version: "0.0.4"
 
 disable_openvino: True
-not_for_clinical_use: True
+not_for_clinical_use: False
 enable_multiple_jobs: True
 all_reports: True
 warn_unmatched_series: False

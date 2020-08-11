@@ -15,6 +15,7 @@ import re
 import numpy as np
 import sigpy as sp
 from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
+from scipy.ndimage import gaussian_filter
 from deepbrain import Extractor as BrainExtractor
 
 from subtle.util.inference_job_utils import (
@@ -71,6 +72,8 @@ class SubtleGADJobType(BaseJobType):
         "skull_strip_prob_threshold": 0.5,
         "num_scale_context_slices": 20,
         "blur_lowdose": False,
+        "cs_blur_sigma": [0, 1.5],
+        "acq_plane": "AX",
 
         # inference params:
         "inference_mpr": True,
@@ -84,7 +87,7 @@ class SubtleGADJobType(BaseJobType):
         # post processing params
         "series_desc_prefix": "SubtleGAD:",
         "series_desc_suffix": "",
-        "series_number_offset": 100,
+        "series_number_offset": 100
     }
 
     mfr_specific_config = {
@@ -97,7 +100,8 @@ class SubtleGADJobType(BaseJobType):
             "transform_type": "rigid",
             "histogram_matching": False,
             "joint_normalize": False,
-            "scale_ref_zero_img": False
+            "scale_ref_zero_img": False,
+            "acq_plane": "AX"
         },
         "siemens": {
             "perform_noise_mask": True,
@@ -112,6 +116,7 @@ class SubtleGADJobType(BaseJobType):
             "scale_ref_zero_img": False,
             "skull_strip_union": False,
             "reshape_for_mpr_rotate": False,
+            "acq_plane": "AX"
         },
         "philips": {
             "perform_noise_mask": True,
@@ -122,7 +127,8 @@ class SubtleGADJobType(BaseJobType):
             "transform_type": "rigid",
             "histogram_matching": True,
             "joint_normalize": False,
-            "scale_ref_zero_img": False
+            "scale_ref_zero_img": False,
+            "acq_plane": "SAG"
         }
     }
 
@@ -783,6 +789,36 @@ class SubtleGADJobType(BaseJobType):
 
         return processed_data
 
+    def _blur_lowdose(self, images: np.ndarray) -> np.ndarray:
+        """
+        If self.proc_config.blur_lowdose is True, then the lowdose image is blurred with an
+        anisotropic Gaussian blur to get rid of Compressed Sensing (CS) related streaks
+
+        :param images: Input zero dose and low dose images as a numpy array
+        :return: Numpy array after blurring low dose with the specified Gaussian blur
+        """
+
+        if not self._proc_config.blur_lowdose:
+            return images
+
+        processed_data = np.copy(images)
+        self._logger.info("Blurring low dose image with anisotropic gaussian filter...")
+
+        aniso_gauss_blur = lambda x: gaussian_filter(x, sigma=self._proc_config.cs_blur_sigma)
+        img_low = processed_data[1]
+        trans_map = {
+            'AX': lambda x: x,
+            'SAG': lambda x: x.transpose(1, 0, 2),
+            'COR': lambda x: x.transpose(2, 0, 1)
+        }
+
+        img_low = trans_map[self._proc_config.acq_plane](img_low)
+        img_low_blur = np.array([aniso_gauss_blur(sl) for sl in img_low])
+        img_low_blur = trans_map[self._proc_config.acq_plane](img_low_blur)
+
+        processed_data[1] = img_low_blur
+        return processed_data
+
     @processify
     def _process_model_input_compatibility(self, input_data: np.ndarray) -> np.ndarray:
         """
@@ -917,6 +953,8 @@ class SubtleGADJobType(BaseJobType):
             input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
+            input_data_full = self._blur_lowdose(input_data_full)
+
             (input_data_full, self._original_input_shape, self._resampled_isotropic) = \
             self._process_model_input_compatibility(input_data_full)
 
