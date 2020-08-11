@@ -172,7 +172,7 @@ node {
         fi
         mkdir -p html-reports
         '''
-        docker.image("nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04").inside("--runtime=nvidia"){
+        docker.image("subtle/test_env").inside("--runtime=nvidia"){
             sh '''
                 apt-get update
                 apt-get install -y python3 python3-pip
