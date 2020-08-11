@@ -213,6 +213,8 @@ node {
         sh 'echo Building executable'
         docker.image("subtle/build_env").inside("--runtime=nvidia"){
             sh '''
+                yum -y update && yum -y install yum-utils nvcc wget
+                yum -y install python35u python35u-pip python35u-devel
                 pip3.5 install --upgrade pip
                 export PYTHON=python3.5
                 export PIP=pip
