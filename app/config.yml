@@ -29,6 +29,7 @@ jobs:
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
       model_id: "20200304102652-gadphilips"
+      num_rotations: 3
   - job_name: "gad_siemens"
     series_required:
       - "zero_dose_siemens"

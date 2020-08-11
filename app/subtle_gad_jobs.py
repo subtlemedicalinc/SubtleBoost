@@ -65,10 +65,12 @@ class SubtleGADJobType(BaseJobType):
         "scale_ref_zero_img": False,
 
         # not manufacturer specific
+        "perform_registration": True,
         "skull_strip": True,
         "skull_strip_union": True,
         "skull_strip_prob_threshold": 0.5,
         "num_scale_context_slices": 20,
+        "blur_lowdose": False,
 
         # inference params:
         "inference_mpr": True,
@@ -147,7 +149,6 @@ class SubtleGADJobType(BaseJobType):
 
         k = list(proc_config.keys())
         _ = [proc_config.pop(f) for f in k if f not in self.SubtleGADProcConfig._fields]
-
         self._proc_config = self.SubtleGADProcConfig(**proc_config)
 
         # initialize arguments to update during processing
@@ -365,6 +366,14 @@ class SubtleGADJobType(BaseJobType):
         self._logger.info("Using manufacturer specific config defined for '%s'", matched_key)
         proc_config = dict(self._proc_config._asdict())
         new_proc_config = {**proc_config, **self.mfr_specific_config[matched_key]}
+
+        # Fetch the few paramters specified in config.yml and overwrite it with existing proc
+        # config
+        exec_config_filter = {
+            k: v for k, v in self.task.job_definition.exec_config.items()
+            if k in new_proc_config
+        }
+        new_proc_config = {**new_proc_config, **exec_config_filter}
         self._proc_config = self.SubtleGADProcConfig(**new_proc_config)
 
     def _get_raw_pixel_data(self):
@@ -610,9 +619,13 @@ class SubtleGADJobType(BaseJobType):
         :param images: Input zero dose and low dose images as numpy array
         :return: Registered images as numpy array
         """
-        self._logger.info("Performing registration of low dose with respect to zero dose...")
-
         reg_images = np.copy(images)
+
+        if not self._proc_config.perform_registration:
+            self._logger.info("Skipping image registration...")
+            return reg_images
+
+        self._logger.info("Performing registration of low dose with respect to zero dose...")
 
         # register the low dose image with respect to the zero dose image
         reg_args = {
