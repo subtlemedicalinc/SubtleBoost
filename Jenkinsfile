@@ -155,7 +155,6 @@ node {
         docker.image('subtle/test_env').inside("--runtime=nvidia") {
             sh '''
                 cd $WORKSPACE/subtle-app-utilities/subtle_python_packages
-                python dldt-build/install_subtle.py
                 pip install -r test_requirements.txt --find-links dist/
                 pylint --rcfile pylintrc subtle/ || true
                 pytest -v -m "build or subtleapp or subtlegad" --junitxml xunit-reports/xunit-result-py35.xml --html=html-reports/xunit-result-py35.html --self-contained-html
