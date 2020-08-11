@@ -250,13 +250,26 @@ def register(args, ims, metadata):
         metadata['reg'] = 1
         metadata['transform_type'] = args.transform_type
 
-        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'], non_rigid=args.non_rigid_reg)
+        zero_stk = None
+        low_stk = None
+        full_stk = None
+
+        if args.register_with_dcm_reference:
+            zero_stk = sup.dcm_to_sitk(args.path_zero)
+            low_stk = sup.dcm_to_sitk(args.path_low)
+            full_stk = sup.dcm_to_sitk(args.path_full)
+
+        stk_ref_imgs = [zero_stk, low_stk, full_stk]
+
+        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'], non_rigid=args.non_rigid_reg,
+        ref_fixed=zero_stk, ref_moving=low_stk)
 
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
-        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'], non_rigid=args.non_rigid_reg)
+        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'], non_rigid=args.non_rigid_reg,
+        ref_fixed=zero_stk, ref_moving=full_stk)
 
         reg_params = [None, spars1_reg, spars2_reg]
         spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
@@ -277,7 +290,7 @@ def register(args, ims, metadata):
                     im_fixed_spacing=metadata['pixel_spacing_zero'],
                     im_moving_spacing=metadata[spacing_keys[idx]],
                     non_rigid=args.non_rigid_reg,
-                    return_params=False
+                    return_params=False, ref_fixed=zero_stk, ref_moving=stk_ref_imgs[idx]
                 )
             )
 
@@ -539,7 +552,8 @@ def resample_isotropic(args, ims, metadata):
     if args.resample_isotropic > 0:
         print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
-        new_spacing = [args.resample_isotropic] * 3
+        # new_spacing = [args.resample_isotropic] * 3
+        new_spacing = [1.0, args.resample_isotropic, args.resample_isotropic]
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)
