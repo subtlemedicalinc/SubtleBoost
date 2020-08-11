@@ -1,0 +1,48 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/yichun/preprocess/data",
+  "verbose": 1,
+  "gpu": 0,
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/yichun/train/checkpoints",
+  "slices_per_input": 7,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/yichun/data",
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/yichun/preprocess/plots",
+    "out_dir": "/home/srivathsa/projects/studies/gad/yichun/preprocess/data",
+    "fsl_mask": true,
+    "pad_for_size": 512,
+    "resample_isotropic": 0.5,
+    "file_ext": "npy",
+    "transform_type": "rigid",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "mask_threshold": 0.08,
+    "scale_matching": true,
+    "skip_hist_norm": true,
+    "fsl_mask_all_ims": true
+  },
+  "train": {
+
+  },
+  "inference": {
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "all_mpr_5r_fsl",
+    "num_rotations": 5,
+    "checkpoint": "all_mpr_fsl.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/yichun/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/yichun/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/yichun/inference",
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "enh_vgg": {
+      "reshape_for_mpr_rotate": true,
+      "procs_per_gpu": 3,
+      "resample_isotropic": 0.5,
+      "num_rotations": 1,
+      "file_ext": "npy",
+      "checkpoint": "gen_enh_vgg_07232020.checkpoint",
+      "description": "unified_vgg_fix"
+    }
+  }
+}
