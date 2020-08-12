@@ -74,6 +74,7 @@ class SubtleGADJobType(BaseJobType):
         "blur_lowdose": False,
         "cs_blur_sigma": [0, 1.5],
         "acq_plane": "AX",
+        "model_resolution": [1.0, 0.5, 0.5],
 
         # inference params:
         "inference_mpr": True,
@@ -172,6 +173,7 @@ class SubtleGADJobType(BaseJobType):
         self._proc_lambdas = []
 
         self._output_data = {}
+        self._undo_model_compat_reshape = None
 
         self._original_input_shape = None
         self._resampled_isotropic = False
@@ -829,7 +831,7 @@ class SubtleGADJobType(BaseJobType):
         :return: Resampled/zero-padded data
         """
         # Model is initialized here only to get the default input shape
-        resampled = False
+        undo_methods = []
         orig_shape = input_data.shape
 
         model = GenericInferenceModel(
@@ -841,22 +843,43 @@ class SubtleGADJobType(BaseJobType):
         input_shape = (input_data.shape[-2], input_data.shape[-1])
 
         if input_shape != model_shape:
-            pixel_spacing = np.array(self._pixel_spacing[0])[::-1]
+            if input_shape[0] != input_shape[1]:
+                max_shape = np.max([input_shape[0], input_shape[1]])
+                self._logger.info('Zero padding to %s %s', max_shape, max_shape)
+                input_data = SubtleGADJobType._zero_pad(
+                    img=input_data,
+                    ref_img=np.zeros(
+                        (input_data.shape[0], input_data.shape[1], max_shape, max_shape)
+                    )
+                )
 
-            if not np.array_equal(np.round(pixel_spacing, decimals=1), [1., 1., 1.]):
+                undo_methods.append({
+                    'fn': 'undo_zero_pad',
+                    'arg': np.zeros(orig_shape[1:])
+                })
+
+            pixel_spacing = np.round(np.array(self._pixel_spacing[0])[::-1], decimals=2)
+
+            if not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
                 self._logger.info('Resampling to isotropic resolution...')
-                # resample to isotropic resolution
-                resampled = True
-                input_3d_shape = np.array(input_data.shape[1:])
-                target_size = np.round(input_3d_shape * pixel_spacing)
-                resize_factor = target_size / input_3d_shape
+
+                resize_factor = (pixel_spacing / self._proc_config.model_resolution)
                 zero_resample = zoom_interp(input_data[0], resize_factor)
                 low_resample = zoom_interp(input_data[1], resize_factor)
 
                 input_data = np.array([zero_resample, low_resample])
 
+                undo_factor = 1.0 / resize_factor
+                undo_methods.append({
+                    'fn': 'undo_resample',
+                    'arg': undo_factor
+                })
+
+                self._logger.info('Input data shape after resampling %s', input_data.shape)
+
             if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
                 self._logger.info('Zero padding to fit model shape...')
+                curr_shape = input_data.shape
                 input_data = SubtleGADJobType._zero_pad(
                     img=input_data,
                     ref_img=np.zeros(
@@ -864,7 +887,14 @@ class SubtleGADJobType(BaseJobType):
                     )
                 )
 
-        return input_data, orig_shape, resampled
+                undo_methods.append({
+                    'fn': 'undo_zero_pad',
+                    'arg': np.zeros(curr_shape[1:])
+                })
+
+                self._logger.info('Input data shape after zero padding %s', input_data.shape)
+
+        return input_data, undo_methods
 
     @staticmethod
     def _get_crop_range(shape_num: int) -> Tuple[int, int]:
@@ -955,7 +985,7 @@ class SubtleGADJobType(BaseJobType):
             input_data_full = self._apply_proc_lambdas(input_data_full)
             input_data_full = self._blur_lowdose(input_data_full)
 
-            (input_data_full, self._original_input_shape, self._resampled_isotropic) = \
+            (input_data_full, self._undo_model_compat_reshape) = \
             self._process_model_input_compatibility(input_data_full)
 
             dict_input_data[frame_seq_name] = input_data_full
@@ -992,31 +1022,19 @@ class SubtleGADJobType(BaseJobType):
         :param pixel_data: Input pixel data numpy array
         :return: Numpy array after undoing zero padding and isotropic resampling
         """
-        pixel_spacing = np.array(self._pixel_spacing[0])[::-1]
-        input_shape = np.array(self._original_input_shape[1:])
-        shape_check = np.round(pixel_spacing * input_shape).astype(np.int)
+
+        undo_methods = self._undo_model_compat_reshape[::-1]
         data = pixel_data[..., 0]
 
-        crop_ref_img = None
-        undo_zero_pad = False
+        for method_dict in undo_methods:
+            self._logger.info('Applying method %s on pixel_data', method_dict['fn'])
 
-        if not self._resampled_isotropic and not np.array_equal(input_shape, data.shape):
-            undo_zero_pad = True
-            crop_ref_img = np.zeros(input_shape)
+            if method_dict['fn'] == 'undo_zero_pad':
+                data = SubtleGADJobType._center_crop(data, method_dict['arg'])
+            elif method_dict['fn'] == 'undo_resample':
+                data = zoom_interp(data, method_dict['arg'])
 
-        if self._resampled_isotropic and not np.array_equal(data.shape, shape_check):
-            undo_zero_pad = True
-            crop_ref_img = np.zeros(shape_check)
-
-        if undo_zero_pad:
-            self._logger.info('Center cropping pixel data...')
-            data = SubtleGADJobType._center_crop(data, crop_ref_img)
-
-        if self._resampled_isotropic:
-            self._logger.info('Undoing isotropic resampling...')
-            new_spacing = np.array([1., 1., 1.]) / pixel_spacing
-            data = zoom_interp(data, new_spacing)
-
+        self._logger.info('Final pixel_data shape %s', data.shape)
         pixel_data = data[..., None]
         return pixel_data
 
