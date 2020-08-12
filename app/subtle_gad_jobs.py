@@ -17,6 +17,7 @@ import sigpy as sp
 from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from scipy.ndimage import gaussian_filter
 from deepbrain import Extractor as BrainExtractor
+import gpustat
 
 from subtle.util.inference_job_utils import (
     BaseJobType, GenericInferenceModel, DataLoader2pt5D, set_keras_memory
@@ -44,6 +45,7 @@ class SubtleGADJobType(BaseJobType):
         "app_name": "SubtleGAD",
         "app_id": 4000,
         "app_version": "0.0.0",
+        "min_gpu_mem_mb": 9800.0,
 
         # model params
         "model_id": "None",
@@ -199,6 +201,19 @@ class SubtleGADJobType(BaseJobType):
         dict_pixel_data = self._preprocess_raw_pixel_data()
         return dict_pixel_data
 
+    def _get_available_gpus(self) -> str:
+        """
+        Return GPUs indices that have at least the minimum GPU memory required for processing
+
+        :return: Comma separated values of GPUs available based on the min_gpu_mem_mb configuration
+        """
+        stats = gpustat.GPUStatCollection.new_query().jsonify()
+
+        return ','.join([
+            str(gpu['index']) for gpu in stats['gpus']
+            if (gpu['memory.total'] - gpu['memory.used']) >= self._proc_config.min_gpu_mem_mb
+        ])
+
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
     @processify
@@ -219,8 +234,14 @@ class SubtleGADJobType(BaseJobType):
 
         self._logger.info("starting inference (job type: %s)", self.name)
 
-        gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+        gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", self._get_available_gpus())
         avail_gpu_ids = gpu_devices.split(',')
+
+        if len(avail_gpu_ids) == 0:
+            msg = "Adequate computing resources not available at this moment, to complete the job"
+            self._logger.error(msg)
+            raise Exception(msg)
+
         gpu_repeat = [[id] * self._proc_config.num_procs_per_gpu for id in avail_gpu_ids]
         gpu_ids = [item for sublist in gpu_repeat for item in sublist]
 
