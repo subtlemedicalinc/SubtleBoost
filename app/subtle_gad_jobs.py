@@ -237,7 +237,7 @@ class SubtleGADJobType(BaseJobType):
         gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", self._get_available_gpus())
         avail_gpu_ids = gpu_devices.split(',')
 
-        if len(avail_gpu_ids) == 0:
+        if not avail_gpu_ids:
             msg = "Adequate computing resources not available at this moment, to complete the job"
             self._logger.error(msg)
             raise Exception(msg)
