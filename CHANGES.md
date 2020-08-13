@@ -1,3 +1,12 @@
+### Changes since 0.0.3
+- Make processing params (e.g. `num_rotations`, `noise_mask_threshold` etc) configurable through
+exec config (config.yml)
+- Make registration optional for QC testing
+- Optionally blur low dose image with anisotropic gaussian blur to get rid of CS streaks
+- Resample, zero pad and crop methods to support the new unified model
+- When app is installed in CPU mode, `CUDA_VISIBLE_DEVICES` is not specified. In this case,
+identify GPU IDs with the required memory
+
 ### Changes since 0.0.2
 - Integrate the latest Siemens model
 - Zero pad and resample to isotropic resolution as required by the model
