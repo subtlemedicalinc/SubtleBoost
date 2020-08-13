@@ -17,7 +17,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20200812095615-unified"
+      model_id: "20200813113143-unified"
       num_rotations: 3
   - job_name: "gad_philips"
     series_required:
@@ -29,7 +29,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20200812095615-unified"
+      model_id: "20200813113143-unified"
   - job_name: "gad_siemens"
     series_required:
       - "zero_dose_siemens"
@@ -40,7 +40,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20200812095615-unified"
+      model_id: "20200813113143-unified"
 
 series:
   - name: "zero_dose_ge"
