@@ -60,7 +60,13 @@ class InferenceTest(unittest.TestCase):
             "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
             "series_number_offset": 100,
-            "use_mask_reg": False
+            "use_mask_reg": False,
+            "acq_plane": "AX",
+            "blur_lowdose": False,
+            "model_resolution": [1.0, 0.5, 0.5],
+            "perform_registration": True,
+            "min_gpu_mem_mb": 9800.0,
+            "cs_blur_sigma": [0, 1.5]
         }
 
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
@@ -71,7 +77,13 @@ class InferenceTest(unittest.TestCase):
 
         self.mock_task = MagicMock()
         self.mock_task.job_name = 'test'
-        self.mock_task.job_definition.exec_config = self.processing_config
+        exec_config_keys = [
+            'app_name', 'app_id', 'app_version', 'model_id', 'not_for_clinical_use',
+            'series_desc_prefix', 'series_desc_suffix', 'series_number_offset'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in exec_config_keys
+        }
 
         self.job_obj = subtle_gad_jobs.SubtleGADJobType(
             task=self.mock_task, model_dir=self.model_dir
@@ -122,6 +134,53 @@ class InferenceTest(unittest.TestCase):
         self.assertTrue(np.array_equal(result, expected_pred))
         mock_pool.get.assert_called_once_with(block=True)
         mock_pool.put.assert_called_once_with("0")
+
+    def test_compat_reshape(self):
+        """
+        Test the _process_model_input_compatibility method
+        """
+
+        with mock.patch('subtle_gad_jobs.GenericInferenceModel') as mock_model:
+            with mock.patch('subtle_gad_jobs.SubtleGADJobType._zero_pad') as mock_pad:
+                with mock.patch('subtle_gad_jobs.zoom_interp') as mock_interp:
+                    mock_inf_model = MagicMock()
+                    mock_inf_model._model_obj.inputs = [np.zeros((14, 512, 512))]
+                    mock_model.return_value = mock_inf_model
+                    self.job_obj._pixel_spacing = [[0.75, 0.75, 1.0]]
+                    mock_pad.return_value = np.zeros((2, 7, 256, 256))
+                    mock_interp.return_value = np.zeros((7, 384, 384))
+
+                    _, undo_methods = self.job_obj._process_model_input_compatibility(
+                        np.zeros((2, 7, 232, 256))
+                    )
+
+                    self.assertTrue(mock_pad.call_count == 2)
+                    self.assertTrue(mock_interp.call_count == 2)
+
+                    undo_fn_names = [m['fn'] for m in undo_methods]
+                    self.assertTrue(len(undo_methods) == 3)
+                    self.assertTrue(
+                        np.array_equal(
+                            undo_fn_names, ['undo_zero_pad', 'undo_resample', 'undo_zero_pad']
+                        )
+                    )
+
+    def test_gpu_allocation(self):
+        """
+        Test the _get_available_gpus method
+        """
+
+        with mock.patch('subtle_gad_jobs.gpustat') as mock_stats:
+            mock_stats.GPUStatCollection.new_query.return_value.jsonify.return_value = {
+                'gpus': [
+                    {'index': 0, 'memory.total': 10989, 'memory.used': 4500},
+                    {'index': 1, 'memory.total': 10989, 'memory.used': 989},
+                    {'index': 2, 'memory.total': 10989, 'memory.used': 0},
+                    {'index': 3, 'memory.total': 10989, 'memory.used': 1189}
+                ]
+            }
+            gpus = self.job_obj._get_available_gpus()
+            self.assertTrue(gpus == '1,2,3')
 
     def test_center_crop_even(self):
         """
@@ -181,6 +240,37 @@ class InferenceTest(unittest.TestCase):
             self.assertTrue(
                 np.array_equal(self.job_obj._output_data[self.sequence_name], dummy_data)
             )
+
+    def test_undo_reshape(self):
+        """
+        Test that undo_reshape function executes correct with the given undo_methods
+        """
+
+        undo_methods = [{
+            'fn': 'undo_zero_pad',
+            'arg': np.zeros((7, 256, 232))
+        }, {
+            'fn': 'undo_resample',
+            'arg': [1.0, 0.5, 0.5]
+        }]
+
+        pixel_data = np.zeros((7, 512, 512, 1))
+
+        with mock.patch('subtle_gad_jobs.zoom_interp') as mock_zoom:
+            with mock.patch('subtle_gad_jobs.SubtleGADJobType._center_crop') as mock_crop:
+                mock_zoom_ret = np.zeros((7, 256, 256))
+                mock_zoom.return_value = mock_zoom_ret
+
+                self.job_obj._undo_model_compat_reshape = undo_methods
+                self.job_obj._undo_reshape(pixel_data)
+
+                self.assertTrue(mock_zoom.call_count == 1)
+                self.assertTrue(np.array_equal(mock_zoom.call_args[0][0], pixel_data[..., 0]))
+                self.assertTrue(np.array_equal(mock_zoom.call_args[0][1], undo_methods[1]['arg']))
+
+                self.assertTrue(mock_crop.call_count == 1)
+                self.assertTrue(np.array_equal(mock_crop.call_args[0][0], mock_zoom_ret))
+                self.assertTrue(np.array_equal(mock_crop.call_args[0][1], undo_methods[0]['arg']))
 
     def test_save_data(self):
         """

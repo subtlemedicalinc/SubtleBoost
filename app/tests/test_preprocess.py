@@ -57,7 +57,13 @@ class PreprocessTest(unittest.TestCase):
             "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
             "series_number_offset": 100,
-            "use_mask_reg": False
+            "use_mask_reg": False,
+            "acq_plane": "AX",
+            "blur_lowdose": False,
+            "model_resolution": [1.0, 0.5, 0.5],
+            "perform_registration": True,
+            "min_gpu_mem_mb": 9800.0,
+            "cs_blur_sigma": [0, 1.5]
         }
 
         path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
@@ -67,7 +73,13 @@ class PreprocessTest(unittest.TestCase):
 
         self.mock_task = MagicMock()
         self.mock_task.job_name = 'test'
-        self.mock_task.job_definition.exec_config = self.processing_config
+        exec_config_keys = [
+            'app_name', 'app_id', 'app_version', 'model_id', 'not_for_clinical_use',
+            'series_desc_prefix', 'series_desc_suffix', 'series_number_offset'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in exec_config_keys
+        }
 
         self.job_obj = subtle_gad_jobs.SubtleGADJobType(
             task=self.mock_task, model_dir=self.model_dir
@@ -373,6 +385,34 @@ class PreprocessTest(unittest.TestCase):
 
         self.assertTrue(ml2.call_count == 1)
         self.assertTrue(np.array_equal(ml2.call_args[0][0], self.dummy_data))
+
+    def test_cs_blur_false(self):
+        """
+        Test that gaussian blur is not called when config value is False
+        """
+
+        with mock.patch('subtle_gad_jobs.gaussian_filter') as mock_gauss:
+            self.processing_config['blur_lowdose'] = False
+            self.job_obj._proc_config = self.job_obj.SubtleGADProcConfig(**self.processing_config)
+
+            self.job_obj._blur_lowdose(np.zeros((2, 7, 240, 240)))
+            self.assertTrue(mock_gauss.call_count == 0)
+
+    def test_cs_blur_true(self):
+        """
+        Test that gaussian blur is called with appropriate args when config value is True
+        """
+
+        with mock.patch('subtle_gad_jobs.gaussian_filter') as mock_gauss:
+            self.processing_config['blur_lowdose'] = True
+            self.job_obj._proc_config = self.job_obj.SubtleGADProcConfig(**self.processing_config)
+            mock_gauss.return_value = np.zeros((240, 240))
+
+            self.job_obj._blur_lowdose(np.zeros((2, 7, 240, 240)))
+            self.assertTrue(mock_gauss.call_count == 7)
+            self.assertTrue(
+                mock_gauss.call_args[1]['sigma'] == self.job_obj._proc_config.cs_blur_sigma
+            )
 
 if __name__ == "__main__":
     unittest.main()

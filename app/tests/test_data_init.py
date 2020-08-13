@@ -28,7 +28,7 @@ class DataLoadingTest(unittest.TestCase):
         """
         processing_config = {
             "app_name": "SubtleGAD",
-            "app_id": 3000,
+            "app_id": 4000,
             "app_version": "unittest",
             "model_id": "None",
             "not_for_clinical_use": False,
@@ -55,7 +55,13 @@ class DataLoadingTest(unittest.TestCase):
             "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
             "series_number_offset": 100,
-            "use_mask_reg": False
+            "use_mask_reg": False,
+            "acq_plane": "AX",
+            "blur_lowdose": False,
+            "model_resolution": [1.0, 0.5, 0.5],
+            "perform_registration": True,
+            "min_gpu_mem_mb": 9800.0,
+            "cs_blur_sigma": [0, 1.5]
         }
 
         path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
@@ -63,7 +69,14 @@ class DataLoadingTest(unittest.TestCase):
 
         self.mock_task = MagicMock()
         self.mock_task.job_name = 'test'
-        self.mock_task.job_definition.exec_config = processing_config
+
+        exec_config_keys = [
+            'app_name', 'app_id', 'app_version', 'model_id', 'not_for_clinical_use',
+            'series_desc_prefix', 'series_desc_suffix', 'series_number_offset'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in exec_config_keys
+        }
 
         self.job_obj = SubtleGADJobType(task=self.mock_task, model_dir=self.model_dir)
 
@@ -148,6 +161,16 @@ class DataLoadingTest(unittest.TestCase):
         self.job_obj._get_dicom_data()
         self.job_obj._set_mfr_specific_config()
         self.assertEqual(self.job_obj._proc_config.noise_mask_threshold, 0.08)
+
+    def test_exec_config(self):
+        """
+        Test that config values present in exec_config takes precedence
+        """
+
+        self.mock_task.job_definition.exec_config['num_rotations'] = 2
+        self.job_obj._get_dicom_data()
+        self.job_obj._set_mfr_specific_config()
+        self.assertEqual(self.job_obj._proc_config.num_rotations, 2)
 
     def test_get_pixel_spacing(self):
         """
