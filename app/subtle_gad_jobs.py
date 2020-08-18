@@ -80,7 +80,7 @@ class SubtleGADJobType(BaseJobType):
 
         # inference params:
         "inference_mpr": True,
-        "num_rotations": 1,
+        "num_rotations": 3,
         "slices_per_input": 7,
         "mpr_angle_start": 0,
         "mpr_angle_end": 90,

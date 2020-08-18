@@ -33,10 +33,10 @@
     },
     "defaultModels": [
         "20200304102938-gadge", "20200304102652-gadphilips", "20200402142840-gadsiemens",
-        "20200813113143-unified"
+        "20200817105336-unified"
     ],
     "compatibleModels": [
         "20200304102938-gadge", "20200304102652-gadphilips", "20200402142840-gadsiemens",
-        "20200813113143-unified"
+        "20200817105336-unified"
     ]
 }
