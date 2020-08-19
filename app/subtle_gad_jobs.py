@@ -17,7 +17,7 @@ import sigpy as sp
 from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from scipy.ndimage import gaussian_filter
 from deepbrain import Extractor as BrainExtractor
-import gpustat
+import GPUtil
 
 from subtle.util.inference_job_utils import (
     BaseJobType, GenericInferenceModel, DataLoader2pt5D, set_keras_memory
@@ -208,16 +208,15 @@ class SubtleGADJobType(BaseJobType):
         :return: Comma separated values of GPUs available based on the min_gpu_mem_mb configuration
         """
         self._logger.info("entering _get_available_gpus method")
-        stats = gpustat.GPUStatCollection.new_query().jsonify()
-
+        stats = GPUtil.getGPUs()
         return ','.join([
-            str(gpu['index']) for gpu in stats['gpus']
-            if (gpu['memory.total'] - gpu['memory.used']) >= self._proc_config.min_gpu_mem_mb
+            str(gpu.id) for gpu in stats
+            if (gpu.memoryTotal - gpu.memoryUsed) >= self._proc_config.min_gpu_mem_mb
         ])
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
-    # @processify
+    @processify
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once

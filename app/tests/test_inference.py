@@ -9,6 +9,7 @@ Created on 2020/03/03
 import os
 import tempfile
 import shutil
+from collections import namedtuple
 from glob import glob
 import unittest
 from unittest.mock import MagicMock
@@ -174,15 +175,15 @@ class InferenceTest(unittest.TestCase):
         Test the _get_available_gpus method
         """
 
-        with mock.patch('subtle_gad_jobs.gpustat') as mock_stats:
-            mock_stats.GPUStatCollection.new_query.return_value.jsonify.return_value = {
-                'gpus': [
-                    {'index': 0, 'memory.total': 10989, 'memory.used': 4500},
-                    {'index': 1, 'memory.total': 10989, 'memory.used': 989},
-                    {'index': 2, 'memory.total': 10989, 'memory.used': 0},
-                    {'index': 3, 'memory.total': 10989, 'memory.used': 1189}
-                ]
-            }
+        with mock.patch('subtle_gad_jobs.GPUtil') as mock_stats:
+            gpu_obj = namedtuple('gpu_obj', 'id memoryTotal memoryUsed')
+            mock_stats.getGPUs.return_value = [
+                gpu_obj(id=0, memoryTotal=10989, memoryUsed=4500),
+                gpu_obj(id=1, memoryTotal=10989, memoryUsed=989),
+                gpu_obj(id=2, memoryTotal=10989, memoryUsed=0),
+                gpu_obj(id=3, memoryTotal=10989, memoryUsed=1189)
+            ]
+
             gpus = self.job_obj._get_available_gpus()
             self.assertTrue(gpus == '1,2,3')
 
