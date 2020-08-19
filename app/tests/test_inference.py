@@ -133,9 +133,6 @@ class InferenceTest(unittest.TestCase):
         expected_pred = np.load(os.path.join(self.path_data, "expected_pred.npy"))
         result = subtle_gad_jobs.SubtleGADJobType._process_mpr(mpr_params)
 
-        dump_path = os.path.dirname(os.path.abspath(__file__))
-        print('dumping result to {}'.format(dump_path))
-        np.save('{}/test_result.npy'.format(dump_path), result)
         self.assertTrue(np.allclose(result, expected_pred, atol=1.0))
         mock_pool.get.assert_called_once_with(block=True)
         mock_pool.put.assert_called_once_with("0")
