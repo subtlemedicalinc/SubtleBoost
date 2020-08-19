@@ -10,7 +10,7 @@ a = Analysis(['infer.py'],
                 ('/usr/lib/python3.5/site-packages/tensorflow/contrib', 'tensorflow/contrib'),
                 ('/usr/lib/python3.5/site-packages/deepbrain', 'deepbrain')
              ],
-             hiddenimports=['tensorflow', 'tensorflow.contrib', 'tensorrt', 'pkg_resources', 'pkg_resources.py2_warn', 'pywt._extensions._cwt', 'gpustat'],
+             hiddenimports=['tensorflow', 'tensorflow.contrib', 'tensorrt', 'pkg_resources', 'pkg_resources.py2_warn', 'pywt._extensions._cwt'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

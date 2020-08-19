@@ -1,3 +1,8 @@
+### Changes since 0.0.4
+- Removed `gpustat` library and replaced it with `GPUtil` to get available GPUs. The `gpustat`
+library was having a dependency on `pynvml` which was throwing a driver mismatch error
+when packaged with `pyinstaller`.
+
 ### Changes since 0.0.3
 - Make processing params (e.g. `num_rotations`, `noise_mask_threshold` etc) configurable through
 exec config (config.yml)
