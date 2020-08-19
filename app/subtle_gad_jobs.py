@@ -207,6 +207,7 @@ class SubtleGADJobType(BaseJobType):
 
         :return: Comma separated values of GPUs available based on the min_gpu_mem_mb configuration
         """
+        self._logger.info("entering _get_available_gpus method")
         stats = gpustat.GPUStatCollection.new_query().jsonify()
 
         return ','.join([
