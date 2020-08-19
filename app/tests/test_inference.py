@@ -135,7 +135,7 @@ class InferenceTest(unittest.TestCase):
         dump_path = os.path.dirname(os.path.abspath(__file__))
         print('dumping result to {}'.format(dump_path))
         np.save('{}/test_result.npy'.format(dump_path), result)
-        self.assertTrue(np.array_equal(result, expected_pred))
+        self.assertTrue(np.allclose(result, expected_pred, atol=1.0))
         mock_pool.get.assert_called_once_with(block=True)
         mock_pool.put.assert_called_once_with("0")
 
