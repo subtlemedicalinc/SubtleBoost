@@ -1,4 +1,4 @@
-version: "0.0.4"
+version: "0.0.4-tmp"
 
 disable_openvino: True
 not_for_clinical_use: False

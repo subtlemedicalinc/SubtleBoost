@@ -216,7 +216,7 @@ class SubtleGADJobType(BaseJobType):
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
-    @processify
+    # @processify
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
@@ -233,10 +233,14 @@ class SubtleGADJobType(BaseJobType):
         dict_output_array = {}
 
         self._logger.info("starting inference (job type: %s)", self.name)
+        self._logger.info(
+            "value of CUDA_VISIBLE_DEVICES %s", os.environ.get("CUDA_VISIBLE_DEVICES", "none")
+        )
 
         gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", self._get_available_gpus())
         avail_gpu_ids = gpu_devices.split(',')
 
+        self._logger.info("avail_gpu_ids %s", avail_gpu_ids)
         if not avail_gpu_ids:
             msg = "Adequate computing resources not available at this moment, to complete the job"
             self._logger.error(msg)
@@ -245,11 +249,15 @@ class SubtleGADJobType(BaseJobType):
         gpu_repeat = [[id] * self._proc_config.num_procs_per_gpu for id in avail_gpu_ids]
         gpu_ids = [item for sublist in gpu_repeat for item in sublist]
 
+        self._logger.info("gpu ids... %s", gpu_ids)
+
         gpu_q = Queue()
         for gid in gpu_ids:
             gpu_q.put(gid)
 
+        self._logger.info("going to initialize process pool...")
         process_pool = Pool(processes=len(gpu_ids), initializer=_init_gpu_pool, initargs=(gpu_q, ))
+        self._logger.info("initialized process pool....")
 
         for frame_seq_name, pixel_data in dict_pixel_data.items():
             # perform inference with default input format (NHWC)
@@ -1075,6 +1083,7 @@ class SubtleGADJobType(BaseJobType):
          - 'slice_axis': Slice axis of orientation for the input volume
          :return: Prediction from the specified model with the given MPR parameters
         """
+        print('inside process mpr...')
         # pylint: disable=global-variable-undefined
         global gpu_pool
         gpu_id = gpu_pool.get(block=True)

@@ -273,6 +273,7 @@ node {
         }
     }
 
+    PACKAGE = "true"
     if(PACKAGE == "true") {
         stage("Platform Package and Deploy") {
             dir('subtle-platform-utils') {
