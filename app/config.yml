@@ -1,4 +1,4 @@
-version: "0.0.5"
+version: "0.0.5-patch"
 
 disable_openvino: True
 not_for_clinical_use: False
