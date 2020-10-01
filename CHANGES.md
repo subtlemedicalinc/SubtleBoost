@@ -1,3 +1,7 @@
+### Changes since 0.0.5
+- Introduced a proc config `allocate_available_gpus` to control app's behaviour in cloud mode. When this config value is `False`, then the app will not allocate available GPUs on its own.
+- Changed the output directory structure to `/output/dicoms/series/*.dcm`
+
 ### Changes since 0.0.4
 - Removed `gpustat` library and replaced it with `GPUtil` to get available GPUs. The `gpustat`
 library was having a dependency on `pynvml` which was throwing a driver mismatch error
