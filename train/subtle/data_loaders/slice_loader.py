@@ -35,6 +35,29 @@ class SliceLoader(keras.utils.Sequence):
         self.brain_only = brain_only
         self.brain_only_mode = brain_only_mode
         self.h5_key = 'data_mask' if self.brain_only else 'data'
+
+        self.use_enh_uad = use_enh_uad
+        self.fpath_uad_masks = fpath_uad_masks
+        self.uad_mask_threshold = uad_mask_threshold
+        self.uad_mask_path = uad_mask_path
+
+        '''
+        Input and output index specifies which channels of the data is to be used as input
+        and output. Data is processed and has a shape of (2, sl, c, x, y). The first dimension
+        has the corresponding full-brain and skull-stripped images respectively.
+
+        sl - number of slices
+        c - number of contrasts (3 or 4)
+        x and y - image matrix dimensions
+
+        For T1-only volumes the c dimension has size 3 where the images are T1-precontrast,
+        T1-lowdose contrast and T1-post contrast respectively. For volumes having T2 images, the
+        4th dimension has the processed T2 volume.
+
+        For T1-only models, the input_idx is typically [0, 1] and output_idx is [2]
+        For T2 models, the input_idx is [0, 1, 3] and output_idx is [2]
+        '''
+
         self.input_idx = input_idx
         self.output_idx = output_idx
         self.enh_pfactor = enh_pfactor
