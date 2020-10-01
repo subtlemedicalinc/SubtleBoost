@@ -750,9 +750,10 @@ def preprocess_t2(args):
     dcmdir_t2 = utils_io.get_dcmdir_with_kw(args.path_base, 't2')
     assert dcmdir_t2 is not None, 'Study does not have a valid T2 scan'
 
-    dcmdir_t1_pre, _, _ = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+    dcmdir_t1_pre, dcmdir_t1_low, dcmdir_t1_full = utils_io.get_dicom_dirs(args.path_base, override=args.override)
     t2_vol, t2_hdr = utils_io.dicom_files(dcmdir_t2)
     t1_pre = t1_data[0, :, 0]
+    t1_low = t1_data[0, :, 1]
 
     ### Noise masking
     print('Noise masking...')
@@ -783,6 +784,10 @@ def preprocess_t2(args):
     print('Scaling...')
     t2_vol = np.interp(t2_vol, (t2_vol.min(), t2_vol.max()), (t1_pre.min(), t1_pre.max()))
     t2_vol_mask = np.interp(t2_vol_mask, (t2_vol_mask.min(), t2_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
+
+    print('Histogram equalization...')
+    t2_vol = sup.scale_im(t1_low, t2_vol)
+    t2_vol *= args.t2_scaling_constant
 
     ### Saving data
     save_data(args, t2_vol, t2_vol_mask, metadata=None)
