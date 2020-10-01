@@ -138,8 +138,9 @@ def plot_t2(input, output, idx=None, h5_key='data'):
         data = utils_io.load_file(input, params={'h5_key': h5_key})
         data_t1 = utils_io.load_file(input.replace('_T2', ''), params={'h5_key': h5_key})
     else:
-        data_all = utils_io.load_file(input)
-        data_t1 = utils_io.load_file(input.replace('_T2', ''))
+        data_full = utils_io.load_file(input)
+        data_all = data_full[..., 3]
+        data_t1 = data_full[..., :3]
         data_idx = 0 if h5_key == 'data' else 1
         data = data_all[data_idx]
 

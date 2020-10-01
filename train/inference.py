@@ -315,6 +315,10 @@ def inference_process(args):
         'use_multiprocessing': args.use_multiprocessing,
         'verbose': args.verbose
     }
+
+    args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
+    args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
+
     data_loader = load_data_loader(args.model_name)
 
     mconf_dict = utils_exp.get_model_config(args.model_name, args.model_config, model_type='generators')
@@ -343,7 +347,9 @@ def inference_process(args):
             'block_size': args.block_size,
             'block_strides': args.block_strides,
             'batch_size': args.batch_size,
-            'predict_full': args.predict_full_volume
+            'predict_full': args.predict_full_volume,
+            'input_idx': args.input_idx,
+            'output_idx': args.output_idx
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
@@ -390,7 +396,7 @@ def inference_process(args):
         kw_model = {
             'img_rows': nx,
             'img_cols': ny,
-            'num_channel_input': 2 * args.slices_per_input
+            'num_channel_input': len(args.input_idx) * args.slices_per_input
         }
         model_kwargs = {**model_kwargs, **kw_model}
 
@@ -398,7 +404,9 @@ def inference_process(args):
             'residual_mode': args.residual_mode,
             'slices_per_input': args.slices_per_input,
             'resize': args.resize,
-            'brain_only': args.brain_only
+            'brain_only': args.brain_only,
+            'input_idx': args.input_idx,
+            'output_idx': args.output_idx
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
