@@ -8,18 +8,19 @@ Created on 2018/08/24
 
 import time
 
+import os
 import numpy as np
 import sigpy as sp
 import keras
 from expiringdict import ExpiringDict
+from tqdm import tqdm
 
 from subtle.utils.slice import build_slice_list, get_num_slices
 from subtle.utils.io import load_slices, load_file
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth
 
 class SliceLoader(keras.utils.Sequence):
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, file_ext='npy'):
-
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, file_ext='npy', use_enh_uad=False, fpath_uad_masks=[], uad_mask_threshold=0.1, uad_mask_path=None):
         'Initialization'
         self.data_list = data_list
         self.batch_size = batch_size
@@ -67,7 +68,34 @@ class SliceLoader(keras.utils.Sequence):
         self.ims_cache = ExpiringDict(max_len=250, max_age_seconds=24*60*60)
 
         self._init_slice_info()
+
+        self.uad_masks = {}
+        self._init_uad_masks()
+
         self.on_epoch_end()
+
+    def _init_uad_masks(self):
+        if self.use_enh_uad:
+            print('Initializing UAD masks...')
+            for fpath_mask in tqdm(self.fpath_uad_masks, total=len(self.fpath_uad_masks)):
+                dict_key, uad_mask_th = self._process_uad_mask(fpath_mask)
+                self.uad_masks[dict_key] = uad_mask_th
+
+    def _process_uad_mask(self, fpath_mask):
+        dict_key = fpath_mask.split('/')[-1].replace(self.file_ext, '').replace('.', '')
+        uad_mask = load_file(fpath_mask, file_type=self.file_ext)
+
+        ### Truncating the uad_mask to min value of 1e-4 to avoid vanishing gradients problem
+        min_val = 1e-4
+
+        th = uad_mask.max() * self.uad_mask_threshold
+        uad_mask[uad_mask <= th] = 0
+        max_arr = uad_mask.max(axis=(1, 2))
+
+        uad_mask = np.divide(uad_mask, max_arr[:, None, None], where=max_arr[:, None, None]>=min_val)
+        uad_mask = np.clip(uad_mask, min_val, uad_mask.max())
+
+        return dict_key, uad_mask[:, None, :, :]
 
     def _init_slice_info(self):
         _slice_list_files, _slice_list_indexes = build_slice_list(self.data_list, slice_axis=self.slice_axis, params={'h5_key': self.h5_key})
@@ -126,6 +154,16 @@ class SliceLoader(keras.utils.Sequence):
         if self.shuffle == True:
             self.indexes = np.random.permutation(self.indexes)
 
+    def _fetch_slices_by_dim(self, data, slices, dim):
+        if dim == 0:
+            ims = data[slices, :, :, :]
+        elif dim == 2:
+            ims = data[:, :, slices, :]
+        elif dim == 3:
+            ims = data[:, :, :, slices]
+
+        return ims
+
     def _get_slices(self, fpath, slices, dim, params={'h5_key': 'all'}):
         cache_cont = self.ims_cache.get(fpath)
 
@@ -134,17 +172,21 @@ class SliceLoader(keras.utils.Sequence):
         else:
             data, data_mask = load_file(fpath, file_type=self.file_ext, params=params)
             self._cache_img(fpath, data, data_mask)
-        if dim == 0:
-            ims = data[slices, :, :, :]
-            ims_mask = data_mask[slices, :, :, :]
-        elif dim == 2:
-            ims = data[:, :, slices, :]
-            ims_mask = data_mask[:, :, slices, :]
-        elif dim == 3:
-            ims = data[:, :, :, slices]
-            ims_mask = data_mask[:, :, :, slices]
+
+        ims = self._fetch_slices_by_dim(data, slices, dim)
+        ims_mask = self._fetch_slices_by_dim(data_mask, slices, dim)
 
         return ims, ims_mask
+
+    def _get_uad_mask_slices(self, fpath, slices, dim):
+        dict_key = fpath.split('/')[-1].replace(self.file_ext, '').replace('.', '')
+        if dict_key not in self.uad_masks:
+            fpath_mask = os.path.join(
+                self.uad_mask_path, '{}.{}'.format(dict_key, self.file_ext)
+            )
+            _, uad_mask_th = self._process_uad_mask(fpath_mask)
+            self.uad_masks[dict_key] = uad_mask_th
+        return self._fetch_slices_by_dim(self.uad_masks[dict_key], slices, dim)
 
     def _cache_img(self, fpath, ims, ims_mask=None):
         self.ims_cache[fpath] = (ims, ims_mask)
@@ -162,6 +204,8 @@ class SliceLoader(keras.utils.Sequence):
         if not self.predict:
             data_list_Y = []
             data_list_Y_mask = []
+
+        uad_mask_list = []
 
         for i, (f, idx_dict) in enumerate(zip(slice_list_files, slice_list_indexes)):
             c = idx_dict['index']
@@ -191,6 +235,10 @@ class SliceLoader(keras.utils.Sequence):
                 # FIXME: only load slices_mask if BET masking was run, and prediction is False
                 slices, slices_mask = self._get_slices(f, idxs, ax, params={'h5_key': 'all'})
 
+            uad_mask_slices = None
+            if self.use_enh_uad:
+                uad_mask_slices = self._get_uad_mask_slices(f, idxs, ax)
+
             if ax == 0:
                 pass
             if ax == 1:
@@ -198,19 +246,35 @@ class SliceLoader(keras.utils.Sequence):
             elif ax == 2:
                 slices = np.transpose(slices, (2, 1, 0, 3))
                 slices_mask = np.transpose(slices_mask, (2, 1, 0, 3))
+
+                if uad_mask_slices is not None:
+                    uad_mask_slices = np.transpose(uad_mask_slices, (2, 1, 0, 3))
             elif ax == 3:
                 slices = np.transpose(slices, (3, 1, 0, 2))
                 slices_mask = np.transpose(slices_mask, (3, 1, 0, 2))
 
+                if uad_mask_slices is not None:
+                    uad_mask_slices = np.transpose(uad_mask_slices, (3, 1, 0, 2))
+
             if self.resize is not None:
                 slices = sp.util.resize(slices, [slices.shape[0], slices.shape[1], self.resize, self.resize])
                 slices_mask = sp.util.resize(slices_mask, [slices_mask.shape[0], slices_mask.shape[1], self.resize, self.resize])
+
+                if uad_mask_slices is not None:
+                    uad_mask_slices = sp.util.resize(
+                        uad_mask_slices, [
+                            uad_mask_slices.shape[0], uad_mask_slices.shape[1], self.resize, self.resize
+                        ]
+                    )
 
             if self.resample_size is not None:
                 if self.verbose > 1:
                     print('Resampling slices to matrix size', self.resample_size)
                 slices = resample_slices(slices, self.resample_size)
                 slices_mask = resample_slices(slices_mask, self.resample_size)
+
+                if uad_mask_slices:
+                    uad_mask_slices = resample_slices(uad_mask_slices, self.resample_size)
 
             if self.verbose > 1:
                 print('loaded slices from {} in {} s'.format(f, time.time() - tic))
@@ -225,6 +289,9 @@ class SliceLoader(keras.utils.Sequence):
                 slices_Y_mask = slices_mask[h, self.output_idx, :, :][None,None,...]
                 data_list_Y.append(slices_Y)
                 data_list_Y_mask.append(slices_Y_mask)
+
+            if uad_mask_slices is not None:
+                uad_mask_list.append(uad_mask_slices)
 
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
@@ -247,6 +314,11 @@ class SliceLoader(keras.utils.Sequence):
             if self.use_enh_mask:
                 # FIXME: if percentiles are included in the numpy metadata, then use them as the "max_val_arr" that is passed to the enancement mask (for each sample in the batch)
                 enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor)
+
+            if self.use_enh_uad:
+                uad_mask_list = np.array(uad_mask_list)
+                enh_mask = uad_mask_list[:, h, ...][:, None, ...].astype(np.float32)
+
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
 
@@ -283,7 +355,7 @@ class SliceLoader(keras.utils.Sequence):
         if not self.predict:
             Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
             Y_mask = np.transpose(np.reshape(Y_mask, (Y_mask.shape[0], -1, Y_mask.shape[3], Y_mask.shape[4])), (0, 2, 3, 1))
-            if self.use_enh_mask:
+            if self.use_enh_mask or self.use_enh_uad:
                 enh_mask = np.transpose(np.reshape(enh_mask, (enh_mask.shape[0], -1, enh_mask.shape[3], enh_mask.shape[4])), (0, 2, 3, 1))
             else:
                 enh_mask = np.ones(Y.shape)

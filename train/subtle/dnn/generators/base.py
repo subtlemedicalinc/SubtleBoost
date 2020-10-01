@@ -89,7 +89,7 @@ class GeneratorBase:
     def callback_csv(self, fpath_csv):
         return keras.callbacks.CSVLogger(fpath_csv, append=True)
 
-    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=16, gan_mode=False, use_enh_mask=False, enh_pfactor=1.0, detailed_plot=True, plot_list=None, file_ext=None):
+    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=16, gan_mode=False, use_enh_mask=False, enh_pfactor=1.0, detailed_plot=True, plot_list=None, file_ext=None, uad_mask_path=None, use_enh_uad=False, uad_mask_threshold=0.1):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -125,7 +125,11 @@ class GeneratorBase:
                 enh_pfactor=enh_pfactor,
                 detailed_plot=detailed_plot,
                 plot_list=plot_list,
-                file_ext=file_ext)
+                file_ext=file_ext,
+                uad_mask_path=uad_mask_path,
+                use_enh_uad=use_enh_uad,
+                uad_mask_threshold=uad_mask_threshold
+            )
 
     def load_weights(self, filename=None):
         if filename is not None:
