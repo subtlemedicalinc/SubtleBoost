@@ -45,11 +45,36 @@ def _shared_args(parser):
     parser.add_argument('--output_idx', type=str, help='output indices from data', default='2')
     parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
 
-    parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
-
     parser.add_argument('--acq_plane', action='store', type=str, dest='acq_plane', help='Plane of acquisition - AX, SAG or COR', default='AX')
 
     return parser
+
+def _t2_args(parser):
+    parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
+
+    # This scaling constant is computed using the maximum intensity between post contrast
+    # and low-dose T1 images. It is the average of post_contrast.max() / low_dose.max()
+    # of all the Stanford GE cases. This might vary between manufacturers or sites
+    # The T2 volume's histogram is equalized using T1 low-dose as reference and is
+    # multiplied with this constant value
+    parser.add_argument('--t2_scaling_constant', action='store', type=float,
+    dest='t2_scaling_constant', help='Intensity scale factor that the T2 volume should be scaled with', default=1.389)
+
+    return parser
+
+def _uad_args(parser):
+    parser.add_argument('--enh_mask_uad', action='store_true', dest='enh_mask_uad',
+    help='Boolean arg indicating whether to use enhancement weighted loss function from the UAD masks', default=False)
+
+    parser.add_argument('--uad_mask_path', action='store', type=str, dest='uad_mask_path',
+    help='Basepath where UAD masks are stored', default=None)
+
+    parser.add_argument('--uad_mask_threshold', action='store', type=float,
+    dest='uad_mask_threshold', help='Percentage of max pixel value to compute the UAD mask',
+    default=0.1)
+
+    return parser
+
 
 def _preprocess_args(parser):
     parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
@@ -186,5 +211,7 @@ def get_parser(usage_str='', description_str=''):
     parser = _preprocess_args(parser)
     parser = _train_args(parser)
     parser = _inference_args(parser)
+    parser = _t2_args(parser)
+    parser = _uad_args(parser)
 
     return parser

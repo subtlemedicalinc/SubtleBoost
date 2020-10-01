@@ -120,6 +120,16 @@ def train_process(args):
     args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
     args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
 
+    fpath_uad_masks = []
+
+    if args.enh_mask_uad:
+        fpath_uad_masks = [
+            '{}/{}.{}'.format(args.uad_mask_path, cnum, args.file_ext)
+            for cnum in case_nums
+        ]
+
+    enh_mask_mode = (args.enh_mask or args.enh_mask_uad)
+
     if not hypsearch:
         clear_keras_memory()
 
@@ -135,12 +145,12 @@ def train_process(args):
 
         print('Loss weight sum is > 1. Normalizing loss weights to add up to one. New loss weights are: \n\n# l1_lambda={:.3f}\n# ssim_lambda={:.3f}\n# perceptual_lambda={:.3f}\n# wloss_lambda={:.3f}'.format(args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda))
 
-    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, style_lambda=args.style_lambda, img_shape=(nx, ny, 3), enh_mask=args.enh_mask, vgg_resize_shape=args.vgg_resize_shape)
+    loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, style_lambda=args.style_lambda, img_shape=(nx, ny, 3), enh_mask=enh_mask_mode, vgg_resize_shape=args.vgg_resize_shape)
 
-    l1_metric = suloss.l1_loss if not args.enh_mask else suloss.weighted_l1_loss
+    l1_metric = suloss.l1_loss if not enh_mask_mode else suloss.weighted_l1_loss
     metrics_monitor = [l1_metric, suloss.ssim_loss, suloss.mse_loss, suloss.psnr_loss]
 
-    if args.enh_mask and args.verbose:
+    if enh_mask_mode and args.verbose:
         print('Using weighted L1 loss...')
 
     if args.resample_size is not None:
@@ -236,7 +246,7 @@ def train_process(args):
     if args.gan_mode:
         ckp_monitor = 'gen_loss'
     else:
-        if args.enh_mask:
+        if enh_mask_mode:
             ckp_monitor = 'val_weighted_l1_loss'
         else:
             ckp_monitor = 'val_l1_loss'
@@ -257,7 +267,7 @@ def train_process(args):
 
     if r > 0:
         # FIXME: change the tbimage callback to take a generator, so that all this stuff doesn't have to be passed explicitly
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides, gan_mode=args.gan_mode, use_enh_mask=args.enh_mask, enh_pfactor=args.enh_pfactor, detailed_plot=(not hypsearch), plot_list=plot_list, file_ext=args.file_ext))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides, gan_mode=args.gan_mode, use_enh_mask=args.enh_mask, enh_pfactor=args.enh_pfactor, detailed_plot=(not hypsearch), plot_list=plot_list, file_ext=args.file_ext, uad_mask_path=args.uad_mask_path, use_enh_uad=args.enh_mask_uad, uad_mask_threshold=args.uad_mask_threshold))
 
     data_loader = load_data_loader(args.model_name)
 
@@ -268,6 +278,10 @@ def train_process(args):
         'verbose': args.verbose,
         'brain_only': args.brain_only,
         'brain_only_mode': args.brain_only_mode,
+        'use_enh_uad': args.enh_mask_uad,
+        'fpath_uad_masks': fpath_uad_masks,
+        'uad_mask_threshold': args.uad_mask_threshold,
+        'uad_mask_path': args.uad_mask_path
     }
 
     if '3d' in args.model_name:
