@@ -1,0 +1,44 @@
+{
+  "train": [
+    "Patient_0097",
+    "Patient_0099",
+    "Patient_0102",
+    "Patient_0105",
+    "Patient_0113",
+    "Patient_0121",
+    "Patient_0122",
+    "Patient_0135",
+    "Patient_0230",
+    "Patient_0372",
+    "Patient_0449",
+    "Patient_0457",
+    "Patient_0458",
+    "Patient_0546",
+    "Patient_0547",
+    "Patient_0548"
+  ],
+  "validation": [
+    "Patient_0114",
+    "Patient_0229",
+    "Patient_0440",
+    "Patient_0545"
+  ],
+  "test": [
+    "Patient_0138",
+    "Patient_0170",
+    "Patient_0183",
+    "Patient_0187",
+    "Patient_0235",
+    "Patient_0243",
+    "Patient_0267",
+    "Patient_0378",
+    "Patient_0399"
+  ],
+  "plot": [
+    ["Patient_0114", 177],
+    ["Patient_0229", 124],
+    ["Patient_0440", 64],
+    ["Patient_0545", 172],
+    ["Patient_0235", 152]
+  ]
+}
