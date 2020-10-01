@@ -61,7 +61,8 @@ class DataLoadingTest(unittest.TestCase):
             "model_resolution": [1.0, 0.5, 0.5],
             "perform_registration": True,
             "min_gpu_mem_mb": 9800.0,
-            "cs_blur_sigma": [0, 1.5]
+            "cs_blur_sigma": [0, 1.5],
+            "allocate_available_gpus": False
         }
 
         path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")

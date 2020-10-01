@@ -86,6 +86,7 @@ class SubtleGADJobType(BaseJobType):
         "mpr_angle_end": 90,
         "reshape_for_mpr_rotate": True,
         "num_procs_per_gpu": 2,
+        "allocate_available_gpus": False,
 
         # post processing params
         "series_desc_prefix": "SubtleGAD:",
@@ -233,8 +234,14 @@ class SubtleGADJobType(BaseJobType):
 
         self._logger.info("starting inference (job type: %s)", self.name)
 
-        gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", self._get_available_gpus())
+        if self._proc_config.allocate_available_gpus:
+            gpu_devices = os.environ.get("CUDA_VISIBLE_DEVICES", self._get_available_gpus())
+        else:
+            gpu_devices = "0"
+
         avail_gpu_ids = gpu_devices.split(',')
+
+        self._logger.info("avail gpu ids %s", avail_gpu_ids)
 
         if not avail_gpu_ids:
             msg = "Adequate computing resources not available at this moment, to complete the job"
@@ -1144,9 +1151,6 @@ class SubtleGADJobType(BaseJobType):
         """
         # save data frame by frame but with the same series UID and a shared UID pool
         # create output directory
-        out_dicom_dir = os.path.join(out_dicom_dir,
-                                     list(dict_template_ds.values())[0][0].StudyInstanceUID,)
-        os.makedirs(out_dicom_dir, exist_ok=True)  # do not complain if exists
 
         # generate a new series UID
         series_uid = pydicom_utils.generate_uid()

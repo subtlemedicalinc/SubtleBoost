@@ -1,4 +1,4 @@
-version: "0.0.5-patch"
+version: "0.0.6"
 
 disable_openvino: True
 not_for_clinical_use: False
@@ -18,6 +18,7 @@ jobs:
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
       model_id: "20200817105336-unified"
+      noise_mask_threshold: 0.01
   - job_name: "gad_philips"
     series_required:
       - "zero_dose_philips"
@@ -52,6 +53,7 @@ jobs:
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
       model_id: "20200817105336-unified"
+      reshape_for_mpr_rotate: True
 
 series:
   - name: "zero_dose_ge"

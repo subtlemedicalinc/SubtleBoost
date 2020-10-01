@@ -67,7 +67,8 @@ class InferenceTest(unittest.TestCase):
             "model_resolution": [1.0, 0.5, 0.5],
             "perform_registration": True,
             "min_gpu_mem_mb": 9800.0,
-            "cs_blur_sigma": [0, 1.5]
+            "cs_blur_sigma": [0, 1.5],
+            "allocate_available_gpus": False
         }
 
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
@@ -291,9 +292,6 @@ class InferenceTest(unittest.TestCase):
 
         dcm_files = glob('{}/**/*.dcm'.format(out_dir), recursive=True)
         self.assertTrue(len(dcm_files) == 7)
-        self.assertTrue(
-            list(self.job_obj._input_datasets[0].values())[0][0].StudyInstanceUID in dcm_files[0]
-        )
 
         dcm_pixel_array = pydicom.dcmread(dcm_files[0]).pixel_array
         self.assertTrue(np.array_equal(dcm_pixel_array, np.ones((240, 240))))
