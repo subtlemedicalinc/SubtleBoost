@@ -546,3 +546,11 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False)
 
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
+
+def get_enh_mask_t2(X_mask, Y_mask, X, center_slice, t2_csf_quant):
+    t1_post_mask = (Y_mask[:, 0, 0, ...] > t2_csf_quant).astype(np.uint8)
+    t2_mask = (X[:, center_slice, 2, ...] > t2_csf_quant).astype(np.uint8)
+    t1_pre_max = np.max(X[:, center_slice, 0, ...])
+    enh_mask = t1_pre_max * (t1_post_mask * t2_mask)
+
+    return enh_mask.reshape(Y_mask.shape)

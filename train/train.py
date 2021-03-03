@@ -123,8 +123,9 @@ def train_process(args):
     fpath_uad_masks = []
 
     if args.enh_mask_uad:
+        args.uad_file_ext = (args.uad_file_ext or args.file_ext)
         fpath_uad_masks = [
-            '{}/{}.{}'.format(args.uad_mask_path, cnum, args.file_ext)
+            '{}/{}.{}'.format(args.uad_mask_path, cnum, args.uad_file_ext)
             for cnum in case_nums
         ]
 
@@ -211,6 +212,9 @@ def train_process(args):
             'num_channel_input': len(args.input_idx) * args.slices_per_input
         }
 
+    if args.use_uad_ch_input:
+        kw['num_channel_input'] += args.uad_ip_channels
+
     model_kwargs = {**model_kwargs, **kw}
 
     m = model_class(**model_kwargs)
@@ -262,12 +266,12 @@ def train_process(args):
 
     if args.train_mpr:
         slice_axis = [0, 2, 3]
-        num_epochs = args.num_epochs // len(slice_axis)
+        # num_epochs = args.num_epochs // len(slice_axis)
         print('Training in MPR mode: {} epochs'.format(num_epochs))
 
     if r > 0:
         # FIXME: change the tbimage callback to take a generator, so that all this stuff doesn't have to be passed explicitly
-        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides, gan_mode=args.gan_mode, use_enh_mask=args.enh_mask, enh_pfactor=args.enh_pfactor, detailed_plot=(not hypsearch), plot_list=plot_list, file_ext=args.file_ext, uad_mask_path=args.uad_mask_path, use_enh_uad=args.enh_mask_uad, uad_mask_threshold=args.uad_mask_threshold))
+        callbacks.append(m.callback_tbimage(data_list=data_val_list, slice_dict_list=None, slices_per_epoch=1, slices_per_input=args.slices_per_input, batch_size=args.tbimage_batch_size, verbose=args.verbose, residual_mode=args.residual_mode, tag='Validation', gen_type=args.gen_type, log_dir='{}_image'.format(log_tb_dir), shuffle=True, input_idx=args.input_idx, output_idx=args.output_idx, slice_axis=slice_axis, resize=args.resize, resample_size=args.resample_size, brain_only=args.brain_only, brain_only_mode=args.brain_only_mode, model_name=args.model_name, block_size=args.block_size, block_strides=args.block_strides, gan_mode=args.gan_mode, use_enh_mask=args.enh_mask, enh_pfactor=args.enh_pfactor, detailed_plot=(not hypsearch), plot_list=plot_list, file_ext=args.file_ext, uad_mask_path=args.uad_mask_path, uad_file_ext=args.uad_file_ext, use_enh_uad=args.enh_mask_uad, use_uad_ch_input=args.use_uad_ch_input, uad_ip_channels=args.uad_ip_channels, uad_mask_threshold=args.uad_mask_threshold, enh_mask_t2=args.enh_mask_t2))
 
     data_loader = load_data_loader(args.model_name)
 
@@ -279,9 +283,13 @@ def train_process(args):
         'brain_only': args.brain_only,
         'brain_only_mode': args.brain_only_mode,
         'use_enh_uad': args.enh_mask_uad,
+        'use_uad_ch_input': args.use_uad_ch_input,
+        'uad_ip_channels': args.uad_ip_channels,
         'fpath_uad_masks': fpath_uad_masks,
         'uad_mask_threshold': args.uad_mask_threshold,
-        'uad_mask_path': args.uad_mask_path
+        'uad_mask_path': args.uad_mask_path,
+        'uad_file_ext': args.uad_file_ext,
+        'enh_mask_t2': args.enh_mask_t2
     }
 
     if '3d' in args.model_name:

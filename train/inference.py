@@ -124,6 +124,7 @@ def process_mpr(proc_params):
                 data_mask_rot = None
         else:
             data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
+
             if data_mask is not None:
                 data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
             else:
@@ -398,6 +399,13 @@ def inference_process(args):
             'img_cols': ny,
             'num_channel_input': len(args.input_idx) * args.slices_per_input
         }
+
+        uad_list = []
+        if args.use_uad_ch_input:
+            kw_model['num_channel_input'] += args.uad_ip_channels
+            case_num = args.path_base.split('/')[-1].replace(args.file_ext, '')
+            uad_list = [os.path.join(args.uad_mask_path, '{}.{}'.format(case_num, args.uad_file_ext))]
+
         model_kwargs = {**model_kwargs, **kw_model}
 
         kw = {
@@ -406,7 +414,13 @@ def inference_process(args):
             'resize': args.resize,
             'brain_only': args.brain_only,
             'input_idx': args.input_idx,
-            'output_idx': args.output_idx
+            'output_idx': args.output_idx,
+            'use_uad_ch_input': args.use_uad_ch_input,
+            'uad_ip_channels': args.uad_ip_channels,
+            'fpath_uad_masks': uad_list,
+            'uad_mask_path': args.uad_mask_path,
+            'uad_mask_threshold': args.uad_mask_threshold,
+            'uad_file_ext': args.uad_file_ext
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
@@ -496,13 +510,12 @@ def inference_process(args):
             Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
     # End IF for 3D patch based
-
     if args.resample_isotropic > 0:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        # res_iso = [args.resample_isotropic] * 3
+        res_iso = [args.resample_isotropic] * 3
 
         old_spacing = metadata['old_spacing_zero']
-        res_iso = [0.5, old_spacing[1], old_spacing[2]]
+        # res_iso = [0.5, old_spacing[1], old_spacing[2]]
 
         y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
@@ -517,15 +530,15 @@ def inference_process(args):
         # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 
     # if 'zero_pad_size' in metadata:
-    if (
-        'original_size' in metadata and
-        'old_spacing_zero' in metadata and
-        args.resample_isotropic > 0
-    ):
-        orig_size = metadata['original_size']
-        old_spacing = metadata['old_spacing_zero']
-        args.undo_pad_resample = ','.join([str(int(np.ceil(r))) for r in orig_size * old_spacing[1:]])
-        print('undo pad resample', args.undo_pad_resample)
+    # if (
+    #     'original_size' in metadata and
+    #     'old_spacing_zero' in metadata and
+    #     args.resample_isotropic > 0
+    # ):
+    #     orig_size = metadata['original_size']
+    #     old_spacing = metadata['old_spacing_zero']
+    #     args.undo_pad_resample = ','.join([str(int(np.ceil(r))) for r in orig_size * old_spacing[1:]])
+    #     print('undo pad resample', args.undo_pad_resample)
 
     if args.undo_pad_resample:
         splits = args.undo_pad_resample.split(',')
@@ -568,10 +581,10 @@ def inference_process(args):
             tocz = time.time()
             print('unzoom done: {} s'.format(tocz-ticz))
 
-    if args.resample_size and original_data.shape[2] != args.resample_size:
-        Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
-        Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
-        Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
+    # if args.resample_size and original_data.shape[2] != args.resample_size:
+    #     Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
+    #     Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
+    #     Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
 
     # undo brain center
 

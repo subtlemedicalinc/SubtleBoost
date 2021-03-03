@@ -114,18 +114,21 @@ def get_dicom_dirs(base_dir, override=False):
     dirs = os.listdir(base_dir)
     dirs = [d for d in dirs if '.DS_Store' not in d]
     if len(dirs) > 3:
-        kw_exc = ['T2']
+        kw_exc = ['t2', 'flair']
 
         dirs_filt = []
         for d in dirs:
             kw_found = False
             for kw in kw_exc:
-                kw_found = (kw in d)
+                kw_found = (kw in d.lower())
+                if kw_found: break
+
             if not kw_found:
                 dirs_filt.append(d)
+
         dirs = dirs_filt[:3]
 
-    dirs_split = np.array([d.split('_') for d in dirs])
+    dirs_split = np.array([d.split('_') for d in dirs], dtype=object)
     try:
         dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
     except:
@@ -149,8 +152,14 @@ def get_dicom_dirs(base_dir, override=False):
 
     return dir_list
 
-def get_dcmdir_with_kw(base_dir, kw):
-    kw_dir = [d for d in glob('{}/*'.format(base_dir), recursive=True) if kw.lower() in d.lower()]
+def get_dcmdir_with_kw(base_dir, kws):
+    def _kws_in_dir(kws_str, d):
+        for kw in kws_str:
+            if kw.lower() not in d.lower():
+                return False
+        return True
+
+    kw_dir = [d for d in glob('{}/*'.format(base_dir), recursive=True) if _kws_in_dir(kws, d)]
 
     if len(kw_dir) == 0:
         return None

@@ -537,7 +537,10 @@ def fsl_reject_slices(args, ims, fsl_mask, metadata):
     return ims, metadata
 
 def _get_spacing_from_dicom(dirpath_dicom):
-    fpath_dicom = [fpath for fpath in glob('{}/**/*.dcm'.format(dirpath_dicom), recursive=True)][0]
+    fpath_dicom = [
+        fpath for fpath in glob('{}/**/*'.format(dirpath_dicom), recursive=True)
+        if os.path.isfile(fpath)
+    ][0]
 
     dicom = pydicom.dcmread(fpath_dicom)
     return np.array([
@@ -552,8 +555,8 @@ def resample_isotropic(args, ims, metadata):
     if args.resample_isotropic > 0:
         print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
-        # new_spacing = [args.resample_isotropic] * 3
-        new_spacing = [1.0, args.resample_isotropic, args.resample_isotropic]
+        new_spacing = [args.resample_isotropic] * 3
+        # new_spacing = [1.0, args.resample_isotropic, args.resample_isotropic]
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)
@@ -741,62 +744,73 @@ def save_data(args, ims, ims_mask, metadata=None):
     if metadata is not None:
         utils_io.save_meta_h5(args.out_file.replace('.{}'.format(args.file_ext), '_meta.h5'), metadata)
 
-def preprocess_t2(args):
+def preprocess_multi_contrast(args):
     ### Init and fetch data
     case_num = args.path_base.split('/')[-1]
     fpath_t1 = os.path.join(args.data_dir, '{}.{}'.format(case_num, args.file_ext))
+    if not os.path.exists(fpath_t1):
+        rep = 'h5' if args.file_ext == 'npy' else 'npy'
+        fpath_t1 = fpath_t1.replace(args.file_ext, rep)
     t1_data = utils_io.load_file(fpath_t1, params={'h5_key': 'all'})
 
-    dcmdir_t2 = utils_io.get_dcmdir_with_kw(args.path_base, 't2')
-    assert dcmdir_t2 is not None, 'Study does not have a valid T2 scan'
+    mc_kw = args.multi_contrast_kw.split(',')
+    dcmdir_mc = utils_io.get_dcmdir_with_kw(args.path_base, mc_kw)
+    assert dcmdir_mc is not None, 'Study does not have a valid scan with keywords {}'.format(mc_kw)
 
     dcmdir_t1_pre, dcmdir_t1_low, dcmdir_t1_full = utils_io.get_dicom_dirs(args.path_base, override=args.override)
-    t2_vol, t2_hdr = utils_io.dicom_files(dcmdir_t2)
+    mc_vol, mc_hdr = utils_io.dicom_files(dcmdir_mc)
     t1_pre = t1_data[0, :, 0]
     t1_low = t1_data[0, :, 1]
 
     ### Noise masking
     print('Noise masking...')
-    noise_mask = sup.mask_im(np.array([t2_vol]), threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)[0]
-    t2_vol = t2_vol * noise_mask
+    noise_mask = sup.mask_im(np.array([mc_vol]), threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)[0]
+    mc_vol = mc_vol * noise_mask
 
     ### Registration
     print('Registration...')
     t1_spacing = _get_spacing_from_dicom(dcmdir_t1_pre)
-    t2_spacing = _get_spacing_from_dicom(dcmdir_t2)
+    mc_spacing = _get_spacing_from_dicom(dcmdir_mc)
 
     reg_pmap = sitk.GetDefaultParameterMap(args.transform_type)
     ref_fixed = sup.dcm_to_sitk(dcmdir_t1_pre)
-    ref_moving = sup.dcm_to_sitk(dcmdir_t2)
-    t2_vol, _ = sup.register_im(
-        t1_pre, t2_vol, param_map=reg_pmap, im_fixed_spacing=t1_spacing,
-        im_moving_spacing=t2_spacing, ref_fixed=ref_fixed, ref_moving=ref_moving
+    ref_moving = sup.dcm_to_sitk(dcmdir_mc)
+
+    print('Multi contrast volume shape before registration', mc_vol.shape)
+    mc_vol, _ = sup.register_im(
+        t1_pre, mc_vol, param_map=reg_pmap, im_fixed_spacing=t1_spacing,
+        im_moving_spacing=mc_spacing, ref_fixed=ref_fixed, ref_moving=ref_moving
     )
+
+    print('Multi contrast volume shape after registration', mc_vol.shape)
 
     ### Skull stripping
     print('Skull stripping...')
     mask = t1_data[1, :, 2] >= 0.1
     mask = binary_closing(mask)
 
-    t2_vol_mask = t2_vol * mask
+    mc_vol_mask = mc_vol * mask
 
     ### Scaling
     print('Scaling...')
-    t2_vol = np.interp(t2_vol, (t2_vol.min(), t2_vol.max()), (t1_pre.min(), t1_pre.max()))
-    t2_vol_mask = np.interp(t2_vol_mask, (t2_vol_mask.min(), t2_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
+    mc_vol = np.interp(mc_vol, (mc_vol.min(), mc_vol.max()), (t1_pre.min(), t1_pre.max()))
+    mc_vol_mask = np.interp(mc_vol_mask, (mc_vol_mask.min(), mc_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
 
-    print('Histogram equalization...')
-    t2_vol = sup.scale_im(t1_low, t2_vol)
-    t2_vol *= args.t2_scaling_constant
+    # No histogram equalization for FLAIR
+    # print('Histogram equalization...')
+    # mc_vol = sup.scale_im(t1_low, mc_vol.astype(t1_low.dtype))
+
+    if 't2' in mc_kw:
+        mc_vol *= args.t2_scaling_constant
 
     ### Saving data
-    save_data(args, t2_vol, t2_vol_mask, metadata=None)
+    save_data(args, mc_vol, mc_vol_mask, metadata=None)
 
 
 if __name__ == '__main__':
     args = fetch_args()
 
-    if args.t2_mode:
-        preprocess_t2(args)
+    if args.multi_contrast_mode:
+        preprocess_multi_contrast(args)
     else:
         execute_chain(args)

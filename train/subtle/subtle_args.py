@@ -49,8 +49,9 @@ def _shared_args(parser):
 
     return parser
 
-def _t2_args(parser):
-    parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
+def _multi_contrast_args(parser):
+    parser.add_argument('--multi_contrast_mode', action='store_true', dest='multi_contrast_mode', help='T2 or FLAIR preprocessing mode', default=False)
+    parser.add_argument('--multi_contrast_kw', action='store', type=str, dest='multi_contrast_kw', help='Comma separated keywords for identifying multicontrast sequences', default=None)
 
     # This scaling constant is computed using the maximum intensity between post contrast
     # and low-dose T1 images. It is the average of post_contrast.max() / low_dose.max()
@@ -72,6 +73,13 @@ def _uad_args(parser):
     parser.add_argument('--uad_mask_threshold', action='store', type=float,
     dest='uad_mask_threshold', help='Percentage of max pixel value to compute the UAD mask',
     default=0.1)
+
+    parser.add_argument('--uad_file_ext', action='store', type=str, dest='uad_file_ext',
+    help='File extension of UAD mask files', default=None)
+
+    parser.add_argument('--use_uad_ch_input', action='store_true', dest='use_uad_ch_input', help='If True, uad mask will be used as a separate input channel', default=False)
+
+    parser.add_argument('--uad_ip_channels', action='store', type=int, dest='uad_ip_channels', help='Number of channels of UAD input', default=1)
 
     return parser
 
@@ -159,10 +167,14 @@ def _train_args(parser):
     parser.add_argument('--stats_file', action='store', dest='stats_file', type=str, help='store inference stats in h5 file', default=None)
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
     parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
+    parser.add_argument('--save_all_weights', action='store_true', dest='save_all_weights',
+    default=False, help='If True, then weights of all epochs will be saved in the checkpoint dir')
 
     parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
     parser.add_argument('--enh_mask', action='store_true', dest='enh_mask', help='If True, then enhancement_mask is computed and used to compute L1 loss', default=False)
     parser.add_argument('--enh_pfactor', action='store', dest='enh_pfactor', type=float, help='The power factor in the term to compute smooth enhancement mask', default=1.0)
+
+    parser.add_argument('--enh_mask_t2', action='store_true', dest='enh_mask_t2', help='If enh_mask is True, specifying true in this arg, will make the enhancement mask computation, use the T2 volume', default=False)
 
     parser.add_argument('--train_mpr', action='store_true', dest='train_mpr', help='train acrossa multiple planes ', default=False)
     parser.add_argument('--reshape_for_mpr_rotate', action='store_true',
@@ -211,7 +223,7 @@ def get_parser(usage_str='', description_str=''):
     parser = _preprocess_args(parser)
     parser = _train_args(parser)
     parser = _inference_args(parser)
-    parser = _t2_args(parser)
+    parser = _multi_contrast_args(parser)
     parser = _uad_args(parser)
 
     return parser

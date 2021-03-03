@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -133,33 +134,42 @@ def slice_preview(img_vol, interval=7):
     img_disp = np.vstack(all_imgs)
     return img_disp
 
-def plot_t2(input, output, idx=None, h5_key='data'):
-    if '.h5' in input:
-        data = utils_io.load_file(input, params={'h5_key': h5_key})
-        data_t1 = utils_io.load_file(input.replace('_T2', ''), params={'h5_key': h5_key})
-    else:
-        data_full = utils_io.load_file(input)
-        data_all = data_full[..., 3]
-        data_t1 = data_full[..., :3]
-        data_idx = 0 if h5_key == 'data' else 1
-        data = data_all[data_idx]
+def plot_multi_contrast(input, output, idx=None, h5_key='data'):
+    # if '.h5' in input:
+    #     data_all = utils_io.load_file(input, params={'h5_key': h5_key})
+    #     data_t1 = utils_io.load_file(input.replace('_T2', ''), params={'h5_key': h5_key})
+    # else:
+    #     data_full = utils_io.load_file(input)
+    #     data_all = data_full[..., 3]
+    #     data_t1 = data_full[..., :3]
+    #     data_idx = 0 if h5_key == 'data' else 1
+    #     data = data_all[data_idx]
+
+    data_all = utils_io.load_file(input, params={'h5_key': 'all'})
+    fpath_t1 = input.replace('_T2', '').replace('_FLAIR', '')
+    if not os.path.exists(fpath_t1):
+        rep = 'h5' if 'npy' in input else 'npy'
+        fpath_t1 = fpath_t1.replace(fpath_t1.split('/')[-1].split('.')[-1], rep)
+    data_t1 = utils_io.load_file(fpath_t1, params={'h5_key': 'all'})
+    data_idx = 0 if h5_key == 'data' else 1
+    data = data_all[data_idx]
 
     plt.figure(figsize=(15, 15))
-    t2_disp = slice_preview(data_all[0])
-    plt.imshow(t2_disp, cmap='gray')
+    mc_disp = slice_preview(data_all[0])
+    plt.imshow(mc_disp, cmap='gray')
     plt.axis('off')
     plt.savefig(output)
 
     csf_th = np.quantile(data_all[0], 0.90)
     csf_mask = data_all[0] >= csf_th
-    t2_mask = data_all[1] >= 0.1
+    mc_mask = data_all[1] >= 0.1
 
-    t2_csf = (t2_mask * csf_mask).astype(data_all.dtype)
+    mc_csf = (mc_mask * csf_mask).astype(data_all.dtype)
     t1_base = data_t1[0, :, 0]
 
     t1_disp = slice_preview(t1_base)
     t1_rgb = get_rgb(t1_disp)
-    csf_disp = slice_preview(t2_csf)
+    csf_disp = slice_preview(mc_csf)
     csf_rgb = get_rgb(csf_disp)
     t1_rgb[..., 0] = csf_rgb[..., 0] * 0.5
 
