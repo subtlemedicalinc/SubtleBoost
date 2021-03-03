@@ -30,6 +30,10 @@ MODEL_MAP = {
         'model': 'generators.GeneratorEDSR2D',
         'data_loader': 'slice_loader.SliceLoader'
     },
+    'rrdb2d': {
+        'model': 'generators.GeneratorRRDB2D',
+        'data_loader': 'slice_loader.SliceLoader'
+    },
     'edsr3d': {
         'model': 'generators.GeneratorEDSR3D',
         'data_loader': 'block_loader.BlockLoader'
