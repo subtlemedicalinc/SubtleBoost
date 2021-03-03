@@ -215,8 +215,8 @@ moving_mask=None, ref_fixed=None, ref_moving=None):
         param_map = sitk.VectorOfParameterMap()
         param_map.append(sitk.GetDefaultParameterMap('affine'))
         param_map.append(sitk.GetDefaultParameterMap('bspline'))
-
-    param_map['MaximumNumberOfIterations'] = [str(max_iter)]
+    else:
+        param_map['MaximumNumberOfIterations'] = [str(max_iter)]
 
     ef = sitk.ElastixImageFilter()
     ef.SetLogToConsole(True)
@@ -268,9 +268,12 @@ def dcm_to_sitk(fpath_dcm):
 
     return img_reader.Execute()
 
-def apply_reg_transform(img, spacing, transform_params):
+def apply_reg_transform(img, spacing, transform_params, ref_img=None):
     simg = sitk.GetImageFromArray(img)
     simg.SetSpacing(spacing)
+
+    if ref_img:
+        simg.CopyInformation(ref_img)
 
     params = transform_params[0]
 

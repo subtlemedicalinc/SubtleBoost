@@ -258,6 +258,10 @@ def register(args, ims, metadata):
             zero_stk = sup.dcm_to_sitk(args.path_zero)
             low_stk = sup.dcm_to_sitk(args.path_low)
             full_stk = sup.dcm_to_sitk(args.path_full)
+            print('registering with dcm reference')
+            print(args.path_zero)
+            print(args.path_low)
+            print(args.path_full)
 
         stk_ref_imgs = [zero_stk, low_stk, full_stk]
 
@@ -278,7 +282,8 @@ def register(args, ims, metadata):
             print('Planning to apply registration params computed from skull stripped images...')
             reg_transform = lambda idx: (
                 lambda images: sup.apply_reg_transform(
-                    images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx]
+                    images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx],
+                    ref_img=stk_ref_imgs[0]
                 )
             )
         else:

@@ -8,19 +8,21 @@
   "resize": 240,
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "transform_type": "rigid",
+    "transform_type": "affine",
     "normalize": true,
     "normalize_fun": "mean",
     "discard_start_percent": 0,
-    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots_blur",
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
     "discard_end_percent": 0,
     "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_blur",
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
     "override": true,
-    "blur_for_cs_streaks": true,
+    "blur_for_cs_streaks": false,
     "acq_plane": "SAG",
+    "file_ext": "h5",
+    "register_with_dcm_reference": true,
     "old_preproc": {
       "skip_hist_norm": true,
       "joint_normalize": true,
@@ -199,12 +201,13 @@
     },
     "mpr_20190711": {
       "slices_per_input": 7,
-      "file_ext": "npy",
+      "override": true,
+      "file_ext": "h5",
       "num_rotations": 5,
       "inference_mpr": true,
       "gan_mode": false,
       "resize": 240,
-      "description": "mpr_20190711_histeq",
+      "description": "mpr_20190711_sitk2.0",
       "checkpoint": "mpr_20190711.checkpoint"
     },
     "enh_mask": {
@@ -223,12 +226,13 @@
       "description": "enh_vgg_attn_relu"
     },
     "enh_vgg": {
+      "inference_mpr": true,
       "slices_per_input": 7,
-      "file_ext": "npy",
+      "file_ext": "h5",
       "num_rotations": 5,
       "checkpoint": "enh_vgg.checkpoint",
-      "description": "enh_vgg_blurip",
-      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_blur"
+      "description": "enh_vgg",
+      "override": true
     },
     "enh_mask_attn": {
       "model_config": "attn",
