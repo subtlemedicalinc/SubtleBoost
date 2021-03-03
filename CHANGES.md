@@ -1,3 +1,6 @@
+### Changes since 0.0.6
+- Minor changes to support ablation study. Introduced `skip_mpr` process config.
+
 ### Changes since 0.0.5
 - Introduced a proc config `allocate_available_gpus` to control app's behaviour in cloud mode. When this config value is `False`, then the app will not allocate available GPUs on its own.
 - Changed the output directory structure to `/output/dicoms/series/*.dcm`
