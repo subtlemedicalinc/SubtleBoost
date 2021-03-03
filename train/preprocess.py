@@ -808,6 +808,10 @@ def preprocess_multi_contrast(args):
     if 't2' in mc_kw:
         mc_vol *= args.t2_scaling_constant
 
+    print('Histogram equalization...')
+    t2_vol = sup.scale_im(t1_low, t2_vol)
+    t2_vol *= args.t2_scaling_constant
+
     ### Saving data
     save_data(args, mc_vol, mc_vol_mask, metadata=None)
 
