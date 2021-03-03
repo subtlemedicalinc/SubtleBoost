@@ -49,6 +49,7 @@ class PreprocessTest(unittest.TestCase):
             "num_scale_context_slices": 20,
             "inference_mpr": True,
             "num_rotations": 5,
+            "skip_mpr": False,
             "slices_per_input": 7,
             "mpr_angle_start": 0,
             "mpr_angle_end": 90,
