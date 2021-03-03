@@ -1,0 +1,19 @@
+{
+  "ser_split": {
+    "p": 5,
+    "l": 5,
+    "f": 1,
+    "pl": 4,
+    "pf": 2,
+    "lf": 2,
+    "plf": 1
+  },
+  "ring_lines": [2, 5, 7, 10, 12, 20, 30],
+  "motion_deg": [1, 2, 3, 5, 7, 10, 12],
+  "motion_trans": [2, 5, 7, 8, 10, 15],
+  "motion_num_tfm": [1, 2, 3, 4, 5, 8],
+  "base_path": "/home/srivathsa/projects/studies/gad/gad_2d/data/clean",
+  "cases": [
+    "P0088_2DSIM", "P0109_2DSIM", "P0124_2DSIM", "P0167_2DSIM", "P0213_2DSIM", "P0225_2DSIM", "P0288_2DSIM", "P0328_2DSIM", "P0387_2DSIM", "P0413_2DSIM", "P0420_2DSIM", "P0451_2DSIM", "P0514_2DSIM", "P0529_2DSIM", "P0530_2DSIM", "P0531_2DSIM", "P0558_2DSIM", "P0560_2DSIM", "P0573_2DSIM", "P0579_2DSIM"
+  ]
+}
