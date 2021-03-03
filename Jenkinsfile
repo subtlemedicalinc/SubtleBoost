@@ -44,7 +44,7 @@ node {
     // TODO: make sure those buckets exist for staging and prod env later
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
-    def TEST_DATA_TIMESTAMP = "20201130"
+    def TEST_DATA_TIMESTAMP = "20210127"
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
