@@ -282,8 +282,8 @@
       "inference_mpr": false,
       "slices_per_input": 1,
       "file_ext": "h5",
-      "checkpoint": "enhao_2d_l1.checkpoint",
-      "description": "enhao_2d_l1",
+      "checkpoint": "normal_2d_unet.checkpoint",
+      "description": "normal_2d_unet",
       "num_rotations": 1
     },
     "enh_vgg_axblur": {
