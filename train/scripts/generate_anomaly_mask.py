@@ -14,7 +14,8 @@ from skimage.transform import resize
 from scipy.ndimage.interpolation import zoom
 import tensorflow as tf
 
-from subtle.subtle_preprocess import dcm_to_sitk
+from subtle.subtle_preprocess import dcm_to_sitk, center_crop
+import subtle.utils.io as suio
 from ventmapper.segment.ventmapper import process_vent
 
 from models import variational_autoencoder
@@ -22,22 +23,32 @@ from utils.default_config_setup import get_config, get_options, Dataset, get_Bra
 from trainers.VAE import VAE
 from utils.Evaluation import apply_brainmask, normalize_and_squeeze
 from skimage import color
+import pydicom
 
 plt.set_cmap('gray')
 plt.rcParams['figure.figsize'] = (12, 10)
 
-pp_base_path = '/home/srivathsa/projects/studies/gad/stanford/preprocess/data'
-raw_base_path = '/home/srivathsa/projects/studies/gad/stanford/data'
-plot_path_template = '/home/srivathsa/projects/uad_ae/plots/{case_num}_{sl}.png'
+pp_base_path = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_fl'
+raw_base_path = '/home/srivathsa/projects/studies/gad/tiantan/data'
+plot_path_template = '/home/srivathsa/projects/uad_ae/plots/fl/{case_num}_{sl}.png'
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+t2_quantile = 0.99
 
 def find_pre_contrast_series(dirpath_case):
-    return sorted(
-        [ser for ser in glob('{}/*BRAVO*'.format(dirpath_case))],
-        key=lambda ser: int(ser.split('/')[-1].split('_')[0])
-    )[0]
+    ser_nums = []
+    for ser_dir in glob('{}/*'.format(dirpath_case)):
+        if 'T2' in ser_dir or 'FLAIR' in ser_dir: continue
+        dcm_file = [
+            f for f in glob('{}/**/*'.format(ser_dir), recursive=True)
+            if os.path.isfile(f) and 'XX' not in f
+        ][0]
+        dcm = pydicom.dcmread(dcm_file)
+        ser_nums.append((ser_dir, dcm.SeriesNumber))
+
+    ser_nums = sorted(ser_nums, key=lambda s: int(s[1]))
+    return ser_nums[0][0]
 
 def resize_image(input_sitk, new_spacing=[1, 1, 1]):
     orig_spacing = input_sitk.GetSpacing()
@@ -82,8 +93,7 @@ def get_vent_mask(t1_stk, t1m_stk):
 
 def load_uad_model():
     dataset = Dataset.BRAINWEB
-    options = get_options(batchsize=8, learningrate=0.0001, numEpochs=100, zDim=128, outputWidth=128, outputHeight=128,
-                          slices_start=0, slices_end=200)
+    options = get_options(batchsize=8, learningrate=0.0001, numEpochs=100, zDim=128, outputWidth=128, outputHeight=128, slices_start=0, slices_end=200)
     options['data']['dir'] = options["globals"][dataset.value]
     dataset = get_Brainweb_healthy_dataset(options)
     config = get_config(trainer=VAE, options=options, optimizer='ADAM', intermediateResolutions=[8, 8], dropout_rate=0.1, dataset=dataset)
@@ -93,9 +103,15 @@ def load_uad_model():
     model.load_checkpoint()
     return model
 
-def segment_anomalies(vae_model, case_num, full_data):
+def segment_anomalies(vae_model, case_num, full_data, prune_final_mask=False, prune_quant=0.95):
     t2_data = full_data[1, :, 3]
 #     t2_data = np.load('{}/{}.npy'.format(pp_base_path, case_num))[1, :, 3]
+    if t2_data.shape[1] != 256:
+        t2_data = t2_data.transpose(1, 2, 0)
+        pw1 = (256 - t2_data.shape[1]) // 2
+        pw2 = (256 - t2_data.shape[2]) // 2
+        t2_data = np.pad(t2_data, pad_width=[(0, 0), (pw1, pw1), (pw2, pw2)])
+
     t2_data = resize(t2_data, (t2_data.shape[0], 128, 128))
     t2_data = np.clip(t2_data, 0, t2_data.max())
     t2_data = np.interp(t2_data, (t2_data.min(), t2_data.max()), (0, 1))[..., None]
@@ -103,9 +119,8 @@ def segment_anomalies(vae_model, case_num, full_data):
     t2_recon = vae_model.reconstruct(t2_data)['reconstruction']
     x_diff = np.maximum(t2_data - t2_recon, 0)
 #     x_diff = np.abs(t2_data - t2_recon)
-    np.save('x_diff.npy', x_diff)
     brainmask = binary_fill_holes(t2_data > 0.1)
-    prior_quantile = np.quantile(t2_data, 0.95)
+    prior_quantile = np.quantile(t2_data, t2_quantile)
 
     for sl_idx in range(x_diff.shape[0]):
         diff_sl = x_diff[sl_idx, ..., 0]
@@ -115,16 +130,27 @@ def segment_anomalies(vae_model, case_num, full_data):
         x_diff[sl_idx, ..., 0] = diff_sl
 
     uad_mask = resize(np.squeeze(x_diff), (x_diff.shape[0], 256, 256))
+
+    if full_data.shape[-1] != 256:
+        uad_mask = uad_mask.transpose(2, 0, 1)
+        uad_mask = center_crop(uad_mask, np.zeros((full_data.shape[1], full_data.shape[3], full_data.shape[4])))
+
+    if prune_final_mask:
+        mask_quant = np.quantile(uad_mask, prune_quant)
+        uad_mask[uad_mask < mask_quant] = 0
+
     return uad_mask
 
 def format_vent_mask(mask, orig_size):
-    orig_size = [orig_size[0]//2, orig_size[1]//2, orig_size[2]]
-    resize_scale = np.array(orig_size) / np.array(mask.shape)
-    mask_rs = np.rot90(mask.transpose(2, 0, 1), k=1, axes=(1, 2))
-    mask_rs = np.fliplr(mask_rs)
+    mask_rs = mask.transpose(2, 1, 0)
+
+    orig_shape = orig_size[::-1]
+    mask_rs = np.pad(mask_rs, pad_width=[
+        (0, orig_shape[0]-mask_rs.shape[0]), (0, orig_shape[1]-mask_rs.shape[1]), (0, orig_shape[2]-mask_rs.shape[2])
+    ])
+
     mask_rs = binary_fill_holes(mask_rs)
     mask_rs = binary_dilation(mask_rs, iterations=3).astype(np.uint8)
-    mask_rs = zoom(mask_rs, resize_scale[::-1], order=1)
     mask_rs = np.interp(mask_rs, (mask_rs.min(), mask_rs.max()), (0, 1))
 
     return mask_rs
@@ -133,17 +159,20 @@ def get_rgb(img):
     img = (img - np.min(img))/np.ptp(img)
     return np.dstack((img, img, img))
 
-def get_anomalies(case_num, vae_model):
-    full_data = np.load('{}/{}.npy'.format(pp_base_path, case_num))
+def get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=True):
+    full_data = suio.load_file('{}/{}.h5'.format(pp_base_path, case_num), params={'h5_key': 'all'})
 
     t1_stk, t1m_stk, orig_size = process_and_return_sitk(case_num, full_data)
-    vent_mask = get_vent_mask(t1_stk, t1m_stk)
-    vent_mask = format_vent_mask(vent_mask, orig_size)
 
-    uad_mask = segment_anomalies(vae_model, case_num, full_data)
 
+    uad_mask = segment_anomalies(vae_model, case_num, full_data, prune_final_mask)
     final_mask = uad_mask.copy()
-    final_mask[vent_mask.astype(np.uint8) == 1] = 0
+
+    if remove_vent:
+        vent_mask = get_vent_mask(t1_stk, t1m_stk)
+        vent_mask = format_vent_mask(vent_mask, orig_size)
+        final_mask[vent_mask.astype(np.uint8) == 1] = 0
+
     final_mask = gaussian_filter(final_mask, sigma=2)
     final_mask = resize(final_mask, (final_mask.shape[0], full_data.shape[3], full_data.shape[4]))
     final_mask = np.interp(final_mask, (final_mask.min(), final_mask.max()), (0, 1))
@@ -202,12 +231,26 @@ if __name__ == '__main__':
         for c in glob('{}/*.npy'.format(pp_base_path.replace('data', 'uad_masks')))
     ]
 
+    # cases = sorted([c.split('/')[-1] for c in glob('/mnt/datasets/srivathsa/tiantan/Batch1/*')])
+    # cases = sorted([c.split('/')[-1].replace('.npy', '') for c in glob('/home/srivathsa/projects/studies/gad/tiantan/preprocess/uad_masks/no_prune/*.npy')])
+
     cases = sorted([
-        c.split('/')[-1].replace('.npy', '')
-        for c in glob('{}/*.npy'.format(pp_base_path))
+        c.split('/')[-1].replace('.h5', '')
+        for c in glob('{}/*.h5'.format(pp_base_path))
+        if 'meta' not in c and 'Prisma' not in c and 'TwoDim' not in c
     ])
 
-    cases = [c for c in cases if c not in ignore_cases]
+    def sort_key(s):
+        if 'NO' in s:
+            return int(s.replace('NO', ''))
+        elif 'Brain' in s:
+            return 0
+        else:
+            return 1
+
+    cases = sorted([c for c in cases if c not in ignore_cases], key=sort_key)
+
+    # cases = ['NO31']
 
     tf.reset_default_graph()
     vae_model = load_uad_model()
@@ -215,7 +258,7 @@ if __name__ == '__main__':
         try:
             start = datetime.now()
 
-            uad_mask, full_data = get_anomalies(case_num, vae_model)
+            uad_mask, full_data = get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=False)
             end = datetime.now()
             print('time elapsed for {} = {}'.format(case_num, end-start))
 
