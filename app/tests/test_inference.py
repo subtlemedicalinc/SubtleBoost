@@ -53,6 +53,7 @@ class InferenceTest(unittest.TestCase):
             "num_scale_context_slices": 20,
             "inference_mpr": True,
             "num_rotations": 5,
+            "skip_mpr": False,
             "slices_per_input": 7,
             "mpr_angle_start": 0,
             "mpr_angle_end": 90,
@@ -116,8 +117,9 @@ class InferenceTest(unittest.TestCase):
         sample test model's prediction against the expected prediction
         """
 
+        GPU_ID = "0"
         mock_pool = MagicMock()
-        mock_pool.get.return_value = "0"
+        mock_pool.get.return_value = GPU_ID
         subtle_gad_jobs._init_gpu_pool(mock_pool)
 
         mpr_params = {
@@ -136,7 +138,7 @@ class InferenceTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(result, expected_pred, atol=1.0))
         mock_pool.get.assert_called_once_with(block=True)
-        mock_pool.put.assert_called_once_with("0")
+        mock_pool.put.assert_called_once_with(GPU_ID)
 
     def test_compat_reshape(self):
         """

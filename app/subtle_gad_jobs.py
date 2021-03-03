@@ -81,6 +81,7 @@ class SubtleGADJobType(BaseJobType):
         # inference params:
         "inference_mpr": True,
         "num_rotations": 3,
+        "skip_mpr": False,
         "slices_per_input": 7,
         "mpr_angle_start": 0,
         "mpr_angle_end": 90,
@@ -277,7 +278,7 @@ class SubtleGADJobType(BaseJobType):
 
             _, n_slices, height, width = pixel_data.shape
 
-            slice_axes = np.arange(1, 4)
+            slice_axes = np.arange(1, 4) if not self._proc_config.skip_mpr else np.array([1])
             for angle in np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
                 for slice_axis in slice_axes:
                     pobj = copy.deepcopy(param_obj)
@@ -353,9 +354,9 @@ class SubtleGADJobType(BaseJobType):
         low_dose_series = None
 
         for series_key in self.task.dict_required_series.keys():
-            if 'zero_dose' in series_key:
+            if 'zero_dose' in series_key or 'zd' in series_key:
                 zero_dose_series = self.task.dict_required_series[series_key]
-            if 'low_dose' in series_key:
+            if 'low_dose' in series_key or 'ld' in series_key:
                 low_dose_series = self.task.dict_required_series[series_key]
 
         if zero_dose_series is None or low_dose_series is None:
