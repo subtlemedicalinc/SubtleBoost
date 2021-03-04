@@ -7,8 +7,8 @@ a = Analysis(['infer.py'],
              pathex=['/project_dir/app', '.'],
              binaries=[],
              datas=[
-                ('/usr/lib/python3.5/site-packages/tensorflow/contrib', 'tensorflow/contrib'),
-                ('/usr/lib/python3.5/site-packages/deepbrain', 'deepbrain')
+                ('/usr/local/lib/python3.5/site-packages/tensorflow/contrib', 'tensorflow/contrib'),
+                ('/usr/local/lib/python3.5/site-packages/deepbrain', 'deepbrain')
              ],
              hiddenimports=['tensorflow', 'tensorflow.contrib', 'tensorrt', 'pkg_resources', 'pkg_resources.py2_warn', 'pywt._extensions._cwt'],
              hookspath=[],
