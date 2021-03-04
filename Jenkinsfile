@@ -216,7 +216,7 @@ node {
 
                 export PYTHON=python3.5
                 export PIP=pip
-                
+
                 rm -rf app/models
                 cp -r default_models app/models
                 echo "Building executable file with pyinstaller"
@@ -256,7 +256,6 @@ node {
             sh '''
             apt-get update
             apt-get install -y python3 python3-pip libgtk2.0-dev
-            pip3 install --upgrade pip
             pip install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
 
             python3 -c "from subtle.util.licensing import generate_license; import json; from datetime import date, timedelta; j = generate_license(4000, 'SubtleGAD', 'test', date.today() + timedelta(days=2)); f = open('dist/test_license.json', 'w'); json.dump(j,f); f.close();"
