@@ -176,7 +176,6 @@ node {
             sh '''
                 apt-get update
                 apt-get install -y python3 python3-pip
-                pip3 install --upgrade pip
                 pip install --upgrade "setuptools>=45.0.0"
                 pip install --find-links subtle_app_utilities_bdist -r app/requirements.txt
                 pip install -r app/tests/requirements.txt
