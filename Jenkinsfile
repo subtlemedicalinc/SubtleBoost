@@ -44,7 +44,7 @@ node {
     // TODO: make sure those buckets exist for staging and prod env later
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
-    def TEST_DATA_TIMESTAMP = "20210127"
+    def TEST_DATA_TIMESTAMP = "20200304"
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -140,7 +140,7 @@ node {
     }
 
     stage("Pre-Build Tests") {
-        def data_date = "20200618"
+        def data_date = "20210301"
         def file_name = "subtle_python_packages_tests_data.tar.gz"
         def download_path = "/tmp/${file_name}"
         echo 'fetching app utils test data...'
