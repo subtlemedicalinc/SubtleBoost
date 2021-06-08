@@ -46,8 +46,12 @@ def extract_weights(fn):
         y_true = args[0]
         y_pred = args[1]
 
-        weights = K.expand_dims(y_true[..., 1])
-        y_true = K.expand_dims(y_true[..., 0])
+        if y_pred.shape[-1] > 1:
+            weights = y_true[..., 7:]
+            y_true = y_true[..., :7]
+        else:
+            weights = K.expand_dims(y_true[..., 1])
+            y_true = K.expand_dims(y_true[..., 0])
 
         new_args = [y_true, y_pred, weights]
 
@@ -168,22 +172,37 @@ def l1_loss(y_true, y_pred, weights):
 @extract_weights
 def perceptual_loss(y_true, y_pred, weights, img_shape, resize_shape):
     # From https://bit.ly/2HTb4t9
-    if resize_shape > 0:
-        # For 512x512 images, VGG-19 creates some grid artifacts because the
-        # original network is trained with 224x224 images
-        y_true = tf.image.resize(y_true, (resize_shape, resize_shape))
-        y_pred = tf.image.resize(y_pred, (resize_shape, resize_shape))
 
-    y_true_3c = K.concatenate([y_true, y_true, y_true])
-    y_pred_3c = K.concatenate([y_pred, y_pred, y_pred])
-
-    y_true_3c = vgg_preprocess(y_true_3c)
-    y_pred_3c = vgg_preprocess(y_pred_3c)
+    num_slices = int(y_pred.shape[-1])
 
     vgg = VGG19(include_top=False, weights='imagenet', input_shape=img_shape)
     loss_model = Model(inputs=vgg.input, outputs=vgg.get_layer('block3_conv3').output)
     loss_model.trainable = False
-    return K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
+
+    loss_vals = []
+
+    for idx in range(num_slices):
+        y_true_sl = K.expand_dims(y_true[..., idx])
+        y_pred_sl = K.expand_dims(y_pred[..., idx])
+
+        if resize_shape > 0:
+            # For 512x512 images, VGG-19 creates some grid artifacts because the
+            # original network is trained with 224x224 images
+            y_true_sl = tf.image.resize(y_true_sl, (resize_shape, resize_shape))
+            y_pred_sl = tf.image.resize(y_pred_sl, (resize_shape, resize_shape))
+
+        y_true_3c = K.concatenate([y_true_sl, y_true_sl, y_true_sl])
+        y_pred_3c = K.concatenate([y_pred_sl, y_pred_sl, y_pred_sl])
+
+        y_true_3c = vgg_preprocess(y_true_3c)
+        y_pred_3c = vgg_preprocess(y_pred_3c)
+
+        mse = K.mean(K.square(loss_model(y_true_3c) - loss_model(y_pred_3c)))
+        loss_vals.append(mse)
+
+    n_ch = K.variable(float(num_slices))
+    loss_vals = tf.stack(loss_vals)
+    return tf.math.reduce_mean(loss_vals)
 
 @extract_weights
 def perceptual_loss_multi(y_true, y_pred, weights, img_shape):
@@ -252,5 +271,5 @@ def mixed_loss(l1_lambda=0.5, ssim_lambda=0.5, perceptual_lambda=0.0, wloss_lamb
     l1_fn = l1_loss if not enh_mask else weighted_l1_loss
 
     if perceptual_lambda > 0 or wloss_lambda > 0 or style_lambda > 0:
-        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape, vgg_resize_shape) * perceptual_lambda + wloss_lambda * wasserstein_loss(x, y) + style_loss(x, y, img_shape) * style_lambda
+        return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda + perceptual_loss(x, y, img_shape, vgg_resize_shape) * perceptual_lambda
     return lambda x, y: l1_fn(x, y) * l1_lambda + ssim_loss(x, y) * ssim_lambda

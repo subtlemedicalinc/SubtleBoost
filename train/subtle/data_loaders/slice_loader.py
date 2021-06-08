@@ -22,7 +22,7 @@ from subtle.utils.io import load_slices, load_file, load_h5_metadata
 from subtle.subtle_preprocess import resample_slices, enh_mask_smooth, get_enh_mask_t2
 
 class SliceLoader(keras.utils.Sequence):
-    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, file_ext='npy', use_enh_uad=False, use_uad_ch_input=False, uad_ip_channels=1, fpath_uad_masks=[], uad_mask_threshold=0.1, uad_mask_path=None, uad_file_ext=None, enh_mask_t2=False):
+    def __init__(self, data_list, batch_size=8, slices_per_input=1, shuffle=True, verbose=1, residual_mode=False, positive_only=False, predict=False, input_idx=[0, 1], output_idx=[2], resize=None, slice_axis=0, resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, file_ext='npy', use_enh_uad=False, use_uad_ch_input=False, uad_ip_channels=1, fpath_uad_masks=[], uad_mask_threshold=0.1, uad_mask_path=None, uad_file_ext=None, enh_mask_t2=False, num_channel_output=1, multi_slice_gt=False):
         'Initialization'
         self.data_list = data_list
         self.batch_size = batch_size
@@ -47,6 +47,7 @@ class SliceLoader(keras.utils.Sequence):
         self.uad_mask_threshold = uad_mask_threshold
         self.uad_mask_path = uad_mask_path
         self.enh_mask_t2 = enh_mask_t2
+        self.multi_slice_gt = multi_slice_gt
 
         '''
         Input and output index specifies which channels of the data is to be used as input
@@ -71,6 +72,7 @@ class SliceLoader(keras.utils.Sequence):
         self.use_enh_mask = use_enh_mask
         self.file_ext = file_ext
         self.uad_file_ext = uad_file_ext
+        self.num_channel_output = num_channel_output
 
         self.ims_cache = ExpiringDict(max_len=250, max_age_seconds=24*60*60)
 
@@ -105,7 +107,8 @@ class SliceLoader(keras.utils.Sequence):
         uad_mask = load_file(fpath_mask, file_type=self.uad_file_ext)
 
         ### Truncating the uad_mask to min value of 1e-4 to avoid vanishing gradients problem
-        min_val = 1e-4
+        ### min_val needs a value of 0.1 if l1_loss has more weightage (e.g. >= 0.6)
+        min_val = 1e-2
 
         th = uad_mask.max() * self.uad_mask_threshold
         uad_mask[uad_mask <= th] = 0
@@ -319,8 +322,13 @@ class SliceLoader(keras.utils.Sequence):
             data_list_X_mask.append(slices_X_mask)
 
             if not self.predict:
-                slices_Y = slices[h, self.output_idx, :, :][None,None,...]
-                slices_Y_mask = slices_mask[h, self.output_idx, :, :][None,None,...]
+                if self.multi_slice_gt:
+                    slices_Y = slices[:, self.output_idx, :, :][:, None, ...]
+                    slices_Y_mask = slices_mask[:, self.output_idx, :, :][:, None, ...]
+                else:
+                    slices_Y = slices[h, self.output_idx, :, :][None, None, ...]
+                    slices_Y_mask = slices_mask[h, self.output_idx, :, :][None, None, ...]
+
                 data_list_Y.append(slices_Y)
                 data_list_Y_mask.append(slices_Y_mask)
 
@@ -354,12 +362,15 @@ class SliceLoader(keras.utils.Sequence):
                 if self.enh_mask_t2:
                     enh_mask = get_enh_mask_t2(X_mask, Y_mask, X, center_slice=h, t2_csf_quant=csf_quant)
                 else:
-                    enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor)
+                    enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor, multi_slice_gt=self.multi_slice_gt)
 
             if self.uad_mode:
                 uad_mask_list = np.array(uad_mask_list)
                 if self.use_enh_uad:
-                    enh_mask = uad_mask_list[:, h, ...][:, None, ...].astype(np.float32)
+                    if self.multi_slice_gt:
+                        enh_mask = uad_mask_list.astype(np.float32)
+                    else:
+                        enh_mask = uad_mask_list[:, h, ...][:, None, ...].astype(np.float32)
 
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
@@ -423,6 +434,11 @@ class SliceLoader(keras.utils.Sequence):
         if not self.predict:
             Y = np.transpose(np.reshape(Y, (Y.shape[0], -1, Y.shape[3], Y.shape[4])), (0, 2, 3, 1))
             Y_mask = np.transpose(np.reshape(Y_mask, (Y_mask.shape[0], -1, Y_mask.shape[3], Y_mask.shape[4])), (0, 2, 3, 1))
+
+            if self.multi_slice_gt:
+                Y = np.reshape(Y, (self.batch_size, self.slices_per_input, Y.shape[1], Y.shape[2])).transpose(0, 2, 3, 1)
+                Y_mask = np.reshape(Y_mask, (self.batch_size, self.slices_per_input, Y_mask.shape[1], Y_mask.shape[2])).transpose(0, 2, 3, 1)
+
             if self.use_enh_mask or self.use_enh_uad:
                 enh_mask = np.transpose(np.reshape(enh_mask, (enh_mask.shape[0], -1, enh_mask.shape[3], enh_mask.shape[4])), (0, 2, 3, 1))
                 if self.use_enh_uad:

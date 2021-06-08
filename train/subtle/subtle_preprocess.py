@@ -513,11 +513,14 @@ def enhancement_mask(X, Y, center_slice, th=.05):
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
 
-def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False):
+def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False, multi_slice_gt=False):
     'Create a smooth enhancement mask'
     # max_val_arr should be length (batch_size, 1)
-
-    im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0, ...]
+    if multi_slice_gt:
+        Y = np.reshape(Y, (X.shape[0], X.shape[1], Y.shape[2], Y.shape[3], Y.shape[4]))
+        im_diff = Y[:, :, 0, ...] - X[:, :, 0, ...]
+    else:
+        im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0, ...]
 
     if weighted:
         # To give more weight to enhancement present in full dose but not in low dose
@@ -539,13 +542,17 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False)
         ###
 
     if max_val_arr is None:
-        max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
+        if multi_slice_gt:
+            max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], im_diff.shape[1], -1))), axis=2)
+        else:
+            max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
 
     # FIXME: currently hard-coded to minimum value of 1. This obviates the need for the following np.divide
     # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
 
-    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
+    # enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
+    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask

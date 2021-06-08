@@ -119,6 +119,7 @@ def _preprocess_args(parser):
     parser.add_argument('--fsl_mask_all_ims', action='store_true', dest='fsl_mask_all_ims', help='If `fsl_mask`, perform FSL BET on all ims and take the union', default=False)
     parser.add_argument('--use_fsl_reg', action='store_true', dest='use_fsl_reg', help='If true, the registration parameters computed from skull stripped brain will be applied on full brain, otherwise full brain will be registered separately', default=True)
     parser.add_argument('--non_rigid_reg', action='store_true', dest='non_rigid_reg', help='If true, then bspline parameter map is set with affine map to perform non-rigid registration', default=False)
+    parser.add_argument('--union_brain_masks', action='store_true', dest='union_brain_masks', help='Specify whether the masks from the three images should be combined using union operation or not', default=False)
 
     parser.add_argument('--pad_for_size', action='store', type=int,
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
@@ -191,6 +192,8 @@ def _train_args(parser):
     parser.add_argument('--disc_beta', action='store', dest='disc_beta', type=float, help='Beta value for adversary Adam optimizer', default=0.5)
     parser.add_argument('--disc_loss_function', action='store', type=str, dest='disc_loss_function', help='Loss function for adversary', default='mse')
     parser.add_argument('--add_disc_noise', action='store_true', dest='add_gen_noise', help='If True, random noise will be added to discriminator input', default=False)
+
+    parser.add_argument('--multi_slice_gt', action='store_true', dest='multi_slice_gt', help='If True, then in 2.5D training, ground truth will also be 7 slices', default=False)
 
     return parser
 
