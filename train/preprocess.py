@@ -225,6 +225,8 @@ def hist_norm(args, ims, metadata):
         points=50
         mean_intensity=True
 
+        print('histogram data type', ims.dtype)
+
         hnorm = lambda idx: (lambda images: sup.scale_im(images[:, 0, :, :], images[:, idx, :, :], levels, points, mean_intensity))
 
         eye = lambda images: images[:, 0, :, :]
@@ -509,8 +511,11 @@ def _brain_mask(args, ims):
                     print('BET Full')
                 mask_full = _mask_npy(ims[:, 2, ...])
 
+                if args.union_brain_masks:
                 # union of all masks
-                mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
+                    mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
+                else:
+                    mask = np.array([mask_zero, mask_low, mask_full]).transpose(1, 0, 2, 3)
             else:
                 mask = mask_zero
     return mask
@@ -518,11 +523,14 @@ def _brain_mask(args, ims):
 def apply_fsl_mask(args, ims, fsl_mask):
     ims_mask = np.copy(ims)
     if args.fsl_mask:
-        print('Applying computed FSL masks on images')
+        print('Applying computed FSL masks on images. Mask shape -', fsl_mask.shape)
         ims_mask = np.zeros_like(ims)
 
-        for cont in range(ims.shape[1]):
-            ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
+        if fsl_mask.ndim == 4:
+            ims_mask = fsl_mask * ims
+        else:
+            for cont in range(ims.shape[1]):
+                ims_mask[:, cont, :, :] = fsl_mask * ims[:, cont, :, :]
 
     return ims_mask
 
@@ -531,6 +539,11 @@ def fsl_reject_slices(args, ims, fsl_mask, metadata):
         print('Removing slices where brain area is less than {}cm2'.format(args.fsl_area_threshold_cm2))
 
         dicom_spacing = metadata['new_spacing'] if 'new_spacing' in metadata else metadata['pixel_spacing_zero']
+
+        fsl_mask_copy = np.copy(fsl_mask)
+
+        if fsl_mask_copy.ndim == 4:
+            fsl_mask_copy = fsl_mask_copy[:, 0]
 
         mask_areas = np.array([sup.get_brain_area_cm2(mask_slice, dicom_spacing) for mask_slice in fsl_mask])
 
@@ -615,12 +628,16 @@ def reshape_fsl_mask(args, fsl_mask, metadata):
         print('reshaping fsl mask')
         fsl_mask_ims = np.zeros((fsl_mask.shape[0], 3, fsl_mask.shape[1], fsl_mask.shape[2]))
 
-        fsl_mask_ims[:, 0, ...] = np.copy(fsl_mask)
-        fsl_mask_ims[:, 1, ...] = np.copy(fsl_mask)
-        fsl_mask_ims[:, 2, ...] = np.copy(fsl_mask)
+        if fsl_mask.ndim == 4:
+            fsl_mask_ims = np.copy(fsl_mask)
+        else:
+            fsl_mask_ims[:, 0, ...] = np.copy(fsl_mask)
+            fsl_mask_ims[:, 1, ...] = np.copy(fsl_mask)
+            fsl_mask_ims[:, 2, ...] = np.copy(fsl_mask)
 
         fsl_reshape, _ = resample_isotropic(args, fsl_mask_ims, metadata)
-        fsl_reshape = fsl_reshape[:, 0, ...]
+        if fsl_mask.ndim == 3:
+            fsl_reshape = fsl_reshape[:, 0, ...]
         fsl_reshape = (fsl_reshape >= 0.5).astype(fsl_mask.dtype)
     return fsl_reshape
 
@@ -797,20 +814,16 @@ def preprocess_multi_contrast(args):
     mc_vol_mask = mc_vol * mask
 
     ### Scaling
-    print('Scaling...')
-    mc_vol = np.interp(mc_vol, (mc_vol.min(), mc_vol.max()), (t1_pre.min(), t1_pre.max()))
-    mc_vol_mask = np.interp(mc_vol_mask, (mc_vol_mask.min(), mc_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
+    # print('Scaling...')
+    # mc_vol = np.interp(mc_vol, (mc_vol.min(), mc_vol.max()), (t1_pre.min(), t1_pre.max()))
+    # mc_vol_mask = np.interp(mc_vol_mask, (mc_vol_mask.min(), mc_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
 
     # No histogram equalization for FLAIR
     # print('Histogram equalization...')
     # mc_vol = sup.scale_im(t1_low, mc_vol.astype(t1_low.dtype))
 
-    if 't2' in mc_kw:
-        mc_vol *= args.t2_scaling_constant
-
-    print('Histogram equalization...')
-    t2_vol = sup.scale_im(t1_low, t2_vol)
-    t2_vol *= args.t2_scaling_constant
+    # if 't2' in mc_kw:
+    #     mc_vol *= args.t2_scaling_constant
 
     ### Saving data
     save_data(args, mc_vol, mc_vol_mask, metadata=None)
