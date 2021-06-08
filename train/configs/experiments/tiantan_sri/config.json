@@ -91,6 +91,16 @@
       "checkpoint_name": "enh_vgg_wssim",
       "file_ext": "h5"
     },
+    "enh_vgg_1ch_sc": {
+      "slices_per_input": 1,
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.45,
+      "perceptual_lambda": 0.15,
+      "enh_mask": true,
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_t2_fl",
+      "checkpoint_name": "enh_vgg_1ch_sc",
+      "file_ext": "h5"
+    },
     "enh_vgg_attn": {
       "slices_per_input": 7,
       "ssim_lambda": 0.25,

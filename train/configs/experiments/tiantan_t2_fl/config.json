@@ -19,6 +19,12 @@
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
     "override": true,
+    "t2_process": {
+      "multi_contrast_mode": true,
+      "multi_contrast_kw": "t2",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots/t2",
+      "file_ext": "h5"
+    },
     "flair_process": {
       "multi_contrast_mode": true,
       "multi_contrast_kw": "flair,vista",
@@ -70,6 +76,32 @@
       "use_uad_ch_input": true,
       "uad_ip_channels": 7,
       "input_idx": "0,1,3,4"
+    },
+    "mc_branch_l1_ssim": {
+      "model_name": "branch_unet2d",
+      "model_config": "base",
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.6,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "enh_mask_uad": true,
+      "use_uad_ch_input": false,
+      "uad_ip_channels": 7,
+      "input_idx": "0,1,3,4"
+    },
+    "mc_reorder": {
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.45,
+      "perceptual_lambda": 0.15,
+      "enh_mask": false,
+      "enh_mask_uad": true,
+      "use_uad_ch_input": true,
+      "uad_ip_channels": 7,
+      "input_idx": "0,4,3,1"
     }
   },
   "inference": {

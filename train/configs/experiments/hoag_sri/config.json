@@ -42,7 +42,6 @@
     "inference_mpr": true,
     "learn_residual": false,
     "description": "hoag_mpr",
-
     "checkpoint": "hoag_mpr.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/hoag/data",
     "data_raw": "/home/srivathsa/projects/studies/gad/hoag/data",

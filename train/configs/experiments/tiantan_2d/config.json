@@ -60,6 +60,14 @@
       "brain_only": true,
       "brain_only_mode": "pure",
       "checkpoint_name": "simple_mask"
+    },
+    "inverse_model": {
+      "ssim_lambda": 0.2,
+      "l1_lambda": 0.6,
+      "perceptual_lambda": 0.2,
+      "enh_mask": false,
+      "input_idx": "0,2",
+      "output_idx": "1"
     }
   },
   "inference": {
@@ -87,6 +95,12 @@
       "checkpoint": "simple_mask.checkpoint",
       "description": "l1_ssim_mask",
       "brain_only": true
+    },
+    "inverse_model": {
+      "checkpoint": "inverse_model.checkpoint",
+      "description": "low_dose_sim",
+      "input_idx": "0,2",
+      "output_idx": "1"
     }
   }
 }

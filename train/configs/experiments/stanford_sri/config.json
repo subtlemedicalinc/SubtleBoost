@@ -20,7 +20,9 @@
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
-    "use_fsl_reg": false,
+    "use_fsl_reg": true,
+    "union_brain_masks": false,
+    "register_with_dcm_reference": false,
     "file_ext": "npy",
     "batch1": {
       "data_batch": "0,56"
@@ -284,6 +286,18 @@
       "inference_mpr": true,
       "description": "sford_enh_vgg_3r",
       "num_rotations": 3,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+      "checkpoint": "stanford_enh_vgg.checkpoint"
+    },
+    "super_gad": {
+      "inference_mpr": true,
+      "description": "sford_super_zero_full",
+      "num_rotations": 3,
+      "input_idx": "0,2",
       "slices_per_input": 7,
       "file_ext": "npy",
       "resize": 512,
