@@ -1,0 +1,22 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "upsample_mode": "default",
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "batch_norm": false,
+    "num_modalities": 5,
+    "submodel_num_channel": 14,
+    "branch_unet_mode": "fusion_single_ch",
+    "avg_layer": "average"
+  },
+  "t1pre_1ch": {
+    "branch_unet_mode": "fusion_t1pre_final_1ch"
+  },
+  "wavg": {
+    "branch_unet_mode": "fusion_single_ch_wavg"
+  },
+  "wavg_t1pre_1ch": {
+    "branch_unet_mode": "fusion_t1pre_final_1ch_wavg"
+  }
+}

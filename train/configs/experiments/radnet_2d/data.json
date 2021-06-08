@@ -1,0 +1,53 @@
+{
+  "train": [
+    "Rad1",
+    "Rad2",
+    "Rad3",
+    "Rad4",
+    "Rad4",
+    "Rad4",
+    "Rad9",
+    "Rad10",
+    "Rad13",
+    "Rad14",
+    "Rad15",
+    "Rad17",
+    "Rad17",
+    "Rad17",
+    "Rad18",
+    "Rad18",
+    "Rad18",
+    "Rad18",
+    "Rad20",
+    "Rad21",
+    "Rad22",
+    "Rad23",
+    "UCHS2",
+    "UCHS3",
+    "UCHS4",
+    "UCHS4",
+    "UCHS4"
+  ],
+  "validation": [
+    "Rad19",
+    "Rad7",
+    "Rad16",
+    "Rad8",
+    "Rad6",
+    "Rad12",
+    "Rad11",
+    "UCHS1",
+    "Rad5"
+  ],
+  "plot": [
+    ["Rad4", 15],
+    ["Rad4", 26],
+    ["UCHS4", 10]
+  ],
+  "test": [
+    "TwoDim1",
+    "TwoDim2",
+    "TwoDim3",
+    "TwoDim4"
+  ]
+}

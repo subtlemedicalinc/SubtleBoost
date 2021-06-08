@@ -182,7 +182,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
 
 
 def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None,
-im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False, fixed_mask=None,
+im_moving_spacing=None, max_iter=400, return_params=True, non_rigid=False, fixed_mask=None,
 moving_mask=None, ref_fixed=None, ref_moving=None):
     '''
     Image registration using SimpleElastix.

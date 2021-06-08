@@ -184,6 +184,8 @@ def _train_args(parser):
     parser.add_argument('--brain_only', action='store_true', dest='brain_only', help='Use FSL extracted brain data to train (preprocess should have been run with this option: H5 file should have "data_mask" key)', default=False)
     parser.add_argument('--brain_only_mode', action='store', dest='brain_only_mode', type=str, help='pure or mixed - whether to train only on FSL masked images only or include a fraction of the full brain images too', default=None)
 
+    parser.add_argument('--pretrain_ckps', action='store', dest='pretrain_ckps', type=str, help='List of pretrained checkpoints from which weights should be loaded to different portions of the network. Used in GeneratorFBoostUNet2D', default=None)
+
     # gan related
     parser.add_argument('--gan_mode', action='store_true', dest='gan_mode', help='If True, network will be trained in GAN mode with adversarial loss', default=False)
     parser.add_argument('--adversary_name', action='store', dest='adversary_name', type=str, help='Name of the Discriminator model architecture', default='patch2d')

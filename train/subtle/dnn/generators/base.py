@@ -21,7 +21,7 @@ from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, 
 class GeneratorBase:
     def __init__(
         self, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128, optimizer_fun=Adam, lr_init=None, optim_amsgrad=True, loss_function=suloss.l1_loss, metrics_monitor=[suloss.l1_loss], verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True,
-        model_config='base', tunable_params=None
+        model_config='base', tunable_params=None, fpaths_pre=[], transfer_weights=True
     ):
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -41,6 +41,8 @@ class GeneratorBase:
         self.optim_amsgrad = optim_amsgrad
         self.model_config = model_config
         self.tunable_params = tunable_params
+        self.fpaths_pre = fpaths_pre
+        self.transfer_weights = transfer_weights
 
         self.model = None # to be assigned by _build_model() in children classes
 
@@ -149,6 +151,15 @@ class GeneratorBase:
 
     def get_config(self, param_name, layer_name=''):
         return get_layer_config(self.config_dict, param_name, layer_name)
+
+    def _freeze_weights(self, kw=None):
+        if kw is not None:
+            layers = [l for l in self.model.layers if kw in l.name]
+        else:
+            layers = self.model.layers
+
+        for layer in layers:
+            layer.trainable = False
 
     def _compile_model(self, custom_optim=None):
         if custom_optim is not None:

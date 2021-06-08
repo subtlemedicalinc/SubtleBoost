@@ -7,3 +7,6 @@ from .rrdb2d import GeneratorRRDB2D
 from .vdsr3d import GeneratorVDSR3D
 from .wdsr3d import GeneratorWDSR3D
 from .attn_unet2d import GeneratorAttnUNet2D
+from .branch_unet2d import GeneratorBranchUNet2D
+from .fboost_unet2d import GeneratorFBoostUNet2D
+from .ivdnet2d import GeneratorIVDNet2D

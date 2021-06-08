@@ -45,6 +45,18 @@ MODEL_MAP = {
     'wdsr3d': {
         'model': 'generators.GeneratorWDSR3D',
         'data_loader': 'block_loader.BlockLoader'
+    },
+    'branch_unet2d': {
+        'model': 'generators.GeneratorBranchUNet2D',
+        'data_loader': 'slice_loader.SliceLoader'
+    },
+    'ivdnet2d': {
+        'model': 'generators.GeneratorIVDNet2D',
+        'data_loader': 'slice_loader.SliceLoader'
+    },
+    'fboost_unet2d': {
+        'model': 'generators.GeneratorFBoostUNet2D',
+        'data_loader': 'slice_loader.SliceLoader'
     }
 }
 
