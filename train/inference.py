@@ -14,6 +14,7 @@ Created on 2018/11/09
 import sys
 
 import tempfile
+import json
 import os
 import datetime
 import time
@@ -83,6 +84,7 @@ def process_mpr(proc_params):
         mkwargs = proc_params['mkwargs']
 
         model_class = load_model(proc_params['model_name'])
+
         m = model_class(**mkwargs)
         m.load_weights()
 
@@ -146,6 +148,8 @@ def process_mpr(proc_params):
             gen_kwargs['data_list'] = [data_file]
             gen_kwargs['slice_axis'] = [slice_axis]
             gen_kwargs['file_ext'] = 'npy'
+
+
             prediction_generator = data_loader(**gen_kwargs)
 
             data_ref = np.zeros_like(data_rot)
@@ -593,32 +597,32 @@ def inference_process(args):
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
-    if 'zero_pad_size' in metadata:
-        # if 'resampled_size' in metadata:
-        #     crop_size = metadata['resampled_size'][0]
-        # else:
-        crop_size = metadata['original_size'][0]
-
-        y_pred = Y_prediction[..., 0]
-        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
-        y_pred = supre.center_crop(y_pred, ref_img)
-        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
+    # if 'zero_pad_size' in metadata:
+    #     # if 'resampled_size' in metadata:
+    #     #     crop_size = metadata['resampled_size'][0]
+    #     # else:
+    #     crop_size = metadata['original_size'][0]
+    #
+    #     y_pred = Y_prediction[..., 0]
+    #     ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+    #     y_pred = supre.center_crop(y_pred, ref_img)
+    #     Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+    #
+    #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
     utils_io.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
-    if args.brain_only:
-        data_zero = original_data[..., 0]
-        brain_mask = binary_fill_holes(original_data_mask[..., 0] > 0.1)
-
-        y_pred = (data_zero - (data_zero * brain_mask)) + Y_prediction[..., 0]
-        Y_prediction_stitch = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
-
-        utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
+    # if args.brain_only:
+    #     data_zero = original_data[..., 0]
+    #     brain_mask = binary_fill_holes(original_data_mask[..., 0] > 0.1)
+    #
+    #     y_pred = (data_zero - (data_zero * brain_mask)) + Y_prediction[..., 0]
+    #     Y_prediction_stitch = np.array([y_pred]).transpose(1, 2, 3, 0)
+    #
+    #     data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
+    #
+    #     utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
 
     # if args.stats_file and not metadata['inference_only']:
     #     print('running stats on inference...')
