@@ -57,7 +57,7 @@ def kw_not_in(s, kws):
     return True
 
 if __name__ == '__main__':
-    pp_base_path = '/home/srivathsa/projects/studies/gad/gad_2d/preprocess/data'
+    pp_base_path = '/home/srivathsa/projects/studies/gad/radnet/preprocess/data'
     dcm_path = pp_base_path.replace('preprocess/', '')
     save_path = os.path.join(pp_base_path, 'hdbet_masks')
     plot_path = os.path.join(save_path, 'plots')
@@ -73,49 +73,50 @@ if __name__ == '__main__':
         for f in glob('{}/*.npy'.format(save_path))
     ]
 
-    cases = [c for c in cases if c not in processed_cases]
+    # cases = [c for c in cases if c not in processed_cases]
+    cases = ['Rad3', 'Rad4', 'Rad5', 'Rad7']
 
     for case_num in tqdm(cases, total=len(cases)):
-        try:
-            dirpath_precon = find_pre_contrast_series(os.path.join(dcm_path, case_num))
-            ref_dcm = dcm_to_sitk(dirpath_precon)
-            ref_dims = ref_dcm.GetSize()[::-1]
-            # full_data = np.load(os.path.join(pp_base_path, '{}.npy'.format(case_num)))
-            full_data = suio.load_file(os.path.join(pp_base_path, '{}.h5'.format(case_num)))
-            data_arr = full_data[:, 0]
+        # try:
+        dirpath_precon = find_pre_contrast_series(os.path.join(dcm_path, case_num))
+        ref_dcm = dcm_to_sitk(dirpath_precon)
+        ref_dims = ref_dcm.GetSize()[::-1]
+        # full_data = np.load(os.path.join(pp_base_path, '{}.npy'.format(case_num)))
+        full_data = suio.load_file(os.path.join(pp_base_path, '{}.h5'.format(case_num)))
+        data_arr = full_data[:, 0]
 
-            if data_arr.shape[0] > ref_dims[0]:
-                data_arr = center_crop(data_arr, np.zeros(ref_dims))
-            elif data_arr.shape[0] < ref_dims[0]:
-                sdiff = ref_dims[0] - data_arr.shape[0]
-                npad = []
-                if sdiff == 1:
-                    npad = [(1, 0), (0, 0), (0, 0)]
-                else:
-                    diff_part = sdiff // 2
-                    diff_rem = sdiff - diff_part
-                    npad = [(diff_part, diff_rem), (0, 0), (0, 0)]
-                data_arr = np.pad(data_arr, pad_width=npad, mode='constant', constant_values=0)
+        if data_arr.shape[0] > ref_dims[0]:
+            data_arr = center_crop(data_arr, np.zeros(ref_dims))
+        elif data_arr.shape[0] < ref_dims[0]:
+            sdiff = ref_dims[0] - data_arr.shape[0]
+            npad = []
+            if sdiff == 1:
+                npad = [(1, 0), (0, 0), (0, 0)]
+            else:
+                diff_part = sdiff // 2
+                diff_rem = sdiff - diff_part
+                npad = [(diff_part, diff_rem), (0, 0), (0, 0)]
+            data_arr = np.pad(data_arr, pad_width=npad, mode='constant', constant_values=0)
 
-            data_sitk = sitk.GetImageFromArray(data_arr)
-            data_sitk.CopyInformation(ref_dcm)
-            mask = None
-            with tempfile.TemporaryDirectory() as tmpdir:
-                fpath_input = '{}/input.nii.gz'.format(tmpdir)
-                fpath_output = '{}/output.nii.gz'.format(tmpdir)
-                fpath_mask = '{}/output_mask.nii.gz'.format(tmpdir)
+        data_sitk = sitk.GetImageFromArray(data_arr)
+        data_sitk.CopyInformation(ref_dcm)
+        mask = None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fpath_input = '{}/input.nii.gz'.format(tmpdir)
+            fpath_output = '{}/output.nii.gz'.format(tmpdir)
+            fpath_mask = '{}/output_mask.nii.gz'.format(tmpdir)
 
-                sitk.WriteImage(data_sitk, fpath_input)
-                run_hd_bet(fpath_input, fpath_output, mode='fast', device=0, do_tta=False)
-                mask = nib.load(fpath_mask).get_data().transpose(2, 1, 0)
+            sitk.WriteImage(data_sitk, fpath_input)
+            run_hd_bet(fpath_input, fpath_output, mode='fast', device=4, do_tta=False)
+            mask = nib.load(fpath_mask).get_data().transpose(2, 1, 0)
 
-            np.save(os.path.join(save_path, '{}.npy'.format(case_num)), mask)
-            fpath_plot = os.path.join(plot_path, '{}.png'.format(case_num))
-            plt_img = get_plot_image(full_data, mask)
+        np.save(os.path.join(save_path, '{}.npy'.format(case_num)), mask)
+        fpath_plot = os.path.join(plot_path, '{}.png'.format(case_num))
+        plt_img = get_plot_image(full_data, mask)
 
-            plt.imshow(plt_img)
-            plt.axis('off')
-            plt.tight_layout()
-            plt.savefig(fpath_plot)
-        except Exception as exc:
-            print('ERROR in {}: {}'.format(case_num, exc))
+        plt.imshow(plt_img)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(fpath_plot)
+        # except Exception as exc:
+        #     print('ERROR in {}: {}'.format(case_num, exc))

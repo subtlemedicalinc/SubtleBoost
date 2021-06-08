@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 import subtle.utils.io as suio
 
-base_path = '/home/srivathsa/projects/studies/gad/gad_2d/preprocess/data'
+base_path = '/home/srivathsa/projects/studies/gad/radnet/preprocess/data'
 dirpath_src = os.path.join(base_path, 'old_mask')
 dirpath_dest = base_path
 dirpath_masks = os.path.join(base_path, 'hdbet_masks')
@@ -28,6 +28,7 @@ if __name__ == '__main__':
     ]
 
     cases = [c for c in cases if c not in ignore_cases]
+
     for case_num in tqdm(cases, total=len(cases)):
         try:
             fpath_hdbet_mask = os.path.join(dirpath_masks, '{}.npy'.format(case_num))
