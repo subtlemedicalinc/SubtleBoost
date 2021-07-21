@@ -186,7 +186,7 @@
       "checkpoint_name": "512_mpr_07222020"
     },
     "attn_enh_vgg_0720": {
-      "max_data_sets": 200,
+      "max_data_sets": 155,
       "ssim_lambda": 0.25,
       "l1_lambda": 0.25,
       "perceptual_lambda": 0.5,
@@ -196,6 +196,9 @@
       "enh_mask": true,
       "resize": 512,
       "train_mpr": true,
+      "batch_size": 4,
+      "queue_size": 2,
+      "max_queue_size": 8,
       "file_ext": "npy",
       "checkpoint_name": "stanford_enh_vgg",
       "model_config": "attn",
