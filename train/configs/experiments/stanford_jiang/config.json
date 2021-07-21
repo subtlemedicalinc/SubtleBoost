@@ -1,6 +1,6 @@
 {
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
-  "data_dir": "/raid/jiang/projects/SubtleGad/stanford/preprocess/data",
+  "data_dir": "/raid/jiang/projects/SubtleGad/stanford/preprocess/data_h5",
   "verbose": 1,
   "gpu": 0,
   "slices_per_input": 7,
@@ -196,7 +196,7 @@
       "enh_mask": true,
       "resize": 512,
       "train_mpr": true,
-      "file_ext": "npy",
+      "file_ext": "h5",
       "checkpoint_name": "stanford_enh_vgg",
       "model_config": "attn",
       "checkpoint_dir": "/raid/jiang/projects/SubtleGad/stanford/attn_enh_vgg_0720/ckpt",
