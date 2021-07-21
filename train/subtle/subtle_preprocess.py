@@ -14,7 +14,7 @@ import sys
 import warnings
 import time
 import tempfile
-
+import pdb
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import binary_dilation, binary_erosion, rectangle, square, cube, binary_closing
@@ -541,6 +541,7 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
         im_diff = np.clip(im_diff, 0, im_diff.max())
         ###
 
+    #pdb.set_trace()
     if max_val_arr is None:
         if multi_slice_gt:
             max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], im_diff.shape[1], -1))), axis=2)
@@ -551,10 +552,14 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
     # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
 
-    # enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
-    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
+    if not multi_slice_gt:
+        enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
+    else:
+        enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
+    enh_mask = np.clip(enh_mask, 0.01, 10)
+    #print(enh_mask.min(), enh_mask.max())
     return enh_mask
 
 def get_enh_mask_t2(X_mask, Y_mask, X, center_slice, t2_csf_quant):

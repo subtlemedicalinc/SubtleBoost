@@ -4,6 +4,7 @@ import sys
 import traceback
 from functools import wraps
 from multiprocessing import Process, Queue
+import collections
 
 # From https://gist.github.com/schlamar/2311116
 def processify(func):

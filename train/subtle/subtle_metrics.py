@@ -13,7 +13,10 @@ import warnings
 import time
 import numpy as np
 
-from skimage.measure import compare_ssim
+try:
+    from skimage.measure import compare_ssim as ssim_score
+except:
+    from skimage.metrics import structural_similarity as ssim_score
 
 
 def nrmse(x_truth, x_predict, axis=None):
@@ -145,5 +148,6 @@ def ssim(x_truth, x_predict, axis=None, dynamic_range=None):
     if x_truth.dtype != x_predict.dtype:
         warnings.warn('x_truth.dtype == {} != {} == x_predict.dtype. Casting x_predict to x_truth'.format(x_truth.dtype, x_predict.dtype))
         x_predict = x_predict.astype(dtype=x_truth.dtype)
-
-    return compare_ssim(x_truth, x_predict, data_range=dynamic_range)
+    
+    score = ssim_score(x_truth, x_predict, data_range=dynamic_range)
+    return score

@@ -16,6 +16,7 @@ import h5py
 import numpy as np
 from glob import glob
 from tqdm import tqdm
+import pdb
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
         series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
@@ -129,6 +130,7 @@ def get_dicom_dirs(base_dir, override=False):
         dirs = dirs_filt[:3]
 
     dirs_split = np.array([d.split('_') for d in dirs], dtype=object)
+    #pdb.set_trace()
     try:
         dirs_sorted = np.array(dirs)[np.argsort([int(dd[0]) for dd in dirs_split])]
     except:

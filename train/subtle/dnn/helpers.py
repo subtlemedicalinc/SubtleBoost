@@ -57,6 +57,10 @@ MODEL_MAP = {
     'fboost_unet2d': {
         'model': 'generators.GeneratorFBoostUNet2D',
         'data_loader': 'slice_loader.SliceLoader'
+    },
+    'series_unet2d': {
+        'model': 'generators.GeneratorSeriesUNet2D',
+        'data_loader': 'slice_loader.SliceLoader'
     }
 }
 
