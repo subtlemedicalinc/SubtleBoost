@@ -494,7 +494,7 @@ def get_shape(input_file, file_type=None, params={'h5_key': 'data'}):
         sys.exit(-1)
 
 def get_shape_npy(input_file):
-    f = np.load(input_file, mmap_mode='r+')
+    f = np.load(input_file, mmap_mode='r')
     fs = f.shape
     if len(fs) > 4:
         return fs[-4:]
@@ -577,7 +577,7 @@ def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     return data
 
 def load_slices_npy(input_file, slices=None, dim=0):
-    d = np.load(input_file, mmap_mode='r+')
+    d = np.load(input_file, mmap_mode='r')
     if slices is None:
         return d
     else:
