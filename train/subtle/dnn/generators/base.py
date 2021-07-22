@@ -166,7 +166,7 @@ class GeneratorBase:
         if custom_optim is not None:
             optimizer = custom_optim
         elif self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad, clipnorm=1)
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad) #, clipnorm=1)
         else:
             optimizer = self.optimizer_fun()
 

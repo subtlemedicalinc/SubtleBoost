@@ -64,5 +64,5 @@ fcontent=${fcontent}--${exparg}
 job_id=$(echo ${fcontent} | sha1sum | awk '{print $1}' | cut -c1-6)
 logfile=$2/log_train_${commit}_${job_id}.log
 
-python train_process.py ${exp_str} ${gpu_str} --id ${job_id} > ${logfile} 2>${logfile}
-#python train_process.py ${exp_str} ${gpu_str} --id ${job_id}
+#python train_process.py ${exp_str} ${gpu_str} --id ${job_id} > ${logfile} 2>${logfile}
+python train_process.py ${exp_str} ${gpu_str} --id ${job_id}
