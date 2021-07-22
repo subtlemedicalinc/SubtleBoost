@@ -1,6 +1,6 @@
 {
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
-  "data_dir": "/home/srivathsa/projects/SubtleGad/stanford/preprocess/data_h5",
+  "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data_h5",
   "verbose": 1,
   "gpu": 0,
   "slices_per_input": 7,
