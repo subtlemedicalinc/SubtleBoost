@@ -576,19 +576,47 @@ def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     F.close()
     return data
 
-def load_slices_npy(input_file, slices=None, dim=0):
+def load_slices_npy(input_file, slices=None, dim=0, h5_key='data'):
     d = np.load(input_file, mmap_mode='r')
+    
+    if h5_key == 'data':
+        m = 0
+    elif h5_key == 'data_mask':
+        m = 1
+    elif h5_key == 'all':
+        m = [0, 1]
+        
     if slices is None:
-        return d
+        return d[m]
     else:
         if dim == 0:
-            return d[slices, :, :, :]
+            if h5_key == 'all':
+                d1 = d[0][slices, ...]
+                d2 = d[1][slices, ...]
+                return np.array([d1, d2])
+            else:
+                return d[m][slices, ...]
         elif dim == 1:
-            return d[:, slices, :, :]
+            if h5_key == 'all':
+                d1 = d[0][:, slices, ...]
+                d2 = d[1][:, slices, ...]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, slices, ...]
         elif dim == 2:
-            return d[:, :, slices, :]
+            if h5_key == 'all':
+                d1 = d[0][:, :, slices, :]
+                d2 = d[1][:, :, slices, :]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, :, slices, :]
         elif dim == 3:
-            return d[:, :, :, slices]
+            if h5_key == 'all':
+                d1 = d[0][..., slices]
+                d2 = d[1][..., slices]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, :, :, slices]
 
 def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}, dim=0):
     ''' Load some or all slices from data file
@@ -614,7 +642,7 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
         file_type = get_file_type(input_file)
 
     if file_type == 'npy':
-        return load_slices_npy(input_file, slices, dim=dim)
+        return load_slices_npy(input_file, slices, h5_key=params['h5_key'], dim=dim)
     elif file_type == 'h5':
         return load_slices_h5(input_file, slices, h5_key=params['h5_key'], dim=dim)
     else:

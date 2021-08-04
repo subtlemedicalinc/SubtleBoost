@@ -80,7 +80,7 @@ class SliceLoader(keras.utils.Sequence):
 
         self.uad_masks = {}
         self._init_uad_masks()
-
+        self._init_img_cache()
         self.csf_quant_dict = {}
         self._init_csf_quant_dict()
 
@@ -135,7 +135,12 @@ class SliceLoader(keras.utils.Sequence):
         }
 
         self.num_slices = len(self.slice_list_files)
-
+        
+    def _init_img_cache(self):
+        for fpath in tqdm(self.data_list, total=len(self.data_list)):
+            data, data_mask = load_file(fpath, file_type=self.file_ext, params={'h5_key': 'all'})
+            self._cache_img(fpath, data, data_mask)
+        
     def __len__(self):
         'Denotes the number of batches per epoch'
         return int(np.floor(self.num_slices / self.batch_size))
@@ -191,9 +196,10 @@ class SliceLoader(keras.utils.Sequence):
 
     def _get_slices(self, fpath, slices, dim, params={'h5_key': 'all'}):
         cache_cont = self.ims_cache.get(fpath)
-
+        from_cache = False
         if cache_cont is not None:
             data, data_mask = cache_cont
+            from_cache = True
         else:
             data, data_mask = load_file(fpath, file_type=self.file_ext, params=params)
             self._cache_img(fpath, data, data_mask)
