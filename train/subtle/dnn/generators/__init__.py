@@ -10,3 +10,4 @@ from .attn_unet2d import GeneratorAttnUNet2D
 from .branch_unet2d import GeneratorBranchUNet2D
 from .fboost_unet2d import GeneratorFBoostUNet2D
 from .ivdnet2d import GeneratorIVDNet2D
+from .series_unet2d import GeneratorSeriesUNet2D

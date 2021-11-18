@@ -14,3 +14,5 @@ tags
 tags
 app/models
 app/manifest.json
+stanford/*
+tiantan/*

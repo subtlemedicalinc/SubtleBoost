@@ -4,7 +4,9 @@
     "upsample_mode": "default",
     "num_poolings": 3,
     "num_conv_per_pooling": 3,
+    "num_channel_output": 7,
     "batch_norm": false,
+    "final_step": "conv",
     "all": {
       "padding": "same",
       "activation": "relu",
@@ -15,24 +17,17 @@
     "model_output": {
       "activation": "linear",
       "kernel_size": [1, 1]
-    }
+    },
+    "num_branch_op_channels": 7
   },
-  "lrelu": {
-    "all": {
-      "activation": "leaky_relu",
-      "lrelu_alpha": 0.2
-    }
-  },
-  "attn": {
-    "upsample_mode": "attention"
-  },
-  "series": {
+  "single": {
     "num_filters_first_conv": 32,
     "upsample_mode": "default",
     "num_poolings": 3,
-    "num_channel_output": 7,
     "num_conv_per_pooling": 3,
+    "num_channel_output": 7,
     "batch_norm": false,
+    "final_step": "conv",
     "all": {
       "padding": "same",
       "activation": "relu",
@@ -43,15 +38,8 @@
     "model_output": {
       "activation": "linear",
       "kernel_size": [1, 1]
-    }
-  },
-  "lrelu": {
-    "all": {
-      "activation": "leaky_relu",
-      "lrelu_alpha": 0.2
-    }
-  },
-  "attn": {
-    "upsample_mode": "attention"
+    },
+    "num_branch_op_channels": 7,
+    "output_channels": 1
   }
 }

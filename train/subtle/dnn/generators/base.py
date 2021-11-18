@@ -17,6 +17,7 @@ import numpy as np
 import subtle.subtle_loss as suloss
 from subtle.utils.experiment import get_model_config, get_layer_config
 from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, TrainProgressCallBack, HparamsCallback
+import pdb
 
 class GeneratorBase:
     def __init__(
@@ -49,7 +50,7 @@ class GeneratorBase:
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/train/configs/models')
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/jiang/projects/SubtleGad/train/configs/models')
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}
@@ -165,7 +166,7 @@ class GeneratorBase:
         if custom_optim is not None:
             optimizer = custom_optim
         elif self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad)
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad) #, clipnorm=1)
         else:
             optimizer = self.optimizer_fun()
 

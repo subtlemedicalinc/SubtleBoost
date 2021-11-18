@@ -80,7 +80,7 @@ class SliceLoader(keras.utils.Sequence):
 
         self.uad_masks = {}
         self._init_uad_masks()
-
+        self._init_img_cache()
         self.csf_quant_dict = {}
         self._init_csf_quant_dict()
         self._init_img_cache()

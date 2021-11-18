@@ -45,6 +45,7 @@ import subtle.subtle_metrics as sumetrics
 from preprocess import preprocess_chain
 
 import subtle.subtle_args as sargs
+import pdb
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
