@@ -60,6 +60,18 @@
     "num_modalities": 5,
     "num_branch_op_channels": 1
   },
+  "fusion_gt7ch_wavg": {
+    "final_step": "fusion_single_ch_gt7ch_wavg",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 7
+  },
+  "fusion_gt7ch_wavg_n4": {
+    "final_step": "fusion_single_ch_gt7ch_wavg",
+    "enable_uad_branch": false,
+    "num_modalities": 4,
+    "num_branch_op_channels": 7
+  },
   "simple_weighted": {
     "final_step": "simple_weighted",
     "num_modalities": 5

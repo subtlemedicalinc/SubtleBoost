@@ -83,7 +83,7 @@ class SliceLoader(keras.utils.Sequence):
 
         self.csf_quant_dict = {}
         self._init_csf_quant_dict()
-
+        self._init_img_cache()
         self.on_epoch_end()
 
     def _init_uad_masks(self):
@@ -135,6 +135,11 @@ class SliceLoader(keras.utils.Sequence):
         }
 
         self.num_slices = len(self.slice_list_files)
+
+    def _init_img_cache(self):
+        for fpath in tqdm(self.data_list, total=len(self.data_list)):
+            data, data_mask = load_file(fpath, file_type=self.file_ext, params={'h5_key': 'all'})
+            self._cache_img(fpath, data, data_mask)
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -230,8 +235,13 @@ class SliceLoader(keras.utils.Sequence):
         # the number of slices may differ but the image dimensions
         # should be the same
 
+        t1 = time.time()
+
         data_list_X = []
         data_list_X_mask = []
+
+        all_slices_X_mask = []
+
         if not self.predict:
             data_list_Y = []
             data_list_Y_mask = []
@@ -320,6 +330,7 @@ class SliceLoader(keras.utils.Sequence):
 
             data_list_X.append(slices_X)
             data_list_X_mask.append(slices_X_mask)
+            all_slices_X_mask.append(slices_mask)
 
             if not self.predict:
                 if self.multi_slice_gt:
@@ -362,15 +373,21 @@ class SliceLoader(keras.utils.Sequence):
                 if self.enh_mask_t2:
                     enh_mask = get_enh_mask_t2(X_mask, Y_mask, X, center_slice=h, t2_csf_quant=csf_quant)
                 else:
-                    enh_mask = enh_mask_smooth(X_mask, Y_mask, center_slice=h, p=self.enh_pfactor, multi_slice_gt=self.multi_slice_gt)
+                    all_slices_X_mask = np.array(all_slices_X_mask)
+                    if len(self.input_idx) == 1:
+                        # single contrast model (low-dose as input) - use zero-dose to compute mask
+                        x_input = all_slices_X_mask.copy()
+                    else:
+                        x_input = X_mask
+                    enh_mask = enh_mask_smooth(x_input, Y_mask, center_slice=h, p=self.enh_pfactor, multi_slice_gt=self.multi_slice_gt)
 
             if self.uad_mode:
                 uad_mask_list = np.array(uad_mask_list)
                 if self.use_enh_uad:
                     if self.multi_slice_gt:
-                        enh_mask = uad_mask_list.astype(np.float32)
+                        enh_mask = uad_mask_list.astype(np.float16)
                     else:
-                        enh_mask = uad_mask_list[:, h, ...][:, None, ...].astype(np.float32)
+                        enh_mask = uad_mask_list[:, h, ...][:, None, ...].astype(np.float16)
 
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
@@ -457,6 +474,7 @@ class SliceLoader(keras.utils.Sequence):
                 print('X, size = ', X.shape)
             else:
                 print('X, Y sizes = ', X.shape, Y.shape)
+        t2 = time.time()
 
         if self.predict:
             if self.brain_only:

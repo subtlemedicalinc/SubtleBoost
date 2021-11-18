@@ -8,7 +8,8 @@
     "num_modalities": 5,
     "submodel_num_channel": 14,
     "branch_unet_mode": "fusion_single_ch",
-    "avg_layer": "average"
+    "avg_layer": "average",
+    "unet_num_op_ch": 1
   },
   "t1pre_1ch": {
     "branch_unet_mode": "fusion_t1pre_final_1ch"
@@ -18,5 +19,14 @@
   },
   "wavg_t1pre_1ch": {
     "branch_unet_mode": "fusion_t1pre_final_1ch_wavg"
+  },
+  "wavg_gt7ch": {
+    "branch_unet_mode": "fusion_gt7ch_wavg",
+    "unet_num_op_ch": 7
+  },
+  "wavg_gt7ch_n4": {
+    "branch_unet_mode": "fusion_gt7ch_wavg_n4",
+    "unet_num_op_ch": 7,
+    "num_modalities": 4
   }
 }

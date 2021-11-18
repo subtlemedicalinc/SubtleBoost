@@ -17,7 +17,7 @@ class GeneratorFBoostUNet2D(GeneratorBase):
     def _transfer_weights(self, dest_model, branch_num, ckp_file, kw=None, op_layer=None, freeze=False, num_ip_channels=None):
         ip_ch = num_ip_channels if num_ip_channels is not None else self.submodel_num_channel
         src_model = GeneratorUNet2D(
-            num_channel_input=ip_ch, num_channel_output=self.num_channel_output,
+            num_channel_input=ip_ch, num_channel_output=self.unet_num_op_ch,
             img_rows=self.img_rows, img_cols=self.img_cols,
             verbose=self.verbose,
             compile_model=False,
@@ -54,7 +54,9 @@ class GeneratorFBoostUNet2D(GeneratorBase):
         model_main = self._transfer_weights(model_main, '1', self.fpaths_pre[0], freeze=True)
         model_main = self._transfer_weights(model_main, '2', self.fpaths_pre[1], freeze=True)
         model_main = self._transfer_weights(model_main, '3', self.fpaths_pre[2], freeze=True)
-        model_main = self._transfer_weights(model_main, '4', self.fpaths_pre[3], freeze=True)
+
+        if self.num_modalities == 5:
+            model_main = self._transfer_weights(model_main, '4', self.fpaths_pre[3], freeze=True)
 
         if len(self.fpaths_pre) == 5:
             model_main = self._transfer_weights(model_main, 'fbst_', self.fpaths_pre[4], kw='fbst_', op_layer='model_output', freeze=False, num_ip_channels=2)
@@ -72,11 +74,18 @@ class GeneratorFBoostUNet2D(GeneratorBase):
         print('inputs', inputs)
         num_mods = self.num_modalities
 
-        ip_names = ['t1_pre', 't1_low', 't2', 'fl', 'uad']
-        t1_pre, t1_low, t2, flair, uad = [
-            Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
-            for idx in np.arange(num_mods)
-        ]
+        if num_mods == 5:
+            ip_names = ['t1_pre', 't1_low', 't2', 'fl', 'uad']
+            t1_pre, t1_low, t2, flair, uad = [
+                Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
+                for idx in np.arange(num_mods)
+            ]
+        else:
+            ip_names = ['t1_pre', 't1_low', 't2', 'fl']
+            t1_pre, t1_low, t2, flair = [
+                Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
+                for idx in np.arange(num_mods)
+            ]
 
         model_main = GeneratorBranchUNet2D(
             num_channel_input=self.num_channel_input, num_channel_output=self.num_channel_output,

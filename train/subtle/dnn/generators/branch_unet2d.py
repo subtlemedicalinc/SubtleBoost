@@ -167,17 +167,24 @@ class GeneratorBranchUNet2D(GeneratorBase):
         print('inputs', inputs)
         num_mods = self.num_modalities
 
-        ip_names = ['t1_pre', 't1_low', 't2', 'fl', 'uad']
-        t1_pre, t1_low, t2, flair, uad = [
-            Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
-            for idx in np.arange(num_mods)
-        ]
+        if num_mods == 5:
+            ip_names = ['t1_pre', 't1_low', 't2', 'fl', 'uad']
+            t1_pre, t1_low, t2, flair, uad = [
+                Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
+                for idx in np.arange(num_mods)
+            ]
+        else:
+            ip_names = ['t1_pre', 't1_low', 't2', 'fl']
+            t1_pre, t1_low, t2, flair = [
+                Lambda(lambda ip: ip[..., idx::num_mods], name=ip_names[idx])(inputs)
+                for idx in np.arange(num_mods)
+            ]
+
 
         print('t1 pre', t1_pre)
         print('t1 low', t1_low)
         print('t2', t2)
         print('fl', flair)
-        print('uad', uad)
 
         nx, ny = self.img_rows, self.img_cols
         nc = int(t1_pre.shape[-1]) * 2
