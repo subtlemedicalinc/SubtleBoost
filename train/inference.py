@@ -29,6 +29,7 @@ import numpy as np
 from scipy.ndimage import zoom
 from scipy.ndimage.morphology import binary_fill_holes
 import sigpy as sp
+from glob import glob
 
 import keras.callbacks
 
@@ -214,14 +215,17 @@ def inference_process(args):
             print('loading preprocessed data from', args.data_preprocess)
 
         if args.file_ext == 'npy':
-            data, data_mask = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
+            data, data_mask = utils_io.load_file(args.data_preprocess, file_type=args.file_ext, params={'h5_key': 'all'})
             metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.npy', '_meta.h5'))
         else:
             data = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
             data_mask = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}, file_type=args.file_ext)
             metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.h5', '_meta.h5'))
 
-        dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+        try:
+            dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+        except Exception:
+            dicom_dirs = sorted([d for d in glob('{}/*'.format(args.path_base))])
 
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
@@ -611,7 +615,8 @@ def inference_process(args):
     #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-    utils_io.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+    
+    utils_io.write_dicoms(args.path_low, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
     # if args.brain_only:
     #     data_zero = original_data[..., 0]

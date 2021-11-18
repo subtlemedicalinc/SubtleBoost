@@ -21,6 +21,7 @@ import datetime
 import time
 import pydicom
 import warnings
+from glob import glob
 
 from scipy.ndimage import zoom, gaussian_filter
 from skimage.morphology import binary_closing
@@ -94,6 +95,29 @@ def get_images(args, metadata):
 
         dicom_dirs = utils_io.get_dicom_dirs(base_path, override=args.override)
 
+        ### only for BCH
+        # metadata['inference_only'] = True
+        # dicom_dirs = sorted([d for d in glob('{}/*'.format(base_path)) if os.path.isdir(d)])
+        # args.path_zero = dicom_dirs[0]
+        # args.path_low = dicom_dirs[1]
+        # args.path_full = args.path_low
+        # if len(dicom_dirs) == 3:
+        #     args.path_zero = [d for d in dicom_dirs if 'mprage' in d.lower()][0]
+        #     args.path_low = [
+        #         d for d in dicom_dirs if 'space' in d.lower() and 'reg' in d.lower()
+        #     ][0]
+        #     args.path_full = args.path_low
+        # else:
+        #     args.path_zero = [
+        #         d for d in dicom_dirs
+        #         if 'mprage' in d.lower() and 'smr' in d.lower()
+        #     ][0]
+        #     args.path_low = [
+        #         d for d in dicom_dirs if 'space' in d.lower() and 'reg' in d.lower()
+        #     ][0]
+        #     args.path_full = args.path_low
+        ### only for BCH
+
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
 
@@ -126,11 +150,17 @@ def get_images(args, metadata):
 
     nslices = [ims_zero.shape[0], ims_low.shape[0], ims_full.shape[0]]
 
-    if len(set(nslices)) > 1:
+    if ims_zero.shape[1] != ims_low.shape[1]:
+        ims_low = sup.center_crop(ims_low, ims_zero)
+        ims_full = sup.center_crop(ims_full, ims_zero)
+    elif len(set(nslices)) > 1:
         n_pad = np.max(nslices)
         ims_zero = np.pad(ims_zero, pad_width=[(n_pad - nslices[0], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
         ims_low = np.pad(ims_low, pad_width=[(n_pad - nslices[1], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
         ims_full = np.pad(ims_full, pad_width=[(n_pad - nslices[2], 0), (0, 0), (0, 0)], mode='constant', constant_values=0)
+
+    if args.verbose:
+        print('image sizes after resize: ', ims_zero.shape, ims_low.shape, ims_full.shape)
 
     # FIXME: assert that number of slices are the same
     ns, nx, ny = ims_zero.shape
@@ -256,25 +286,37 @@ def register(args, ims, metadata):
         low_stk = None
         full_stk = None
 
+        spacing_zero = metadata['pixel_spacing_zero']
+        spacing_low = metadata['pixel_spacing_low']
+        spacing_full = metadata['pixel_spacing_full']
+
         if args.register_with_dcm_reference:
             zero_stk = sup.dcm_to_sitk(args.path_zero)
             low_stk = sup.dcm_to_sitk(args.path_low)
             full_stk = sup.dcm_to_sitk(args.path_full)
+
+            spacing_zero = None
+            spacing_low = None
+            spacing_full = None
+
             print('registering with dcm reference')
             print(args.path_zero)
             print(args.path_low)
             print(args.path_full)
 
+            low_shape = list(low_stk.GetSize()[::-1])
+            full_shape = list(full_stk.GetSize()[::-1])
+
         stk_ref_imgs = [zero_stk, low_stk, full_stk]
 
-        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_low'], non_rigid=args.non_rigid_reg,
+        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_low, non_rigid=args.non_rigid_reg,
         ref_fixed=zero_stk, ref_moving=low_stk)
 
 
         if args.verbose:
             print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
 
-        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2, :, :], param_map=spars, verbose=args.verbose, im_fixed_spacing=metadata['pixel_spacing_zero'], im_moving_spacing=metadata['pixel_spacing_full'], non_rigid=args.non_rigid_reg,
+        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_full, non_rigid=args.non_rigid_reg,
         ref_fixed=zero_stk, ref_moving=full_stk)
 
         reg_params = [None, spars1_reg, spars2_reg]
@@ -773,7 +815,7 @@ def preprocess_multi_contrast(args):
     if not os.path.exists(fpath_t1):
         rep = 'h5' if args.file_ext == 'npy' else 'npy'
         fpath_t1 = fpath_t1.replace(args.file_ext, rep)
-    t1_data = utils_io.load_file(fpath_t1, params={'h5_key': 'all'})
+    t1_data = utils_io.load_file(fpath_t1, params={'h5_key': 'all'}).astype(np.float32)
 
     mc_kw = args.multi_contrast_kw.split(',')
     dcmdir_mc = utils_io.get_dcmdir_with_kw(args.path_base, mc_kw)
@@ -798,11 +840,28 @@ def preprocess_multi_contrast(args):
     ref_fixed = sup.dcm_to_sitk(dcmdir_t1_pre)
     ref_moving = sup.dcm_to_sitk(dcmdir_mc)
 
+    ref_z, ref_x, ref_y = ref_fixed.GetSize()[::-1]
+    t1_pre_ref = t1_pre.copy()
+
+    if ref_z > t1_pre.shape[0]:
+        diff_z = (ref_z - t1_pre.shape[0]) // 2
+        t1_pre_ref = np.pad(t1_pre, pad_width=[(diff_z, diff_z), (0, 0), (0, 0)],
+                        mode='constant', constant_values=0)
+    elif ref_z < t1_pre.shape[0]:
+        t1_pre_ref = sup.center_crop(t1_pre, np.zeros((ref_z, ref_x, ref_y)))
+
     print('Multi contrast volume shape before registration', mc_vol.shape)
     mc_vol, _ = sup.register_im(
-        t1_pre, mc_vol, param_map=reg_pmap, im_fixed_spacing=t1_spacing,
+        t1_pre_ref, mc_vol, param_map=reg_pmap, im_fixed_spacing=t1_spacing,
         im_moving_spacing=mc_spacing, ref_fixed=ref_fixed, ref_moving=ref_moving
     )
+
+    if mc_vol.shape[0] > t1_pre.shape[0]:
+        mc_vol = sup.center_crop(mc_vol, np.zeros((t1_pre.shape[0], t1_pre.shape[1], t1_pre.shape[2])))
+    elif mc_vol.shape[0] < t1_pre.shape[0]:
+        diff_z = (t1_pre.shape[0] - mc_vol.shape[0]) // 2
+        mc_vol = np.pad(mc_vol, pad_width=[(diff_z, diff_z), (0, 0), (0, 0)],
+                        mode='constant', constant_values=0)
 
     print('Multi contrast volume shape after registration', mc_vol.shape)
 

@@ -63,13 +63,7 @@ def save_video(input, output, h5_key='data'):
     anim.save(output)
 
 def plot_h5(input, output, idx=None, h5_key='data', axis=0):
-    if '.h5' in input:
-        data = utils_io.load_file(input, params={'h5_key': h5_key})
-    else:
-        data_all = utils_io.load_file(input)
-        data_idx = 0 if h5_key == 'data' else 1
-        data = data_all[data_idx]
-
+    data = utils_io.load_file(input, params={'h5_key': h5_key})
     if axis == 0:
         pass
     elif axis == 1:
@@ -144,13 +138,12 @@ def plot_multi_contrast(input, output, idx=None, h5_key='data'):
     #     data_t1 = data_full[..., :3]
     #     data_idx = 0 if h5_key == 'data' else 1
     #     data = data_all[data_idx]
-
-    data_all = utils_io.load_file(input, params={'h5_key': 'all'})
+    data_all = utils_io.load_file(input, params={'h5_key': 'all'}).astype(np.float32)
     fpath_t1 = input.replace('_T2', '').replace('_FLAIR', '')
     if not os.path.exists(fpath_t1):
         rep = 'h5' if 'npy' in input else 'npy'
         fpath_t1 = fpath_t1.replace(fpath_t1.split('/')[-1].split('.')[-1], rep)
-    data_t1 = utils_io.load_file(fpath_t1, params={'h5_key': 'all'})
+    data_t1 = utils_io.load_file(fpath_t1, params={'h5_key': 'all'}).astype(np.float32)
     data_idx = 0 if h5_key == 'data' else 1
     data = data_all[data_idx]
 
