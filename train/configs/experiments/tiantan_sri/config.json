@@ -29,6 +29,11 @@
       "scale_dicom_tags": true,
       "global_scale_ref_im0": true,
       "fsl_mask": false
+    },
+    "vmorph_noreg": {
+      "skip_registration": true,
+      "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/vmorph_noreg",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/vmorph_noreg/plots"
     }
   },
   "train": {
