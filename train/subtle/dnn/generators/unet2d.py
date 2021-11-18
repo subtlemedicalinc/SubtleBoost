@@ -132,7 +132,6 @@ class GeneratorUNet2D(GeneratorBase):
             name='{}conv_center'.format(name_prefix)
         )
 
-        print('conv center before add', conv_center)
         # residual connection
         conv_center = keras_add([pools[-1], conv_center], name='{}add_center'.format(name_prefix))
 

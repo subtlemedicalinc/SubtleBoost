@@ -196,16 +196,17 @@ class SliceLoader(keras.utils.Sequence):
 
     def _get_slices(self, fpath, slices, dim, params={'h5_key': 'all'}):
         cache_cont = self.ims_cache.get(fpath)
+        from_cache = False
 
         if cache_cont is not None:
             data, data_mask = cache_cont
+            from_cache = True
         else:
             data, data_mask = load_file(fpath, file_type=self.file_ext, params=params)
             self._cache_img(fpath, data, data_mask)
 
         ims = self._fetch_slices_by_dim(data, slices, dim)
         ims_mask = self._fetch_slices_by_dim(data_mask, slices, dim)
-
         return ims, ims_mask
 
     def _get_uad_mask_slices(self, fpath, slices, dim):

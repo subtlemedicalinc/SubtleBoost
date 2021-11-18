@@ -872,8 +872,10 @@ def preprocess_multi_contrast(args):
 
     mc_vol_mask = mc_vol * mask
 
-    ### Scaling
-    # print('Scaling...')
+    ## Scaling
+    print('Scaling...')
+    mc_vol = mc_vol / mc_vol.mean()
+    mc_vol_mask = mc_vol_mask / mc_vol_mask.mean()
     # mc_vol = np.interp(mc_vol, (mc_vol.min(), mc_vol.max()), (t1_pre.min(), t1_pre.max()))
     # mc_vol_mask = np.interp(mc_vol_mask, (mc_vol_mask.min(), mc_vol_mask.max()), (t1_pre.min(), t1_pre.max()))
 

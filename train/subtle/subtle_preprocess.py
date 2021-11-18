@@ -382,8 +382,8 @@ def get_brain_area_cm2(mask, spacing=[1., 1., 1.]):
     area_cm2 = (props[0].area * spacing_x * spacing_y) / 1e3
     return area_cm2
 
-def get_brain_portion(img, threshold=0):
-    center_mask = binary_fill_holes(img[img.shape[0] // 2] > threshold)
+def get_brain_portion(img, threshold=0, sl_ax=0):
+    center_mask = binary_fill_holes(img[img.shape[sl_ax] // 2] > threshold)
 
     regions = regionprops(label(center_mask))
     if len(regions) == 1:
@@ -395,7 +395,7 @@ def get_brain_portion(img, threshold=0):
     (x1, y1, x2, y2) = bbox
     cropped_img = img[:, x1:x2, y1:y2]
 
-    return cropped_img, bbox
+    return cropped_img, bbox, center_mask
 
 def _get_crop_range(shape_num):
     if shape_num % 2 == 0:
@@ -551,8 +551,7 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
     # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
 
-    # enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
-    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
+    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask

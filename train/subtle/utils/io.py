@@ -18,7 +18,7 @@ from glob import glob
 from tqdm import tqdm
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
-        series_desc_pre='SubtleGad:', series_desc_post='', series_num=None):
+        series_desc_pre='SubtleGad:', desc=None, series_desc_post='', series_num=None):
     """Write output numpy array to dicoms, given input dicoms.
     Args:
         input_dicom_folder (str): input dicom folder path.
@@ -62,12 +62,14 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
         dicom.SeriesNumber = str(int(series_num))
     dicom.SliceThickness = abs(delta_z)
     try:
-        dicom.StudyDescription = 'SubtleGad:' + dicom.StudyDescription
+        sdesc = desc if desc is not None else dicom.StudyDescription
+        dicom.StudyDescription = 'SubtleGad:' + sdesc
     except AttributeError:
         pass
 
     try:
-        dicom.SeriesDescription = '{} {} {}'.format(series_desc_pre, dicom.SeriesDescription, series_desc_post)
+        sdesc = desc if desc is not None else dicom.SeriesDescription
+        dicom.SeriesDescription = '{} {} {}'.format(series_desc_pre, sdesc, series_desc_post)
     except AttributeError:
         pass
 
@@ -77,7 +79,7 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
         output[np.where(output<0)] = 0
     output = output.astype(dtype)
 
-    for i in tqdm(range(output_shape[0])):
+    for i in range(output_shape[0]):
         pixel_array = output[i]
         dicom.InstanceNumber = str(i + 1)
         dicom.SOPInstanceUID = pydicom.uid.generate_uid()
@@ -307,7 +309,8 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
     return npy_list
 
 def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
-    return load_slices(input_file, slices=None, file_type=file_type, params=params)
+    slice_data = load_slices(input_file, slices=None, file_type=file_type, params=params)
+    return slice_data.astype(np.float16)
 
 def load_h5_file(h5_file, h5_key='data'):
     return load_slices_h5(h5_file, slices=None, h5_key=h5_key)
@@ -399,7 +402,7 @@ def save_data_npy(output_file, data):
     try:
         np.save(output_file, data)
         return 0
-    except:
+    except Exception as exc:
         return -1
 
 def save_data_h5(output_file, data, data_mask=None, h5_key='data', compress=False):
@@ -493,6 +496,8 @@ def get_shape(input_file, file_type=None, params={'h5_key': 'data'}):
 
 def get_shape_npy(input_file):
     f = np.load(input_file, mmap_mode='r+')
+    if f.ndim == 4:
+        f = f.transpose(1, 0, 2, 3)
     fs = f.shape
     if len(fs) > 4:
         return fs[-4:]
@@ -574,19 +579,57 @@ def load_slices_h5(input_file, slices=None, h5_key='data', dim=0):
     F.close()
     return data
 
-def load_slices_npy(input_file, slices=None, dim=0):
+def load_slices_npy(input_file, slices=None, dim=0, h5_key='data'):
     d = np.load(input_file, mmap_mode='r+')
+
+    if d.ndim == 4:
+        # for stanford 256x256 mcon
+        d = d.transpose(1, 0, 2, 3)
+        d = np.array([d, d])
+    if d.ndim == 3:
+        # uad mask
+        d = d[None]
+        d = d.transpose(1, 0, 2, 3)
+        d = np.array([d, d])
+
+    if h5_key == 'data':
+        m = 0
+    elif h5_key == 'data_mask':
+        m = 1
+    elif h5_key == 'all':
+        m = [0, 1]
+
     if slices is None:
-        return d
+        return d[m]
     else:
         if dim == 0:
-            return d[slices, :, :, :]
+            if h5_key == 'all':
+                d1 = d[0][slices, ...]
+                d2 = d[1][slices, ...]
+                return np.array([d1, d2])
+            else:
+                return d[m][slices, ...]
         elif dim == 1:
-            return d[:, slices, :, :]
+            if h5_key == 'all':
+                d1 = d[0][:, slices, ...]
+                d2 = d[1][:, slices, ...]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, slices, ...]
         elif dim == 2:
-            return d[:, :, slices, :]
+            if h5_key == 'all':
+                d1 = d[0][:, :, slices, :]
+                d2 = d[1][:, :, slices, :]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, :, slices, :]
         elif dim == 3:
-            return d[:, :, :, slices]
+            if h5_key == 'all':
+                d1 = d[0][..., slices]
+                d2 = d[1][..., slices]
+                return np.array([d1, d2])
+            else:
+                return d[m][:, :, :, slices]
 
 def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data'}, dim=0):
     ''' Load some or all slices from data file
@@ -612,7 +655,7 @@ def load_slices(input_file, slices=None, file_type=None, params={'h5_key': 'data
         file_type = get_file_type(input_file)
 
     if file_type == 'npy':
-        return load_slices_npy(input_file, slices, dim=dim)
+        return load_slices_npy(input_file, slices, h5_key=params['h5_key'], dim=dim)
     elif file_type == 'h5':
         return load_slices_h5(input_file, slices, h5_key=params['h5_key'], dim=dim)
     else:

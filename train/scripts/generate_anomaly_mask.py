@@ -28,12 +28,12 @@ import pydicom
 plt.set_cmap('gray')
 plt.rcParams['figure.figsize'] = (12, 10)
 
-pp_base_path = '/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_fl'
-raw_base_path = '/home/srivathsa/projects/studies/gad/tiantan/data'
-plot_path_template = '/home/srivathsa/projects/uad_ae/plots/fl/{case_num}_{sl}.png'
+pp_base_path = '/home/srivathsa/projects/studies/gad/stanford/preprocess/data_fl'
+raw_base_path = '/home/srivathsa/projects/studies/gad/stanford/data'
+plot_path_template = '/home/srivathsa/projects/studies/gad/stanford/plots/fl/{case_num}_{sl}.png'
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 t2_quantile = 0.99
 
 def find_pre_contrast_series(dirpath_case):
@@ -67,6 +67,15 @@ def process_and_return_sitk(case_num, full_data):
     t1_sitk = dcm_to_sitk(find_pre_contrast_series('{}/{}'.format(raw_base_path, case_num)))
     t1_mask = full_data[1, :, 0]
 #     t1_mask = np.load('{}/{}.npy'.format(pp_base_path, case_num))[1, :, 0]
+
+    ref_z, ref_x, ref_y = t1_sitk.GetSize()[::-1]
+    if ref_z > t1_mask.shape[0]:
+        diff_z = (ref_z - t1_mask.shape[0]) // 2
+        t1_mask = np.pad(t1_mask, pad_width=[(diff_z, diff_z), (0, 0), (0, 0)],
+                        mode='constant', constant_values=0)
+    elif ref_z < t1_mask.shape[0]:
+        t1_mask = center_crop(t1_mask, np.zeros((ref_z, ref_x, ref_y)))
+
     t1_mask = binary_fill_holes(t1_mask > 0.1)
     t1_mask_sitk = sitk.GetImageFromArray(t1_mask.astype(np.uint8))
     t1_mask_sitk.CopyInformation(t1_sitk)
@@ -103,13 +112,13 @@ def load_uad_model():
     model.load_checkpoint()
     return model
 
-def segment_anomalies(vae_model, case_num, full_data, prune_final_mask=False, prune_quant=0.95):
+def segment_anomalies(vae_model, case_num, full_data, prune_final_mask=False, prune_quant=0.99, init_size=256):
     t2_data = full_data[1, :, 3]
 #     t2_data = np.load('{}/{}.npy'.format(pp_base_path, case_num))[1, :, 3]
-    if t2_data.shape[1] != 256:
+    if t2_data.shape[1] != init_size:
         t2_data = t2_data.transpose(1, 2, 0)
-        pw1 = (256 - t2_data.shape[1]) // 2
-        pw2 = (256 - t2_data.shape[2]) // 2
+        pw1 = (init_size - t2_data.shape[1]) // 2
+        pw2 = (init_size - t2_data.shape[2]) // 2
         t2_data = np.pad(t2_data, pad_width=[(0, 0), (pw1, pw1), (pw2, pw2)])
 
     t2_data = resize(t2_data, (t2_data.shape[0], 128, 128))
@@ -129,9 +138,9 @@ def segment_anomalies(vae_model, case_num, full_data, prune_final_mask=False, pr
         diff_sl = median_filter(normalize_and_squeeze(diff_sl), (5, 5))
         x_diff[sl_idx, ..., 0] = diff_sl
 
-    uad_mask = resize(np.squeeze(x_diff), (x_diff.shape[0], 256, 256))
+    uad_mask = resize(np.squeeze(x_diff), (x_diff.shape[0], init_size, init_size))
 
-    if full_data.shape[-1] != 256:
+    if full_data.shape[-1] != init_size:
         uad_mask = uad_mask.transpose(2, 0, 1)
         uad_mask = center_crop(uad_mask, np.zeros((full_data.shape[1], full_data.shape[3], full_data.shape[4])))
 
@@ -159,13 +168,13 @@ def get_rgb(img):
     img = (img - np.min(img))/np.ptp(img)
     return np.dstack((img, img, img))
 
-def get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=True):
-    full_data = suio.load_file('{}/{}.h5'.format(pp_base_path, case_num), params={'h5_key': 'all'})
+def get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=True, init_size=256):
+    full_data = suio.load_file('{}/{}.npy'.format(pp_base_path, case_num), params={'h5_key': 'all'})
 
     t1_stk, t1m_stk, orig_size = process_and_return_sitk(case_num, full_data)
 
 
-    uad_mask = segment_anomalies(vae_model, case_num, full_data, prune_final_mask)
+    uad_mask = segment_anomalies(vae_model, case_num, full_data, prune_final_mask, init_size=init_size)
     final_mask = uad_mask.copy()
 
     if remove_vent:
@@ -178,6 +187,7 @@ def get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=True)
     final_mask = np.interp(final_mask, (final_mask.min(), final_mask.max()), (0, 1))
 
     return final_mask, full_data
+
 
 def overlay_mask(data, label, r=0.2, g=1.0, b=0.2):
     data_rgb = get_rgb(data)
@@ -215,28 +225,15 @@ def segviz(image, label, sl=None, title=None, fpath_plot=None, tparams=(1.0, 0.0
     else:
         plt.show()
 
-# case_info = [
-#     ('Patient_0187', 171),
-#     ('Patient_0351', 191),
-#     ('Patient_0378', 72),
-#     ('Patient_0470', 75),
-#     ('Patient_0492', 48),
-#     ('Patient_0492', 92),
-#     ('Patient_0495', 85)
-# ]
-
 if __name__ == '__main__':
     ignore_cases = [
         c.split('/')[-1].replace('.npy', '')
-        for c in glob('{}/*.npy'.format(pp_base_path.replace('data', 'uad_masks')))
+        for c in glob('{}/*.npy'.format(pp_base_path.replace('data', 'uad_fl')))
     ]
 
-    # cases = sorted([c.split('/')[-1] for c in glob('/mnt/datasets/srivathsa/tiantan/Batch1/*')])
-    # cases = sorted([c.split('/')[-1].replace('.npy', '') for c in glob('/home/srivathsa/projects/studies/gad/tiantan/preprocess/uad_masks/no_prune/*.npy')])
-
     cases = sorted([
-        c.split('/')[-1].replace('.h5', '')
-        for c in glob('{}/*.h5'.format(pp_base_path))
+        c.split('/')[-1].replace('.npy', '')
+        for c in glob('{}/*.npy'.format(pp_base_path))
         if 'meta' not in c and 'Prisma' not in c and 'TwoDim' not in c
     ])
 
@@ -249,26 +246,19 @@ if __name__ == '__main__':
             return 1
 
     cases = sorted([c for c in cases if c not in ignore_cases], key=sort_key)
-
-    # cases = ['NO31']
-
     tf.reset_default_graph()
     vae_model = load_uad_model()
     for case_num in cases:
         try:
             start = datetime.now()
 
-            uad_mask, full_data = get_anomalies(case_num, vae_model, prune_final_mask=False, remove_vent=False)
+            uad_mask, full_data = get_anomalies(case_num, vae_model, prune_final_mask=True, remove_vent=False, init_size=512)
             end = datetime.now()
             print('time elapsed for {} = {}'.format(case_num, end-start))
 
             fpath_mask = os.path.join(
-                pp_base_path.replace('data', 'uad_masks'), '{}.npy'.format(case_num)
+                pp_base_path.replace('data_fl', 'uad_fl'), '{}.npy'.format(case_num)
             )
             np.save(fpath_mask, uad_mask)
         except Exception as ex:
             print('Cannot process {}: Error:{}'.format(case_num, ex))
-
-        # th = uad_mask.max() * 0.1
-        # uad_mask_disp = uad_mask >= th
-        # segviz(full_data[1, :, 2], uad_mask_disp, sl=sl, fpath_plot=plot_path_template.format(case_num=case_num, sl=sl))
