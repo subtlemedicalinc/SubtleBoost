@@ -1,0 +1,121 @@
+from networks.baseline_agis import MMT_baseline_agis as generator
+from evaluator_brats import evaluator_brats, split_data
+from evaluator_ixi import evaluator_ixi
+import argparse
+import os
+import glob
+import numpy as np
+import torch
+from torchvision.utils import save_image
+from tqdm import tqdm
+from configs.config import get_config
+from utils import list2str, make_image_grid
+
+
+input_combination_brats = [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2],
+                     [0, 1, 3], [0, 2, 3], [1, 2, 3]]
+
+input_combination_3 = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]]
+
+input_combination_zerogad = [[0, 2, 3]]
+
+input_combination_ixi = [[0], [1], [2], [0, 1], [0, 2], [1, 2]]
+
+input_combination_2 = [[1, 2], [0, 2], [0, 1]]
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--root_path', type=str,
+                    default='/mnt/raid/jiang/projects/SubtleGAN/data/brats2021_slices_crop192x160', help='root dir for data')
+parser.add_argument('--cfg', type=str, default='configs/mmt.yml')
+parser.add_argument('--dataset', type=str,
+                    default='BRATS', help='experiment_name')
+parser.add_argument('--batch_size', type=int,
+                    default=24, help='batch_size per gpu')
+parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
+parser.add_argument('--k', type=int,
+                    default=None, help='number of inputs')
+parser.add_argument('--zero_gad', action='store_true', help='eval zero_gad')
+parser.add_argument('--ckpt', type=str, default=None)
+parser.add_argument('--model_path', type=str, default=None)
+parser.add_argument('--vis', action='store_true', help='visualize results')
+parser.add_argument('--seg', action='store_true', help='test seg acc')
+parser.add_argument('--masked', action='store_true', help='test similarity within tumor mask')
+parser.add_argument('--vis_dir', type=str, default='vis')
+parser.add_argument('--seed', type=int,
+                    default=1234, help='random seed')
+parser.add_argument('--n_contrast', type=int, default=4, help='total number of contrast in the dataset')
+
+args = parser.parse_args()
+
+
+def vis_results(model, inputs, targets, files, model_path, split, vis_dir='vis'):
+    input_tag = list2str(inputs)
+    model.eval()
+    with torch.no_grad():
+        for file in tqdm(files):
+            data = np.load(file)
+            n_channel = data.shape[0]
+            image = torch.from_numpy(data.astype(np.float32)).unsqueeze(0)
+            data = [image[:, i, :, :].unsqueeze(0) for i in range(n_channel)]  # [(1, 1, H, W)]
+            img_inputs, img_targets, contrast_input, contrast_output = split_data(data, inputs, targets)
+            img_outputs = model(img_inputs, contrast_input, contrast_output)
+
+            # save results
+            case = file.split("/")[-2]
+            save_dir = os.path.join(model_path, vis_dir, split, input_tag, case)
+            os.makedirs(save_dir, exist_ok=True)
+            slice_num = file.split("/")[-1].split(".")[0]
+            save_image(make_image_grid(img_inputs), f'{save_dir}/{slice_num}_input.png')
+            save_image(make_image_grid(img_outputs), f'{save_dir}/{slice_num}_output.png')
+            save_image(make_image_grid(img_targets), f'{save_dir}/{slice_num}_gt.png')
+
+
+def visualize_results(args, model, input_combination, split='test', vis_dir='vis'):
+    data_dir = os.path.join(args.root_path, split)
+    if args.dataset == 'BRATS':
+        cases = glob.glob(f"{data_dir}/Bra*")
+    else:
+        cases = glob.glob(f"{data_dir}/IXI*")
+    files = []
+    # get all slices
+    for case in cases:
+        files += glob.glob(f'{case}/*.npy')
+    print("The length of data set is: {}".format(len(files)))
+    for inputs in input_combination:
+        targets = list(set(range(args.n_contrast)) - set(inputs))
+        print(f"***Inputs: {inputs}; Outputs: {targets}")
+        vis_results(model, inputs, targets, files, args.model_path, split, vis_dir=vis_dir)
+
+
+if __name__ == "__main__":
+    G = generator(n_contrast=args.n_contrast).cuda()
+
+    state_dict = torch.load(os.path.join(args.model_path, args.ckpt), map_location='cpu')
+    G.load_state_dict(state_dict['G'])
+    G.eval()
+
+    if args.zero_gad:
+        input_combination = input_combination_zerogad
+    elif args.k == 3:
+        input_combination = input_combination_3
+    elif args.k == 2:
+        input_combination = input_combination_2
+    else:
+        input_combination = input_combination_brats if args.dataset == 'BRATS' else input_combination_ixi
+    if args.vis:
+        visualize_results(args, G, input_combination, split='test', vis_dir=args.vis_dir)
+
+    if args.dataset == 'BRATS':
+        metrics, metrics_seg, metrics_masked = evaluator_brats(args, G, input_combination, split='test', seg=args.seg,
+                                                           masked=args.masked)
+    else:
+        metrics = evaluator_ixi(args, G, input_combination, split='test')
+
+    with open(os.path.join(args.model_path, args.vis_dir, "test_results.txt"), "w") as f:
+        for i in range(len(input_combination)):
+            output_combination = list(set(range(args.n_contrast)) - set(input_combination[i]))
+            for j in range(len(metrics[i])):
+                for m in ['ssim', 'mae', 'psnr', 'mse']:
+                    msg = f'test_{list2str(input_combination[i])}/{m}_{output_combination[j]}: {metrics[i][j][m]}'
+                    f.write(msg)
+                    print(msg)
