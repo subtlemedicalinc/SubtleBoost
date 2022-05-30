@@ -54,21 +54,30 @@ python compute_attn_score.py --model_path /mnt/raid/jiang/projects/SubtleGAN/mod
 
 ## Trained models
 ### MMT models
-* MMT-random:
-`/mnt/raid/jiang/projects/SubtleGAN/model_fluidstack/MMT/MMTUNetHybrid_GAN_ls_random_s_c_MMT_epo75_bs32_lrg0.0005_192_opt-adamw/epoch_74.pth`
-* MMT-single:
-`/mnt/raid/jiang/projects/SubtleGAN/model/MMT/MMTUNetHybrid_GAN_s_c_MMT_epo50_bs24_lrg0.0005_192_opt-adamw/epoch_49.pth` (This model is trained without label-smoothing (LS) and batch size 24. A new model with LS and batch size 32 may be needed for consistency in the paper.)
-* MMT-zerogad:
-`/mnt/raid/jiang/projects/SubtleGAN/model_fluidstack/MMT/MMTUNetHybrid_GAN_ls_zerogad_s_c_MMT_epo50_bs32_lrg0.0005_192_opt-adamw/epoch_31.pth`
-### Baseline models
-* Baseline-random:
-`/mnt/raid/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_random_MMT_epo100_bs16_lrg0.0001_192/epoch_49.pth` 
-* Baseline-single:
-`/mnt/raid/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_MMT_epo100_bs16_lrg0.0001_192/epoch_49.pth`
-* Baseline-zerogad:
-`/mnt/raid/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_zerogad_MMT_epo100_bs16_lrg0.0001_192/epoch_49.pth`
-
-
+* Random:
+`/mnt/raid/jiang/projects/SubtleGAN/MMTUNetHybrid/model/fluidstack_models/finetuned_models/MMT_random_0202_epo100_bs32_lrg0.0005_5.0_20.0_0.0_0.1/best_mae.pth` (BraTS)
+`/mnt/raid/jiang/projects/SubtleGAN/MMTUNetHybrid/model/IXI_random_new_epo100_bs20_lrg0.0005_5.0_20.0_0.0_0.1/best_mae.pth` (IXI)
+* Single:
+`/mnt/raid/jiang/projects/SubtleGAN/MMTUNetHybrid/model/IXI_random_new_epo100_bs20_lrg0.0005_5.0_20.0_0.0_0.1/best_mae.pth` (BraTS)
+  `/mnt/raid/jiang/projects/SubtleGAN/MMTUNetHybrid/model/IXI_single_0217_epo100_bs20_lrg0.0005_5.0_20.0_0.0_0.1/best_mae.pth` (IXI)
+* Zerogad:
+`/mnt/datasets/jiang/projects/SubtleGAN/model_fluidstack/MMT/MMTUNetHybrid_GAN_ls_zerogad_s_c_MMT_epo50_bs32_lrg0.0005_192_opt-adamw/epoch_31.pth`
+### MILR models
+* Random:
+`/mnt/datasets/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_random_MMT_epo100_bs16_lrg0.0001_192/epoch_99.pth` (BraTS)
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMT/IXI_Baseline_agis_random_MMT_epo100_bs16_lrg0.0001_192/epoch_99.pth` (IXI)
+* Single:
+  `/mnt/datasets/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_MMT_epo100_bs16_lrg0.0001_192/epoch_99.pth` (BraTS)
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMT/IXI_Baseline_agis_single_MMT_epo100_bs16_lrg0.0001_192/epoch_99.pth` (IXI)
+* Zerogad:
+`/mnt/datasets/jiang/projects/SubtleGAN/model/MMT/MMTBaseline_agis_zerogad_MMT_epo100_bs16_lrg0.0001_192/epoch_49.pth`
+### MMGAN models
+* Random:
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMGAN/mmgan_brats_zeros_cl_random_0110/generator_param_mmgan_brats_zeros_cl_random_0110_60.pkl` (BraTS)
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMGAN/mmgan_ixi_random_0118/generator_param_mmgan_ixi_random_0118_60.pkl` (IXI)
+* Single:
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMGAN/mmgan_brats_zeros_cl_single_0110/generator_param_mmgan_brats_zeros_cl_single_0110_60.pkl` (BraTS)
+  `/mnt/raid/jiang/projects/SubtleGAN/MMT/model/MMGAN/mmgan_ixi_single_0118/generator_param_mmgan_ixi_single_0118_60.pkl` (IXI)
 ## Reference
 * [TransUNet](https://github.com/Beckschen/TransUNet)
 * [Swin Transformer](https://github.com/google-research/vision_transformer)

@@ -7,6 +7,7 @@ np.random.seed(1337)
 torch.manual_seed(1337)
 random.seed(1337)
 torch.backends.cudnn.deterministic = True
+from kornia.geometry.transform import resize
 def weights_init_normal(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
@@ -99,6 +100,8 @@ class GeneratorUNet(nn.Module):
 
     def forward(self, x):
         # U-Net generator with skip connections from encoder to decoder
+        if x.shape[2] != 256:
+            x = resize(x, (256, 256)).detach()
         d1 = self.down1(x)
         d2 = self.down2(d1)
         d3 = self.down3(d2)
@@ -114,7 +117,7 @@ class GeneratorUNet(nn.Module):
         u5 = self.up5(u4, d3)
         u6 = self.up6(u5, d2)
         u7 = self.up7(u6, d1)
-
+        
         return self.final(u7)
 
 

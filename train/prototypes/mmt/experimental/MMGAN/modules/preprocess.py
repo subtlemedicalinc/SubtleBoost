@@ -135,10 +135,10 @@ for run_on in run_on_list:
         if 'segmasks' in run_on:
             # there are no channels for segmasks
             k = im[m[0]:m[1], m[2]:m[3], m[4]:m[5]]
-            k = np.pad(k, ((8, 8), (8, 8), (0, 0)), mode='constant')
+            #k = np.pad(k, ((8, 8), (8, 8), (0, 0)), mode='constant')
         else:
             k = im[:, m[0]:m[1], m[2]:m[3], m[4]:m[5]]
-            k = np.pad(k, ((0, 0), (8, 8), (8, 8), (0, 0)), mode='constant')
+            #k = np.pad(k, ((0, 0), (8, 8), (8, 8), (0, 0)), mode='constant')
 
         if run_on in std_list:
             # save the image to this numpy array

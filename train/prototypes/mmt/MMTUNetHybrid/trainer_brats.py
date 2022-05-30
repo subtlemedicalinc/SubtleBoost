@@ -200,6 +200,8 @@ def trainer_brats(args, G, D, snapshot_path):
         n_contrast = model_G.n_contrast
         contrasts = list(range(n_contrast))
         for i_batch, data in enumerate(tqdm(trainloader)):
+            import pdb
+            pdb.set_trace()
             img_data = data[:-1]
             img_data = [d.detach().cuda() for d in img_data]
             loss_g = 0

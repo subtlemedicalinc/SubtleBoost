@@ -68,10 +68,10 @@ config['train_lgg_patients'] = 0 # number of LGG patients in training
 config['validation_patients'] = 63 # number of patients in validation
 
 config['batch_size'] = 1 # how many images to load at once in the generator
-
-config['cropping_coords'] = [0, 240, 0, 240, 50, 130] # coordinates used to crop the volumes, this is generated using the notebook checkLargestCropSize.ipynb
-#config['size_after_cropping'] = [240, 240, 80] # set this if you set the above variable. Calculate this using the notebook again.
-config['size_after_cropping'] = [256, 256, 80]
+#config['cropping_coords'] = [0, 240, 0, 240, 50, 130]
+config['cropping_coords'] = [32, 224, 38, 198, 50, 130] # coordinates used to crop the volumes, this is generated using the notebook checkLargestCropSize.ipynb
+#config['size_after_cropping'] = [256, 256, 80] # set this if you set the above variable. Calculate this using the notebook again.
+config['size_after_cropping'] = [192, 160, 80]
 
 #config['data_split'] = {'train': 98, 'test': 2}
 

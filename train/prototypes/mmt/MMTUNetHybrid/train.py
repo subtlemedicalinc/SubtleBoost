@@ -78,7 +78,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
     dataset_name = args.dataset
 
-    snapshot_path = f"model/{args.exp}_epo{args.max_epochs}_bs{args.batch_size*args.n_gpu}_lrg{args.base_lr_g}_s{args.seed}_opt-{args.optimizer}"
+    snapshot_path = f"model/{args.exp}_epo{args.max_epochs}_bs{args.batch_size*args.n_gpu}_lrg{args.base_lr_g}_{args.lambda_self}_{args.lambda_cross}_{args.lambda_triplet}_{args.lambda_GAN}"
     os.makedirs(snapshot_path, exist_ok=True)
 
     config = get_config(args)

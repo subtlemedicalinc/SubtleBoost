@@ -20,6 +20,22 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import mean_squared_error as mse
 from sklearn.metrics import mean_absolute_error as mae
+import lpips
+
+
+loss_fn_vgg = lpips.LPIPS(net='vgg')
+
+
+def lpips_metrics(img1, img2):
+    img1 = torch.from_numpy(img1).unsqueeze(0).unsqueeze(0)
+    img2 = torch.from_numpy(img2).unsqueeze(0).unsqueeze(0)
+    img1 = torch.cat((img1, img1, img1), dim=1)
+    img2 = torch.cat((img2, img2, img2), dim=1)
+    img1 = 2*img1 - 1
+    img2 = 2*img2 - 1
+    score = loss_fn_vgg(img1, img2)
+    return score.item()
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -55,7 +71,7 @@ def recon_loss(outputs, targets, criterion):
 
 
 def eval_ixi(model, inputs, targets, dataloader):
-    metrics_meters = [[AverageMeter() for _ in range(4)] for _ in range(len(targets))]
+    metrics_meters = [[AverageMeter() for _ in range(5)] for _ in range(len(targets))]
     model.eval()
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
@@ -76,12 +92,14 @@ def eval_ixi(model, inputs, targets, dataloader):
                     metrics_meters[i][1].update(mae(img_o, img_t))
                     metrics_meters[i][2].update(ssim(img_o, img_t))
                     metrics_meters[i][3].update(psnr(img_t, img_o))
+                    metrics_meters[i][4].update(lpips_metrics(img_t, img_o))
     metrics = [{} for _ in range(len(targets))]
     for i in range(len(targets)):
         metrics[i]['mse'] = metrics_meters[i][0].avg
         metrics[i]['mae'] = metrics_meters[i][1].avg
         metrics[i]['ssim'] = metrics_meters[i][2].avg
         metrics[i]['psnr'] = metrics_meters[i][3].avg
+        metrics[i]['lpips'] = metrics_meters[i][4].avg
     print(f"***Inputs: {inputs}; Outputs: {targets}; {metrics}")
     return metrics
 

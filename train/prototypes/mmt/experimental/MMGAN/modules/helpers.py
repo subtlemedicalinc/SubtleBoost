@@ -118,6 +118,7 @@ class BrainMRIData(Dataset):
             raise ValueError("Invalid dataset name, please check")
 
         self.h5path = h5path
+        print(h5path)
         self.h5file = h5py.File(h5path, 'r')
         # file was pickled in Python 2, so to open in Python 3
         # we need to set encoding
@@ -238,6 +239,7 @@ class BrainMRIData(Dataset):
         """
         # remove all negative values
         im[im < 0] = 0.0
+        im[im == 0.0] = 1e-15
         for m in range(0, 4):
             if len(im.shape) > 4:
                 for k in range(0, im.shape[0]):

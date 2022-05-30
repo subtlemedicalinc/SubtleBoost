@@ -318,7 +318,9 @@ for epoch in range(opt.epoch, opt.n_epochs, 1):
 
             logger.debug("\tSplicing batch from x_real")
             x_r = x_patient[batch_idx:batch_idx + opt.batch_size, ...].cuda().type(Tensor)
-
+            
+            #pdb.set_trace()
+            
             if opt.c_learning == 1:
                 # Curriculum Learning: Train with easier cases in the first epochs, then start training on harder ones
                 if epoch <= 10:

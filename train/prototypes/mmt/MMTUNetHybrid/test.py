@@ -139,7 +139,7 @@ if __name__ == "__main__":
         for i in range(len(input_combination)):
             output_combination = list(set(range(args.n_contrast)) - set(input_combination[i]))
             for j in range(len(metrics[i])):
-                for m in ['ssim', 'mae', 'psnr', 'mse']:
+                for m in ['ssim', 'mae', 'psnr', 'mse', 'lpips']:
                     msg = f'test_{list2str(input_combination[i])}/{m}_{output_combination[j]}: {metrics[i][j][m]}\n'
                     f.write(msg)
                     print(msg)
