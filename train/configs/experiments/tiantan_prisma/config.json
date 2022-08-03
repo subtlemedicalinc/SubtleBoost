@@ -1,26 +1,29 @@
 {
-  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+  "data_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
   "verbose": 1,
   "gpu": 0,
   "model_name": "unet2d",
-  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/checkpoints",
   "slices_per_input": 7,
   "preprocess": {
-    "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "dicom_data": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
     "transform_type": "affine",
+    "skip_hist_norm": true,
     "normalize": true,
     "normalize_fun": "mean",
-    "discard_start_percent": 0,
-    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
-    "discard_end_percent": 0,
-    "scale_matching": true,
-    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
-    "fsl_mask": true,
-    "fsl_mask_all_ims": true,
-    "pad_for_size": 256,
-    "mask_threshold": 0.1,
     "joint_normalize": true,
-    "save_preprocess_video": true
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+    "dicom_data": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": false,
+    "use_fsl_reg": false,
+    "mask_threshold": 0.1,
+    "scale_matching": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
+    "file_ext": "h5",
+    "pad_for_size": 256
   },
   "train": {
   },
@@ -29,18 +32,19 @@
     "inference_mpr": true,
     "learn_residual": false,
     "description": "mpr_20190711",
-    "num_rotations": 5,
-    "checkpoint": "mpr_20190711.checkpoint",
-    "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
-    "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
+    "num_rotations": 3,
+    "procs_per_gpu": 3,
+    "predict_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/gen_siemens/inference",
     "inference_mpr_avg": "mean",
     "resize": 256,
     "zoom": 0,
     "series_num": 1002,
-    "enh_mask": {
-      "checkpoint": "enh_vgg.checkpoint",
-      "description": "enh_vgg"
+    "enh_vgg": {
+      "checkpoint": "siemens_enh_vgg.checkpoint",
+      "description": "siemens_enh_vgg",
+      "file_ext": "h5"
     }
   }
 }
