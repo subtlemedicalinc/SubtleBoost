@@ -43,11 +43,15 @@ parser.add_argument('--vis_dir', type=str, default='vis')
 parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--n_contrast', type=int, default=4, help='total number of contrast in the dataset')
+parser.add_argument('--save_enc_out', action='store_true', help='Saves encoder output from MMT model - useful for t-SNE visualization')
 
 args = parser.parse_args()
 
+get_op_comb = lambda ip_comb: (
+    [0] if args.k == 4 else list(set(range(args.n_contrast)) - set(ip_comb))
+)
 
-def vis_results(model, inputs, targets, files, model_path, split, vis_dir='vis', dataset='BRATS'):
+def vis_results(model, inputs, targets, files, model_path, split, vis_dir='vis', dataset='BRATS', save_enc_out=False):
     input_tag = list2str(inputs)
     model.eval()
     with torch.no_grad():
@@ -60,7 +64,7 @@ def vis_results(model, inputs, targets, files, model_path, split, vis_dir='vis',
             if dataset == 'Spine':
                 img_outputs = generate_spine_images(data, model, contrast_input, contrast_output)
             else:
-                img_outputs, _, _ = model(img_inputs, contrast_input, contrast_output)
+                img_outputs, enc_out, _ = model(img_inputs, contrast_input, contrast_output)
 
             # save results
             case = file.split("/")[-2]
@@ -70,12 +74,17 @@ def vis_results(model, inputs, targets, files, model_path, split, vis_dir='vis',
             save_image(make_image_grid(img_inputs), f'{save_dir}/{slice_num}_input.png')
             save_image(make_image_grid(img_outputs), f'{save_dir}/{slice_num}_output.png')
             save_image(make_image_grid(img_targets), f'{save_dir}/{slice_num}_gt.png')
-            
-            
+
+            if save_enc_out:
+                for idx, enc_tns in enumerate(enc_out):
+                    enc_npy = enc_tns.cpu().detach().numpy()
+                    np.save(f'{save_dir}/{slice_num}_enc_out_{idx}.npy', enc_npy)
+
+
 def visualize_results(args, model, input_combination, split='test', vis_dir='vis'):
     data_dir = os.path.join(args.root_path, split)
     if args.dataset == 'BRATS':
-        cases = glob.glob(f"{data_dir}/Bra*")
+        cases = glob.glob(f"{data_dir}/*")
     elif args.dataset == 'IXI':
         cases = glob.glob(f"{data_dir}/IXI*")
     else:
@@ -86,9 +95,9 @@ def visualize_results(args, model, input_combination, split='test', vis_dir='vis
         files += glob.glob(f'{case}/*.npy')
     print("The length of data set is: {}".format(len(files)))
     for inputs in input_combination:
-        targets = list(set(range(args.n_contrast)) - set(inputs))
+        targets = get_op_comb(inputs)
         print(f"***Inputs: {inputs}; Outputs: {targets}")
-        vis_results(model, inputs, targets, files, args.model_path, split, vis_dir=vis_dir, dataset=args.dataset)
+        vis_results(model, inputs, targets, files, args.model_path, split, vis_dir=vis_dir, dataset=args.dataset, save_enc_out=args.save_enc_out)
 
 
 if __name__ == "__main__":
@@ -118,6 +127,8 @@ if __name__ == "__main__":
 
     if args.zero_gad:
         input_combination = input_combination_zerogad
+    elif args.k == 4:
+        input_combination = [[0, 1, 2, 3]]
     elif args.k == 3:
         input_combination = input_combination_3
     elif args.k == 2:
@@ -135,9 +146,12 @@ if __name__ == "__main__":
     else:
         metrics = evaluator_spine(args, G, input_combination, split='test')
 
+    get_op_comb = lambda ip_comb: (
+        [[0]] if args.k == 4 else list(set(range(args.n_contrast)) - set(ip_comb))
+    )
     with open(os.path.join(args.model_path, args.vis_dir, "test_results.txt"), "w") as f:
         for i in range(len(input_combination)):
-            output_combination = list(set(range(args.n_contrast)) - set(input_combination[i]))
+            output_combination = get_op_comb(input_combination[i])
             for j in range(len(metrics[i])):
                 for m in ['ssim', 'mae', 'psnr', 'mse', 'lpips']:
                     msg = f'test_{list2str(input_combination[i])}/{m}_{output_combination[j]}: {metrics[i][j][m]}\n'
@@ -145,7 +159,7 @@ if __name__ == "__main__":
                     print(msg)
         if args.masked:
             for i in range(len(input_combination)):
-                output_combination = list(set(range(args.n_contrast)) - set(input_combination[i]))
+                output_combination = get_op_comb(input_combination[i])
                 for j in range(len(metrics[i])):
                     for m in ['masked_mae', 'masked_psnr', 'masked_mse']:
                         msg = f'test_masked{list2str(input_combination[i])}/{m}_{output_combination[j]}: {metrics_masked[i][j][m]}\n'

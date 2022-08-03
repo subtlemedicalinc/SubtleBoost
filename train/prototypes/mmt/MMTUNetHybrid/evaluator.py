@@ -118,9 +118,10 @@ def eval_brats(model, inputs, targets, dataloader, seg=False, masked=False):
                 for j in range(output_imgs.shape[0]):
                     img_o = output_imgs[j, 0, :, :]
                     img_t = target_imgs[j, 0, :, :]
+
                     img_max = img_t.max()
-                    img_o /= img_max
-                    img_t /= img_max
+                    img_o /= (img_max + 1e-8) # to avoid nan error
+                    img_t /= (img_max + 1e-8)
                     img_o = img_o.clip(0, 1)
                     metrics_meters[i][0].update(mse(img_o, img_t))
                     metrics_meters[i][1].update(mae(img_o, img_t))
@@ -272,7 +273,7 @@ def generate_spine_images(img_data, model, contrast_input, contrast_output, crop
             for output_img, output_patch in zip(output_imgs, output_patches):
                 output_img[:, :, x:x+crop_size, y:y+crop_size] = output_patch
     return output_imgs
-    
+
 
 def eval_spine(model, inputs, targets, dataloader):
     metrics_meters = [[AverageMeter() for _ in range(4)] for _ in range(len(targets))]

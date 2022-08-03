@@ -197,7 +197,7 @@ class MMTDecoderBlock(nn.Module):
         attn_windows, attn = self.cross_attn(x_q=self.with_pos_embed(x_windows, contrast_token),
                                        x_k=self.with_pos_embed(x_kv_windows, contrast_embed),
                                        x_v=x_kv_windows, mask=self.attn_mask, return_attention=return_attention)  # nW*B, window_size*window_size*n_contrast, C
-        
+
         # merge windows
         attn_windows = attn_windows.view(-1, n_contrast, self.window_size[0], self.window_size[1], C) # nW*B, n_contrast, window_size, window_size, C
 
@@ -397,7 +397,7 @@ class MMT(nn.Module):
                                 num_heads=num_heads, window_size=window_size, mlp_ratio=mlp_ratio,
                                 qkv_bias=qkv_bias, qk_scale=qk_scale, drop_rate=drop_rate, drop_path_rate=drop_path_rate,
                                 ape=ape, patch_norm=patch_norm, use_checkpoint=use_checkpoint)
-        
+
         # build transformer decoder layers
         self.layers_dec = nn.ModuleList()
         for i_layer in range(self.num_layers):

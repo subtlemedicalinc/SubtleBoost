@@ -39,7 +39,7 @@ class BRATS_dataset(Dataset):
         self.transform = transform  # using transform in torch!
         self.data_dir = os.path.join(base_dir, split)
         data_list = []
-        cases = glob.glob(f"{self.data_dir}/Bra*")
+        cases = glob.glob(f"{self.data_dir}/*")
         for case in cases:
             files = glob.glob(f'{case}/*.npy')
             data_list += files

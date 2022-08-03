@@ -435,7 +435,7 @@ class SwinUNet(nn.Module):
         return dec_out
 
     def forward(self, x, contrast_embeds):
-        enc_out = self.forward_encoder(x, contrast_embeds=contrast_embeds) # list of skip connections 
+        enc_out = self.forward_encoder(x, contrast_embeds=contrast_embeds) # list of skip connections
         dec_out = self.forward_decoder(enc_out, contrast_embeds=contrast_embeds) # multi-scale outputs
         return dec_out
 
