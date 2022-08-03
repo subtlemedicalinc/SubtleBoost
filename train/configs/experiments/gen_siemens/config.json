@@ -116,7 +116,7 @@
       "description": "siemens_simple_vgg"
     },
     "enh_vgg": {
-      "resize": 256,
+      "resize": 512,
       "resample_isotropic": 1,
       "num_rotations": 3,
       "file_ext": "h5",

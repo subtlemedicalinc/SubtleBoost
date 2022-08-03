@@ -28,7 +28,9 @@
       "joint_normalize": true,
       "scale_dicom_tags": true,
       "global_scale_ref_im0": true,
-      "fsl_mask": false
+      "fsl_mask": false,
+      "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data_old_pp",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots/old_pp"
     },
     "vmorph_noreg": {
       "skip_registration": true,
@@ -95,6 +97,29 @@
       "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
       "checkpoint_name": "enh_vgg_wssim",
       "file_ext": "h5"
+    },
+    "enh_vgg_2d": {
+      "train_mpr": false,
+      "slices_per_input": 1,
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.45,
+      "perceptual_lambda": 0.15,
+      "enh_mask": true,
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+      "checkpoint_name": "enh_vgg_2d",
+      "file_ext": "h5"
+    },
+    "enh_vgg_multi": {
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.45,
+      "perceptual_lambda": 0.15,
+      "enh_mask": true,
+      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+      "checkpoint_name": "enh_vgg_multi",
+      "file_ext": "h5",
+      "multi_slice_gt": true
     },
     "enh_vgg_1ch_sc": {
       "slices_per_input": 1,
@@ -193,7 +218,7 @@
     "slices_per_input": 7,
     "description": "nonzero_init",
     "num_rotations": 5,
-    "procs_per_gpu": 2,
+    "procs_per_gpu": 3,
     "file_ext": "h5",
     "checkpoint": "nonzero_init_7ch.checkpoint",
     "predict_dir": "/home/srivathsa/projects/studies/gad/tiantan/data",
@@ -244,9 +269,18 @@
       "inference_mpr": true,
       "slices_per_input": 7,
       "file_ext": "h5",
-      "num_rotations": 5,
+      "num_rotations": 3,
       "checkpoint": "enh_vgg.checkpoint",
       "description": "enh_vgg",
+      "override": true
+    },
+    "enh_vgg_2d": {
+      "inference_mpr": false,
+      "slices_per_input": 1,
+      "file_ext": "h5",
+      "num_rotations": 1,
+      "checkpoint": "enh_vgg_2d.checkpoint",
+      "description": "enh_vgg_2d",
       "override": true
     },
     "enh_mask_attn": {
