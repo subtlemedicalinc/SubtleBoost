@@ -91,6 +91,7 @@ def _preprocess_args(parser):
     parser.add_argument('--noise_mask_area', action='store_true', dest='noise_mask_area', help="If True, region with the largest area will be picked as a noise mask after performing connected components", default=False)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
     parser.add_argument('--register_with_dcm_reference', action='store_true', dest='register_with_dcm_reference', help="If true, a SITK instance derived from the DCM images will be passed as reference. This helps in passing the exact image origin, cosine direction etc.,", default=False)
+    parser.add_argument('--reg_n_levels', type=int, action='store', dest='reg_n_levels', help='Number of levels of affine registration', default=4)
     parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
     parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
     parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)

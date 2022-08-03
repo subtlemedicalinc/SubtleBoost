@@ -198,6 +198,7 @@ def mask_images(args, ims, metadata):
             'fn': lambda images: images * sup.mask_im(images, threshold=args.mask_threshold, noise_mask_area=args.noise_mask_area)
         })
     else:
+        mask = np.ones_like(ims)
         metadata['mask'] = 0
 
     return ims, mask, metadata
@@ -276,7 +277,7 @@ def hist_norm(args, ims, metadata):
     return ims, metadata
 
 def register(args, ims, metadata):
-    spars = sitk.GetDefaultParameterMap(args.transform_type)
+    spars = sitk.GetDefaultParameterMap(args.transform_type, args.reg_n_levels)
 
     if not args.skip_registration:
         metadata['reg'] = 1
