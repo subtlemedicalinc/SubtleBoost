@@ -5,7 +5,7 @@ Network architecture for SubtleGad project.
 Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
-
+import os
 import tensorflow as tf
 import keras.models
 import keras.callbacks
@@ -17,11 +17,12 @@ import numpy as np
 import subtle.subtle_loss as suloss
 from subtle.utils.experiment import get_model_config, get_layer_config
 from subtle.dnn.callbacks import TensorBoardCallBack, TensorBoardImageCallback, TrainProgressCallBack, HparamsCallback
+import pdb
 
 class GeneratorBase:
     def __init__(
         self, num_channel_input=1, num_channel_output=1, img_rows=128, img_cols=128, img_depth=128, optimizer_fun=Adam, lr_init=None, optim_amsgrad=True, loss_function=suloss.l1_loss, metrics_monitor=[suloss.l1_loss], verbose=True, checkpoint_file=None, log_dir=None, job_id='', save_best_only=True, compile_model=True,
-        model_config='base', tunable_params=None
+        model_config='base', tunable_params=None, fpaths_pre=[], transfer_weights=True
     ):
         self.num_channel_input = num_channel_input
         self.num_channel_output = num_channel_output
@@ -41,13 +42,16 @@ class GeneratorBase:
         self.optim_amsgrad = optim_amsgrad
         self.model_config = model_config
         self.tunable_params = tunable_params
+        self.fpaths_pre = fpaths_pre
+        self.transfer_weights = transfer_weights
 
         self.model = None # to be assigned by _build_model() in children classes
 
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/srivathsa/projects/SubtleGad/train/configs/models')
+        dpath_config = '{}/projects/SubtleGad/train/configs/models'.format(os.path.expanduser('~'))
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config=dpath_config)
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}
@@ -89,7 +93,7 @@ class GeneratorBase:
     def callback_csv(self, fpath_csv):
         return keras.callbacks.CSVLogger(fpath_csv, append=True)
 
-    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=16, gan_mode=False, use_enh_mask=False, enh_pfactor=1.0, detailed_plot=True, plot_list=None, file_ext=None):
+    def callback_tbimage(self, data_list, slice_dict_list, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, tag='test', gen_type='legacy', log_dir=None, shuffle=False, image_index=None, input_idx=[0,1], output_idx=[2], slice_axis=0, resize=None, resample_size=None, brain_only=None, brain_only_mode=None, model_name=None, block_size=64, block_strides=16, gan_mode=False, use_enh_mask=False, enh_pfactor=1.0, detailed_plot=True, plot_list=None, file_ext=None, uad_mask_path=None, uad_ip_channels=1, uad_file_ext=None, use_enh_uad=False, use_uad_ch_input=False, uad_mask_threshold=0.1, enh_mask_t2=False, multi_slice_gt=False):
         if log_dir is None:
             _log_dir = self.log_dir
         else:
@@ -125,7 +129,16 @@ class GeneratorBase:
                 enh_pfactor=enh_pfactor,
                 detailed_plot=detailed_plot,
                 plot_list=plot_list,
-                file_ext=file_ext)
+                file_ext=file_ext,
+                uad_mask_path=uad_mask_path,
+                use_enh_uad=use_enh_uad,
+                use_uad_ch_input=use_uad_ch_input,
+                uad_ip_channels=uad_ip_channels,
+                uad_mask_threshold=uad_mask_threshold,
+                enh_mask_t2=enh_mask_t2,
+                uad_file_ext=uad_file_ext,
+                multi_slice_gt=multi_slice_gt
+            )
 
     def load_weights(self, filename=None):
         if filename is not None:
@@ -141,9 +154,20 @@ class GeneratorBase:
     def get_config(self, param_name, layer_name=''):
         return get_layer_config(self.config_dict, param_name, layer_name)
 
-    def _compile_model(self):
-        if self.lr_init is not None:
-            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad)
+    def _freeze_weights(self, kw=None):
+        if kw is not None:
+            layers = [l for l in self.model.layers if kw in l.name]
+        else:
+            layers = self.model.layers
+
+        for layer in layers:
+            layer.trainable = False
+
+    def _compile_model(self, custom_optim=None):
+        if custom_optim is not None:
+            optimizer = custom_optim
+        elif self.lr_init is not None:
+            optimizer = self.optimizer_fun(lr=self.lr_init, amsgrad=self.optim_amsgrad) #, clipnorm=1)
         else:
             optimizer = self.optimizer_fun()
 

@@ -14,6 +14,7 @@ Created on 2018/11/09
 import sys
 
 import tempfile
+import json
 import os
 import datetime
 import time
@@ -28,6 +29,7 @@ import numpy as np
 from scipy.ndimage import zoom
 from scipy.ndimage.morphology import binary_fill_holes
 import sigpy as sp
+from glob import glob
 
 import keras.callbacks
 
@@ -43,6 +45,7 @@ import subtle.subtle_metrics as sumetrics
 from preprocess import preprocess_chain
 
 import subtle.subtle_args as sargs
+import pdb
 
 usage_str = 'usage: %(prog)s [options]'
 description_str = 'Run SubtleGrad inference on dicom data'
@@ -83,6 +86,7 @@ def process_mpr(proc_params):
         mkwargs = proc_params['mkwargs']
 
         model_class = load_model(proc_params['model_name'])
+
         m = model_class(**mkwargs)
         m.load_weights()
 
@@ -124,6 +128,7 @@ def process_mpr(proc_params):
                 data_mask_rot = None
         else:
             data_rot = supre.zero_pad_for_dnn(data, num_poolings=num_poolings)
+
             if data_mask is not None:
                 data_mask_rot = supre.zero_pad_for_dnn(data_mask, num_poolings=num_poolings)
             else:
@@ -145,6 +150,8 @@ def process_mpr(proc_params):
             gen_kwargs['data_list'] = [data_file]
             gen_kwargs['slice_axis'] = [slice_axis]
             gen_kwargs['file_ext'] = 'npy'
+
+
             prediction_generator = data_loader(**gen_kwargs)
 
             data_ref = np.zeros_like(data_rot)
@@ -209,14 +216,17 @@ def inference_process(args):
             print('loading preprocessed data from', args.data_preprocess)
 
         if args.file_ext == 'npy':
-            data, data_mask = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
+            data, data_mask = utils_io.load_file(args.data_preprocess, file_type=args.file_ext, params={'h5_key': 'all'})
             metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.npy', '_meta.h5'))
         else:
             data = utils_io.load_file(args.data_preprocess, file_type=args.file_ext)
             data_mask = utils_io.load_file(args.data_preprocess, params={'h5_key': 'data_mask'}, file_type=args.file_ext)
             metadata = utils_io.load_h5_metadata(args.data_preprocess.replace('.h5', '_meta.h5'))
 
-        dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+        try:
+            dicom_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+        except Exception:
+            dicom_dirs = sorted([d for d in glob('{}/*'.format(args.path_base))])
 
         args.path_zero = dicom_dirs[0]
         args.path_low = dicom_dirs[1]
@@ -315,6 +325,10 @@ def inference_process(args):
         'use_multiprocessing': args.use_multiprocessing,
         'verbose': args.verbose
     }
+
+    args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
+    args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
+
     data_loader = load_data_loader(args.model_name)
 
     mconf_dict = utils_exp.get_model_config(args.model_name, args.model_config, model_type='generators')
@@ -343,7 +357,9 @@ def inference_process(args):
             'block_size': args.block_size,
             'block_strides': args.block_strides,
             'batch_size': args.batch_size,
-            'predict_full': args.predict_full_volume
+            'predict_full': args.predict_full_volume,
+            'input_idx': args.input_idx,
+            'output_idx': args.output_idx
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
@@ -390,15 +406,30 @@ def inference_process(args):
         kw_model = {
             'img_rows': nx,
             'img_cols': ny,
-            'num_channel_input': 2 * args.slices_per_input
+            'num_channel_input': len(args.input_idx) * args.slices_per_input
         }
+
+        uad_list = []
+        if args.use_uad_ch_input:
+            kw_model['num_channel_input'] += args.uad_ip_channels
+            case_num = args.path_base.split('/')[-1].replace(args.file_ext, '')
+            uad_list = [os.path.join(args.uad_mask_path, '{}.{}'.format(case_num, args.uad_file_ext))]
+
         model_kwargs = {**model_kwargs, **kw_model}
 
         kw = {
             'residual_mode': args.residual_mode,
             'slices_per_input': args.slices_per_input,
             'resize': args.resize,
-            'brain_only': args.brain_only
+            'brain_only': args.brain_only,
+            'input_idx': args.input_idx,
+            'output_idx': args.output_idx,
+            'use_uad_ch_input': args.use_uad_ch_input,
+            'uad_ip_channels': args.uad_ip_channels,
+            'fpath_uad_masks': uad_list,
+            'uad_mask_path': args.uad_mask_path,
+            'uad_mask_threshold': args.uad_mask_threshold,
+            'uad_file_ext': args.uad_file_ext
         }
         gen_kwargs = {**gen_kwargs, **kw}
 
@@ -488,13 +519,12 @@ def inference_process(args):
             Y_prediction = np.median(Y_predictions, axis=[-1, -2], keepdims=False)[..., None]
 
     # End IF for 3D patch based
-
     if args.resample_isotropic > 0:
         # isotropic resampling has been done in preprocess, so need to unresample to original spacing
-        # res_iso = [args.resample_isotropic] * 3
+        res_iso = [args.resample_isotropic] * 3
 
         old_spacing = metadata['old_spacing_zero']
-        res_iso = [0.5, old_spacing[1], old_spacing[2]]
+        # res_iso = [0.5, old_spacing[1], old_spacing[2]]
 
         y_pred, _ = supre.zoom_iso(Y_prediction[..., 0], res_iso, metadata['old_spacing_zero'])
         Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
@@ -509,15 +539,15 @@ def inference_process(args):
         # original_data_mask = resample_unisotropic(args, original_data_mask, metadata)
 
     # if 'zero_pad_size' in metadata:
-    if (
-        'original_size' in metadata and
-        'old_spacing_zero' in metadata and
-        args.resample_isotropic > 0
-    ):
-        orig_size = metadata['original_size']
-        old_spacing = metadata['old_spacing_zero']
-        args.undo_pad_resample = ','.join([str(int(np.ceil(r))) for r in orig_size * old_spacing[1:]])
-        print('undo pad resample', args.undo_pad_resample)
+    # if (
+    #     'original_size' in metadata and
+    #     'old_spacing_zero' in metadata and
+    #     args.resample_isotropic > 0
+    # ):
+    #     orig_size = metadata['original_size']
+    #     old_spacing = metadata['old_spacing_zero']
+    #     args.undo_pad_resample = ','.join([str(int(np.ceil(r))) for r in orig_size * old_spacing[1:]])
+    #     print('undo pad resample', args.undo_pad_resample)
 
     if args.undo_pad_resample:
         splits = args.undo_pad_resample.split(',')
@@ -560,10 +590,10 @@ def inference_process(args):
             tocz = time.time()
             print('unzoom done: {} s'.format(tocz-ticz))
 
-    if args.resample_size and original_data.shape[2] != args.resample_size:
-        Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
-        Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
-        Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
+    # if args.resample_size and original_data.shape[2] != args.resample_size:
+    #     Y_prediction = np.transpose(Y_prediction, (0, 3, 1, 2))
+    #     Y_prediction = supre.resample_slices(Y_prediction, resample_size=original_data.shape[2])
+    #     Y_prediction = np.transpose(Y_prediction, (0, 2, 3, 1))
 
     # undo brain center
 
@@ -572,32 +602,33 @@ def inference_process(args):
         y_pred_cont = supre.undo_brain_center(y_pred, bbox_arr[0], threshold=0.1)
         Y_prediction = np.array([y_pred_cont]).transpose(1, 2, 3, 0)
 
-    if 'zero_pad_size' in metadata:
-        # if 'resampled_size' in metadata:
-        #     crop_size = metadata['resampled_size'][0]
-        # else:
-        crop_size = metadata['original_size'][0]
-
-        y_pred = Y_prediction[..., 0]
-        ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
-        y_pred = supre.center_crop(y_pred, ref_img)
-        Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        print('Y prediction shape after undoing zero pad', Y_prediction.shape)
+    # if 'zero_pad_size' in metadata:
+    #     # if 'resampled_size' in metadata:
+    #     #     crop_size = metadata['resampled_size'][0]
+    #     # else:
+    #     crop_size = metadata['original_size'][0]
+    #
+    #     y_pred = Y_prediction[..., 0]
+    #     ref_img = np.zeros((y_pred.shape[0], crop_size, crop_size))
+    #     y_pred = supre.center_crop(y_pred, ref_img)
+    #     Y_prediction = np.array([y_pred]).transpose(1, 2, 3, 0)
+    #
+    #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-    utils_io.write_dicoms(args.path_zero, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
+    
+    utils_io.write_dicoms(args.path_low, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
-    if args.brain_only:
-        data_zero = original_data[..., 0]
-        brain_mask = binary_fill_holes(original_data_mask[..., 0] > 0.1)
-
-        y_pred = (data_zero - (data_zero * brain_mask)) + Y_prediction[..., 0]
-        Y_prediction_stitch = np.array([y_pred]).transpose(1, 2, 3, 0)
-
-        data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
-
-        utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
+    # if args.brain_only:
+    #     data_zero = original_data[..., 0]
+    #     brain_mask = binary_fill_holes(original_data_mask[..., 0] > 0.1)
+    #
+    #     y_pred = (data_zero - (data_zero * brain_mask)) + Y_prediction[..., 0]
+    #     Y_prediction_stitch = np.array([y_pred]).transpose(1, 2, 3, 0)
+    #
+    #     data_out_stitch = supre.undo_scaling(Y_prediction_stitch, metadata, verbose=args.verbose, im_gt=im_gt)
+    #
+    #     utils_io.write_dicoms(args.path_zero, data_out_stitch, args.path_out + '_stitch', series_desc_pre='SubtleGad: ', series_desc_post=args.description + '_stitch', series_num=args.series_num)
 
     # if args.stats_file and not metadata['inference_only']:
     #     print('running stats on inference...')

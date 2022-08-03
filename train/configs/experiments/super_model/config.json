@@ -57,6 +57,35 @@
     "batch_size": 8,
     "no_save_best_only": true,
     "queue_size": 4,
+    "ablation_2d": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 1,
+      "checkpoint_name": "ablation_2d"
+    },
+    "ablation_7ch": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_7ch"
+    },
+    "ablation_mpr": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_mpr",
+      "train_mpr": true,
+      "resize": 512
+    },
+    "ablation_vgg": {
+      "l1_lambda": 0.25,
+      "ssim_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_vgg",
+      "train_mpr": true,
+      "resize": 512
+    },
     "enh_vgg": {
       "ssim_lambda": 0.25,
       "l1_lambda": 0.25,

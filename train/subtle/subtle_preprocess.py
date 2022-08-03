@@ -14,7 +14,7 @@ import sys
 import warnings
 import time
 import tempfile
-
+import pdb
 import numpy as np
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import binary_dilation, binary_erosion, rectangle, square, cube, binary_closing
@@ -182,7 +182,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
 
 
 def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None,
-im_moving_spacing=None, max_iter=200, return_params=True, non_rigid=False, fixed_mask=None,
+im_moving_spacing=None, max_iter=400, return_params=True, non_rigid=False, fixed_mask=None,
 moving_mask=None, ref_fixed=None, ref_moving=None):
     '''
     Image registration using SimpleElastix.
@@ -215,8 +215,8 @@ moving_mask=None, ref_fixed=None, ref_moving=None):
         param_map = sitk.VectorOfParameterMap()
         param_map.append(sitk.GetDefaultParameterMap('affine'))
         param_map.append(sitk.GetDefaultParameterMap('bspline'))
-
-    param_map['MaximumNumberOfIterations'] = [str(max_iter)]
+    else:
+        param_map['MaximumNumberOfIterations'] = [str(max_iter)]
 
     ef = sitk.ElastixImageFilter()
     ef.SetLogToConsole(True)
@@ -268,9 +268,12 @@ def dcm_to_sitk(fpath_dcm):
 
     return img_reader.Execute()
 
-def apply_reg_transform(img, spacing, transform_params):
+def apply_reg_transform(img, spacing, transform_params, ref_img=None):
     simg = sitk.GetImageFromArray(img)
     simg.SetSpacing(spacing)
+
+    if ref_img:
+        simg.CopyInformation(ref_img)
 
     params = transform_params[0]
 
@@ -379,8 +382,8 @@ def get_brain_area_cm2(mask, spacing=[1., 1., 1.]):
     area_cm2 = (props[0].area * spacing_x * spacing_y) / 1e3
     return area_cm2
 
-def get_brain_portion(img, threshold=0):
-    center_mask = binary_fill_holes(img[img.shape[0] // 2] > threshold)
+def get_brain_portion(img, threshold=0, sl_ax=0):
+    center_mask = binary_fill_holes(img[img.shape[sl_ax] // 2] > threshold)
 
     regions = regionprops(label(center_mask))
     if len(regions) == 1:
@@ -392,7 +395,7 @@ def get_brain_portion(img, threshold=0):
     (x1, y1, x2, y2) = bbox
     cropped_img = img[:, x1:x2, y1:y2]
 
-    return cropped_img, bbox
+    return cropped_img, bbox, center_mask
 
 def _get_crop_range(shape_num):
     if shape_num % 2 == 0:
@@ -510,11 +513,14 @@ def enhancement_mask(X, Y, center_slice, th=.05):
     enh_mask = enh_mask.reshape(Y.shape)
     return enh_mask
 
-def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False):
+def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False, multi_slice_gt=False):
     'Create a smooth enhancement mask'
     # max_val_arr should be length (batch_size, 1)
-
-    im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0, ...]
+    if multi_slice_gt:
+        Y = np.reshape(Y, (X.shape[0], X.shape[1], Y.shape[2], Y.shape[3], Y.shape[4]))
+        im_diff = Y[:, :, 0, ...] - X[:, :, 0, ...]
+    else:
+        im_diff = Y[:, 0, 0, ...] - X[:, center_slice, 0, ...]
 
     if weighted:
         # To give more weight to enhancement present in full dose but not in low dose
@@ -535,14 +541,31 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False)
         im_diff = np.clip(im_diff, 0, im_diff.max())
         ###
 
+    #pdb.set_trace()
     if max_val_arr is None:
-        max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
+        if multi_slice_gt:
+            max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], im_diff.shape[1], -1))), axis=2)
+        else:
+            max_val_arr = np.max(abs(im_diff.reshape((im_diff.shape[0], -1))), axis=1)
 
     # FIXME: currently hard-coded to minimum value of 1. This obviates the need for the following np.divide
     # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
 
-    enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
+    if not multi_slice_gt:
+        enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
+    else:
+        enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
+    enh_mask = np.clip(enh_mask, 0.01, 10)
+    #print(enh_mask.min(), enh_mask.max())
     return enh_mask
+
+def get_enh_mask_t2(X_mask, Y_mask, X, center_slice, t2_csf_quant):
+    t1_post_mask = (Y_mask[:, 0, 0, ...] > t2_csf_quant).astype(np.uint8)
+    t2_mask = (X[:, center_slice, 2, ...] > t2_csf_quant).astype(np.uint8)
+    t1_pre_max = np.max(X[:, center_slice, 0, ...])
+    enh_mask = t1_pre_max * (t1_post_mask * t2_mask)
+
+    return enh_mask.reshape(Y_mask.shape)

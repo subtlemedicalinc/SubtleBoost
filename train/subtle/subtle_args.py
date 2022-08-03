@@ -45,11 +45,44 @@ def _shared_args(parser):
     parser.add_argument('--output_idx', type=str, help='output indices from data', default='2')
     parser.add_argument('--slice_axis', action='store',  type=int, dest='slice_axis',  help='axes for slice direction', default=0)
 
-    parser.add_argument('--t2_mode', action='store_true', dest='t2_mode', help='T2 Mode', default=False)
-
     parser.add_argument('--acq_plane', action='store', type=str, dest='acq_plane', help='Plane of acquisition - AX, SAG or COR', default='AX')
 
     return parser
+
+def _multi_contrast_args(parser):
+    parser.add_argument('--multi_contrast_mode', action='store_true', dest='multi_contrast_mode', help='T2 or FLAIR preprocessing mode', default=False)
+    parser.add_argument('--multi_contrast_kw', action='store', type=str, dest='multi_contrast_kw', help='Comma separated keywords for identifying multicontrast sequences', default=None)
+
+    # This scaling constant is computed using the maximum intensity between post contrast
+    # and low-dose T1 images. It is the average of post_contrast.max() / low_dose.max()
+    # of all the Stanford GE cases. This might vary between manufacturers or sites
+    # The T2 volume's histogram is equalized using T1 low-dose as reference and is
+    # multiplied with this constant value
+    parser.add_argument('--t2_scaling_constant', action='store', type=float,
+    dest='t2_scaling_constant', help='Intensity scale factor that the T2 volume should be scaled with', default=1.389)
+
+    return parser
+
+def _uad_args(parser):
+    parser.add_argument('--enh_mask_uad', action='store_true', dest='enh_mask_uad',
+    help='Boolean arg indicating whether to use enhancement weighted loss function from the UAD masks', default=False)
+
+    parser.add_argument('--uad_mask_path', action='store', type=str, dest='uad_mask_path',
+    help='Basepath where UAD masks are stored', default=None)
+
+    parser.add_argument('--uad_mask_threshold', action='store', type=float,
+    dest='uad_mask_threshold', help='Percentage of max pixel value to compute the UAD mask',
+    default=0.1)
+
+    parser.add_argument('--uad_file_ext', action='store', type=str, dest='uad_file_ext',
+    help='File extension of UAD mask files', default=None)
+
+    parser.add_argument('--use_uad_ch_input', action='store_true', dest='use_uad_ch_input', help='If True, uad mask will be used as a separate input channel', default=False)
+
+    parser.add_argument('--uad_ip_channels', action='store', type=int, dest='uad_ip_channels', help='Number of channels of UAD input', default=1)
+
+    return parser
+
 
 def _preprocess_args(parser):
     parser.add_argument('--discard_start_percent', action='store', type=float, dest='discard_start_percent', help='throw away start X %% of slices', default=0.)
@@ -58,6 +91,7 @@ def _preprocess_args(parser):
     parser.add_argument('--noise_mask_area', action='store_true', dest='noise_mask_area', help="If True, region with the largest area will be picked as a noise mask after performing connected components", default=False)
     parser.add_argument('--transform_type', action='store', type=str, dest='transform_type', help="transform type ('rigid', 'translation', etc.)", default='rigid')
     parser.add_argument('--register_with_dcm_reference', action='store_true', dest='register_with_dcm_reference', help="If true, a SITK instance derived from the DCM images will be passed as reference. This helps in passing the exact image origin, cosine direction etc.,", default=False)
+    parser.add_argument('--reg_n_levels', type=int, action='store', dest='reg_n_levels', help='Number of levels of affine registration', default=4)
     parser.add_argument('--normalize', action='store_true', dest='normalize', help="global scaling", default=False)
     parser.add_argument('--scale_matching', action='store_true', dest='scale_matching', help="match scaling of each image to each other", default=False)
     parser.add_argument('--joint_normalize', action='store_true', dest='joint_normalize', help="use same global scaling for all images", default=False)
@@ -86,6 +120,7 @@ def _preprocess_args(parser):
     parser.add_argument('--fsl_mask_all_ims', action='store_true', dest='fsl_mask_all_ims', help='If `fsl_mask`, perform FSL BET on all ims and take the union', default=False)
     parser.add_argument('--use_fsl_reg', action='store_true', dest='use_fsl_reg', help='If true, the registration parameters computed from skull stripped brain will be applied on full brain, otherwise full brain will be registered separately', default=True)
     parser.add_argument('--non_rigid_reg', action='store_true', dest='non_rigid_reg', help='If true, then bspline parameter map is set with affine map to perform non-rigid registration', default=False)
+    parser.add_argument('--union_brain_masks', action='store_true', dest='union_brain_masks', help='Specify whether the masks from the three images should be combined using union operation or not', default=False)
 
     parser.add_argument('--pad_for_size', action='store', type=int,
     dest='pad_for_size', help='If True and if matrix sizes are different then zero padding is done for the final size is equal to this param', default=0)
@@ -134,10 +169,14 @@ def _train_args(parser):
     parser.add_argument('--stats_file', action='store', dest='stats_file', type=str, help='store inference stats in h5 file', default=None)
     parser.add_argument('--predict_file_ext', action='store', dest='predict_file_ext', type=str, help='file extension of predcited data', default='npy')
     parser.add_argument('--no_save_best_only', action='store_false', dest='save_best_only', default=True, help='save newest model at every checkpoint')
+    parser.add_argument('--save_all_weights', action='store_true', dest='save_all_weights',
+    default=False, help='If True, then weights of all epochs will be saved in the checkpoint dir')
 
     parser.add_argument('--denoise', action='store_true', dest='denoise', help='denoise lowcon', default=False)
     parser.add_argument('--enh_mask', action='store_true', dest='enh_mask', help='If True, then enhancement_mask is computed and used to compute L1 loss', default=False)
     parser.add_argument('--enh_pfactor', action='store', dest='enh_pfactor', type=float, help='The power factor in the term to compute smooth enhancement mask', default=1.0)
+
+    parser.add_argument('--enh_mask_t2', action='store_true', dest='enh_mask_t2', help='If enh_mask is True, specifying true in this arg, will make the enhancement mask computation, use the T2 volume', default=False)
 
     parser.add_argument('--train_mpr', action='store_true', dest='train_mpr', help='train acrossa multiple planes ', default=False)
     parser.add_argument('--reshape_for_mpr_rotate', action='store_true',
@@ -145,6 +184,8 @@ def _train_args(parser):
 
     parser.add_argument('--brain_only', action='store_true', dest='brain_only', help='Use FSL extracted brain data to train (preprocess should have been run with this option: H5 file should have "data_mask" key)', default=False)
     parser.add_argument('--brain_only_mode', action='store', dest='brain_only_mode', type=str, help='pure or mixed - whether to train only on FSL masked images only or include a fraction of the full brain images too', default=None)
+
+    parser.add_argument('--pretrain_ckps', action='store', dest='pretrain_ckps', type=str, help='List of pretrained checkpoints from which weights should be loaded to different portions of the network. Used in GeneratorFBoostUNet2D', default=None)
 
     # gan related
     parser.add_argument('--gan_mode', action='store_true', dest='gan_mode', help='If True, network will be trained in GAN mode with adversarial loss', default=False)
@@ -154,6 +195,8 @@ def _train_args(parser):
     parser.add_argument('--disc_beta', action='store', dest='disc_beta', type=float, help='Beta value for adversary Adam optimizer', default=0.5)
     parser.add_argument('--disc_loss_function', action='store', type=str, dest='disc_loss_function', help='Loss function for adversary', default='mse')
     parser.add_argument('--add_disc_noise', action='store_true', dest='add_gen_noise', help='If True, random noise will be added to discriminator input', default=False)
+
+    parser.add_argument('--multi_slice_gt', action='store_true', dest='multi_slice_gt', help='If True, then in 2.5D training, ground truth will also be 7 slices', default=False)
 
     return parser
 
@@ -186,5 +229,7 @@ def get_parser(usage_str='', description_str=''):
     parser = _preprocess_args(parser)
     parser = _train_args(parser)
     parser = _inference_args(parser)
+    parser = _multi_contrast_args(parser)
+    parser = _uad_args(parser)
 
     return parser

@@ -1,0 +1,143 @@
+{
+  "inference": {
+    "data_dir": "/home/srivathsa/projects/studies/gad/ablation/preprocess/data",
+    "verbose": 1,
+    "gpu": 0,
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/ablation/train/checkpoints",
+    "file_ext": "h5",
+    "procs_per_gpu": 2,
+    "predict_dir": "/home/srivathsa/projects/studies/gad/ablation/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/ablation/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/ablation/inference",
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "override": true,
+    "philips_2d": {
+      "resize": 240,
+      "inference_mpr": false,
+      "slices_per_input": 1,
+      "num_rotations": 1,
+      "checkpoint": "philips_2d.checkpoint",
+      "description": "philips_2d"
+    },
+    "philips_7ch": {
+      "resize": 240,
+      "inference_mpr": false,
+      "slices_per_input": 7,
+      "num_rotations": 1,
+      "checkpoint": "philips_7ch.checkpoint",
+      "description": "philips_7ch"
+    },
+    "philips_mpr": {
+      "resize": 240,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "philips_mpr.checkpoint",
+      "description": "philips_mpr"
+    },
+    "philips_vgg": {
+      "resize": 240,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "gan_mode": true,
+      "num_rotations": 5,
+      "checkpoint": "philips_vgg.checkpoint",
+      "description": "philips_vgg"
+    },
+    "philips_enh": {
+      "resize": 240,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "philips_enh.checkpoint",
+      "description": "philips_enh"
+    },
+    "siemens_2d": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": false,
+      "slices_per_input": 1,
+      "num_rotations": 1,
+      "checkpoint": "siemens_2d.checkpoint",
+      "description": "siemens_2d"
+    },
+    "siemens_7ch": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": false,
+      "slices_per_input": 7,
+      "num_rotations": 1,
+      "checkpoint": "siemens_7ch.checkpoint",
+      "description": "siemens_7ch"
+    },
+    "siemens_mpr": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": true,
+      "slices_per_input": 5,
+      "num_rotations": 5,
+      "checkpoint": "siemens_mpr.checkpoint",
+      "description": "siemens_mpr"
+    },
+    "siemens_vgg": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "siemens_vgg.checkpoint",
+      "description": "siemens_vgg"
+    },
+    "siemens_enh": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "siemens_enh.checkpoint",
+      "description": "siemens_enh"
+    },
+    "ge_2d": {
+      "resize": 512,
+      "inference_mpr": false,
+      "slices_per_input": 1,
+      "num_rotations": 1,
+      "checkpoint": "ge_2d.checkpoint",
+      "description": "ge_2d"
+    },
+    "ge_7ch": {
+      "resize": 512,
+      "inference_mpr": false,
+      "slices_per_input": 7,
+      "num_rotations": 1,
+      "checkpoint": "ge_7ch.checkpoint",
+      "description": "ge_7ch"
+    },
+    "ge_mpr": {
+      "resize": 512,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "ge_mpr.checkpoint",
+      "description": "ge_mpr"
+    },
+    "ge_vgg": {
+      "resize": 512,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "ge_vgg.checkpoint",
+      "description": "ge_vgg"
+    },
+    "ge_enh": {
+      "resize": 512,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 5,
+      "checkpoint": "ge_enh.checkpoint",
+      "description": "ge_enh"
+    }
+  }
+}

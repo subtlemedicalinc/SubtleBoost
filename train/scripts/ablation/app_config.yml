@@ -1,0 +1,585 @@
+version: "0.0.6"
+
+disable_openvino: True
+not_for_clinical_use: False
+enable_multiple_jobs: True
+all_reports: True
+warn_unmatched_series: False
+
+jobs:
+  - job_name: "gad_ge"
+    series_required:
+      - "zero_dose_ge"
+      - "low_dose_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_enh_ge"
+      noise_mask_threshold: 0.1
+      num_rotations: 3
+      allocate_available_gpus: True
+  - job_name: "gad_philips"
+    series_required:
+      - "zero_dose_philips"
+      - "low_dose_philips"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_enh"
+      num_rotations: 1
+      allocate_available_gpus: True
+  - job_name: "gad_philips_cs"
+    series_required:
+      - "zero_dose_philips_cs"
+      - "low_dose_philips_cs"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "20200818150236-philipscs"
+      blur_lowdose: True
+      allocate_available_gpus: True
+  - job_name: "gad_siemens"
+    series_required:
+      - "zero_dose_siemens"
+      - "low_dose_siemens"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_enh"
+      reshape_for_mpr_rotate: True
+      num_rotations: 1
+      allocate_available_gpus: True
+  - job_name: "ablation_2d_ph"
+    series_required:
+      - "zd_abl_2d_ph"
+      - "ld_abl_2d_ph"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_2d"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 1
+      allocate_available_gpus: True
+  - job_name: "ablation_2d_sm"
+    series_required:
+      - "zd_abl_2d_sm"
+      - "ld_abl_2d_sm"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_2d"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 1
+      allocate_available_gpus: True
+  - job_name: "ablation_2d_ge"
+    series_required:
+      - "zd_abl_2d_ge"
+      - "ld_abl_2d_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_2d"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 1
+      allocate_available_gpus: True
+  - job_name: "ablation_7ch_ph"
+    series_required:
+      - "zd_abl_7ch_ph"
+      - "ld_abl_7ch_ph"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_7ch"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_7ch_sm"
+    series_required:
+      - "zd_abl_7ch_sm"
+      - "ld_abl_7ch_sm"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_7ch"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_7ch_ge"
+    series_required:
+      - "zd_abl_7ch_ge"
+      - "ld_abl_7ch_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_7ch"
+      num_rotations: 1
+      skip_mpr: True
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_mpr_ph"
+    series_required:
+      - "zd_abl_mpr_ph"
+      - "ld_abl_mpr_ph"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_mpr"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_mpr_sm"
+    series_required:
+      - "zd_abl_mpr_sm"
+      - "ld_abl_mpr_sm"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_mpr"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_mpr_ge"
+    series_required:
+      - "zd_abl_mpr_ge"
+      - "ld_abl_mpr_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_mpr"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_vgg_ph"
+    series_required:
+      - "zd_abl_vgg_ph"
+      - "ld_abl_vgg_ph"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_vgg"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_vgg_sm"
+    series_required:
+      - "zd_abl_vgg_sm"
+      - "ld_abl_vgg_sm"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_vgg"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_vgg_ge"
+    series_required:
+      - "zd_abl_vgg_ge"
+      - "ld_abl_vgg_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_vgg"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_enh_ph"
+    series_required:
+      - "zd_abl_enh_ph"
+      - "ld_abl_enh_ph"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "philips_enh"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_enh_sm"
+    series_required:
+      - "zd_abl_enh_sm"
+      - "ld_abl_enh_sm"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "siemens_enh"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+  - job_name: "ablation_enh_ge"
+    series_required:
+      - "zd_abl_enh_ge"
+      - "ld_abl_enh_ge"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "ablation_enh_ge"
+      num_rotations: 5
+      slices_per_input: 7
+      allocate_available_gpus: True
+
+series:
+  - name: "zero_dose_ge"
+    reg_match: "zerodose"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_ge"
+    reg_match: "lowdose"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zero_dose_philips"
+    reg_match: "zerodose"
+    reg_exclude: "zerodose_cs"
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zero_dose_philips_cs"
+    reg_match: "zerodose_cs"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_philips"
+    reg_match: "lowdose"
+    reg_exclude: "lowdose_cs"
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_philips_cs"
+    reg_match: "lowdose_cs"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zero_dose_siemens"
+    reg_match: "zerodose"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "low_dose_siemens"
+    reg_match: "lowdose"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_2d_ph"
+    reg_match: "zd_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_2d_ph"
+    reg_match: "ld_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_2d_sm"
+    reg_match: "zd_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_2d_sm"
+    reg_match: "ld_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_2d_ge"
+    reg_match: "zd_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_2d_ge"
+    reg_match: "ld_abl_2d"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_7ch_ph"
+    reg_match: "zd_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_7ch_ph"
+    reg_match: "ld_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_7ch_sm"
+    reg_match: "zd_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_7ch_sm"
+    reg_match: "ld_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_7ch_ge"
+    reg_match: "zd_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_7ch_ge"
+    reg_match: "ld_abl_7ch"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_mpr_ph"
+    reg_match: "zd_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_mpr_ph"
+    reg_match: "ld_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_mpr_sm"
+    reg_match: "zd_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_mpr_sm"
+    reg_match: "ld_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_mpr_ge"
+    reg_match: "zd_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_mpr_ge"
+    reg_match: "ld_abl_mpr"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_vgg_ph"
+    reg_match: "zd_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_vgg_ph"
+    reg_match: "ld_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_vgg_sm"
+    reg_match: "zd_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_vgg_sm"
+    reg_match: "ld_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_vgg_ge"
+    reg_match: "zd_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_vgg_ge"
+    reg_match: "ld_abl_vgg"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_enh_ph"
+    reg_match: "zd_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_enh_ph"
+    reg_match: "ld_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "philips"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_enh_sm"
+    reg_match: "zd_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_enh_sm"
+    reg_match: "ld_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "zd_abl_enh_ge"
+    reg_match: "zd_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "ld_abl_enh_ge"
+    reg_match: "ld_abl_enh"
+    reg_exclude: ""
+    manufacturer_match: "ge"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"

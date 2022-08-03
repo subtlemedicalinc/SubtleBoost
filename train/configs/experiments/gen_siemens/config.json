@@ -3,7 +3,6 @@
   "verbose": 1,
   "gpu": 0,
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/checkpoints",
-  "resample_isotropic": 1,
   "slices_per_input": 7,
   "file_ext": "h5",
   "preprocess": {
@@ -21,7 +20,7 @@
     "use_fsl_reg": false,
     "mask_threshold": 0.1,
     "scale_matching": true,
-    "pad_for_size": 256,
+    "pad_for_size": 512,
     "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
     "batch1": {
       "data_batch": "0,5"
@@ -117,9 +116,8 @@
       "description": "siemens_simple_vgg"
     },
     "enh_vgg": {
-      "resize": 256,
+      "resize": 512,
       "resample_isotropic": 1,
-      "undo_pad_resample": "256,232",
       "num_rotations": 3,
       "file_ext": "h5",
       "checkpoint": "siemens_enh_vgg.checkpoint",

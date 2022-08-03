@@ -12,9 +12,11 @@
     "pad_for_size": 512,
     "resample_isotropic": 0.5,
     "file_ext": "npy",
-    "transform_type": "rigid",
+    "transform_type": "affine",
     "normalize": true,
+    "override": true,
     "normalize_fun": "mean",
+    "joint_normalize": true,
     "mask_threshold": 0.08,
     "scale_matching": true,
     "skip_hist_norm": true,
@@ -39,10 +41,18 @@
       "reshape_for_mpr_rotate": true,
       "procs_per_gpu": 3,
       "resample_isotropic": 0.5,
-      "num_rotations": 1,
+      "num_rotations": 3,
       "file_ext": "npy",
       "checkpoint": "gen_enh_vgg_07232020.checkpoint",
       "description": "unified_vgg_fix"
+    },
+    "sford_enh_vgg": {
+      "procs_per_gpu": 2,
+      "resize": 512,
+      "num_rotations": 3,
+      "file_ext": "npy",
+      "checkpoint": "stanford_enh_vgg.checkpoint",
+      "description": "sford_enh_vgg"
     }
   }
 }

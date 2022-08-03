@@ -12,6 +12,17 @@ if __name__ == '__main__':
 
     config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='train')
 
-    config.checkpoint = os.path.join(config.checkpoint_dir, '{}.checkpoint'.format(config.checkpoint_name))
+    if config.save_all_weights:
+        config.checkpoint_dir = os.path.join(config.checkpoint_dir, args.sub_experiment)
+
+        if os.path.exists(config.checkpoint_dir):
+            raise ValueError('Checkpoint directory {} already exists'.format(config.checkpoint_dir))
+        os.makedirs(config.checkpoint_dir)
+
+        config.checkpoint = os.path.join(
+            config.checkpoint_dir, 'weights-{epoch:02d}-{val_loss:.2f}.checkpoint'
+        )
+    else:
+        config.checkpoint = os.path.join(config.checkpoint_dir, '{}.checkpoint'.format(config.checkpoint_name))
 
     train_execute(config)

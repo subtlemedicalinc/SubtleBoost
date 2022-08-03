@@ -1,0 +1,7 @@
+{
+  "base": {
+    "num_rd_iters": 6,
+    "num_rd_blocks": 20,
+    "num_rdb_filters": 32
+  }
+}

@@ -40,8 +40,8 @@ class GeneratorUNet2D(GeneratorBase):
 
         return act_fn(out)
 
-    def _upsample(self, dec_inp, enc_inp, idx):
-        ups_lname = 'upsample_{}'.format(idx + 1)
+    def _upsample(self, dec_inp, enc_inp, idx, name_prefix=''):
+        ups_lname = '{}upsample_{}'.format(name_prefix, idx + 1)
         decoder_upsample = UpSampling2D(
             size=self.get_config('upsample_size', ups_lname),
             name=ups_lname
@@ -53,7 +53,7 @@ class GeneratorUNet2D(GeneratorBase):
 
         up_decoder = concatenate(
             [decoder_upsample, enc_inp],
-            name='cat_{}'.format(idx)
+            name='{}cat_{}'.format(name_prefix, idx)
         )
 
         return up_decoder
@@ -69,21 +69,12 @@ class GeneratorUNet2D(GeneratorBase):
 
         return att_x
 
-    def _build_model(self):
-        print('Building {} model...'.format(self.model_name))
+    def _encoder_decoder(self, inputs, name_prefix=''):
         # batch norm
         if self.batch_norm:
             lambda_bn = lambda x: BatchNormalization()(x)
         else:
             lambda_bn = lambda x: x
-
-        # layers
-        # 2D input is (rows, cols, channels)
-
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='model_input')
-
-        if self.verbose:
-            print(inputs)
 
         # step 1
         conv1 = inputs
@@ -92,13 +83,13 @@ class GeneratorUNet2D(GeneratorBase):
             conv1 = self._conv(
                 conv1,
                 filters=self.num_filters_first_conv,
-                name='conv_enc_1_{}'.format(i)
+                name='{}conv_enc_1_{}'.format(name_prefix, i)
             )
             conv1 = lambda_bn(conv1)
 
         pool1 = MaxPooling2D(
             pool_size=self.get_config('pool_size', 'maxpool_1'),
-            name='maxpool_1'
+            name='{}maxpool_1'.format(name_prefix)
         )(conv1)
 
         if self.verbose:
@@ -117,11 +108,11 @@ class GeneratorUNet2D(GeneratorBase):
                 conv_encoder = self._conv(
                     conv_encoder,
                     filters=num_channel,
-                    name='conv_enc_{}_{}'.format(i + 1, j)
+                    name='{}conv_enc_{}_{}'.format(name_prefix, i + 1, j)
                 )
                 conv_encoder = lambda_bn(conv_encoder)
 
-            maxpool_name = 'maxpool_{}'.format(i + 1)
+            maxpool_name = '{}maxpool_{}'.format(name_prefix, i + 1)
             pool_encoder = MaxPooling2D(
                 pool_size=self.get_config('pool_size', maxpool_name),
                 name=maxpool_name
@@ -138,12 +129,11 @@ class GeneratorUNet2D(GeneratorBase):
         conv_center = self._conv(
             pools[-1],
             filters=list_num_features[-1],
-            name='conv_center'
+            name='{}conv_center'.format(name_prefix)
         )
 
-        print('conv center before add', conv_center)
         # residual connection
-        conv_center = keras_add([pools[-1], conv_center], name='add_center')
+        conv_center = keras_add([pools[-1], conv_center], name='{}add_center'.format(name_prefix))
 
         if self.verbose:
             print('conv center...', conv_center)
@@ -152,14 +142,16 @@ class GeneratorUNet2D(GeneratorBase):
         conv_decoders = [conv_center]
 
         for i in range(1, self.num_poolings + 1):
-            up_decoder = self._upsample(conv_decoders[-1], convs[-i], i)
+            up_decoder = self._upsample(
+                conv_decoders[-1], convs[-i], i, name_prefix=name_prefix
+            )
             conv_decoder = up_decoder
 
             for j in range(self.num_conv_per_pooling):
                 conv_decoder = self._conv(
                     conv_decoder,
                     filters=list_num_features[-i],
-                    name='conv_dec_{}_{}'.format(i + 1, j)
+                    name='{}conv_dec_{}_{}'.format(name_prefix, i + 1, j)
                 )
                 conv_decoder = lambda_bn(conv_decoder)
 
@@ -169,6 +161,20 @@ class GeneratorUNet2D(GeneratorBase):
                 print(conv_decoder, up_decoder)
 
         conv_decoder = conv_decoders[-1]
+        return conv_decoder
+
+    def _build_model(self):
+        print('Building {} model...'.format(self.model_name))
+
+        # layers
+        # 2D input is (rows, cols, channels)
+
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='model_input')
+
+        if self.verbose:
+            print(inputs)
+
+        conv_decoder = self._encoder_decoder(inputs)
 
         conv_output = self._conv(
             conv_decoder,

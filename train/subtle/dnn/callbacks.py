@@ -8,11 +8,11 @@ import keras
 from subtle.data_loaders import SliceLoader
 from subtle.dnn.helpers import make_image, load_data_loader
 from subtle.utils.misc import print_progress_bar
-from scipy.misc import imresize
+from skimage.transform import resize as imresize
 import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None, file_ext='npy'):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None, file_ext='npy', uad_mask_path=None, uad_file_ext=None, use_enh_uad=False, use_uad_ch_input=False, uad_ip_channels=1, fpath_uad_masks=[], uad_mask_threshold=0.1, enh_mask_t2=False, multi_slice_gt=False):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -45,16 +45,36 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.block_strides = block_strides
         self.gan_mode = gan_mode
         self.use_enh_mask = use_enh_mask
+        self.use_uad_ch_input = use_uad_ch_input
+        self.uad_ip_channels = uad_ip_channels
         self.detailed_plot = detailed_plot
         self.plot_list = plot_list
         self.tag_list = []
         self.file_ext = file_ext
+
+        self.uad_mask_path = uad_mask_path
+        self.use_enh_uad = use_enh_uad
+        self.use_uad_ch_input = use_uad_ch_input
+        self.fpath_uad_masks = fpath_uad_masks
+        self.uad_mask_threshold = uad_mask_threshold
+        self.enh_mask_t2 = enh_mask_t2
+        self.uad_file_ext = uad_file_ext
+        self.multi_slice_gt = multi_slice_gt
 
         self._init_generator()
 
 
     def _init_generator(self):
         data_loader = load_data_loader(self.model_name)
+
+        case_nums = [
+            c.split('/')[-1].replace(self.file_ext, '').replace('.', '')
+            for c in self.data_list
+        ]
+        fpath_uad_masks = [
+            '{}/{}.{}'.format(self.uad_mask_path, cnum, self.uad_file_ext)
+            for cnum in case_nums
+        ]
 
         if self.plot_list is not None:
             self.shuffle = False
@@ -68,7 +88,15 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
             'verbose': self.verbose,
             'predict': False,
             'brain_only': self.brain_only,
-            'brain_only_mode': self.brain_only_mode
+            'brain_only_mode': self.brain_only_mode,
+            'use_enh_uad': self.use_enh_uad,
+            'use_uad_ch_input': self.use_uad_ch_input,
+            'uad_ip_channels': self.uad_ip_channels,
+            'fpath_uad_masks': fpath_uad_masks,
+            'uad_mask_threshold': self.uad_mask_threshold,
+            'uad_mask_path': self.uad_mask_path,
+            'uad_file_ext': self.uad_file_ext,
+            'enh_mask_t2': self.enh_mask_t2
         }
 
         if '3d' in self.model_name:
@@ -115,6 +143,7 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 tag = '{}_{}'.format(self.tag, idx)
             else:
                 tag = self.tag_list[idx]
+
             # X is [1, nx, ny, N * 2.5d]
             # Y is [1, nx, ny, N]
 
@@ -153,7 +182,12 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
                 if self.gan_mode:
                     Y_prediction = Y_prediction[0]
 
-                X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, len(self.input_idx)))
+                input_len = len(self.input_idx)
+
+                if self.use_uad_ch_input:
+                    input_len += 1
+
+                X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2], self.slices_per_input, input_len))
 
                 h = self.slices_per_input // 2
                 X_center = X[...,h,:] # [1, nx, ny, N]
@@ -240,7 +274,7 @@ class HparamsCallback(keras.callbacks.TensorBoard):
         hypmonitor_port = str(os.environ['HYPMONITOR_PORT'])
 
         # Markdown formatting commented because app environment supports only python 3.5 for now; formatting requires python 3.6+
-        
+
         # disp = f'''### Hyperparameter Summary [Detailed logs](http://localhost:{hypmonitor_port}/experiment?id={exp_id})\n'''
         # disp += f'''| *Hyperparameter* | *Value* |\n'''
         # disp += f'''| --------------- | ------- |\n'''

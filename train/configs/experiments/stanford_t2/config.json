@@ -1,0 +1,121 @@
+{
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+  "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+  "verbose": 1,
+  "gpu": 0,
+  "slices_per_input": 7,
+  "model_name": "unet2d",
+  "model_config": "base",
+  "preprocess": {
+    "t2_process": {
+      "t2_mode": true,
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots/t2",
+      "file_ext": "npy"
+    }
+  },
+  "train": {
+    "max_data_sets": 100,
+    "validation_split": 0.2,
+    "learning_rate": 0.001,
+    "log_dir": "/home/srivathsa/projects/studies/gad/stanford/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/stanford/train/history",
+    "l1_lambda": 0.8,
+    "ssim_lambda": 0.2,
+    "batch_size": 8,
+    "no_save_best_only": true,
+    "queue_size": 4,
+    "input_idx": "0,1,3",
+    "resize": 512,
+    "file_ext": "npy",
+    "t2_basic_2d": {
+      "train_mpr": false,
+      "slices_per_input": 1,
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "checkpoint_name": "t2_basic_2d"
+    },
+    "t2_basic_7ch": {
+      "train_mpr": false,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "checkpoint_name": "t2_basic_7ch"
+    },
+    "t2_edsr_2d": {
+      "train_mpr": false,
+      "slices_per_input": 1,
+      "model_name": "edsr2d",
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "checkpoint_name": "t2_edsr_2d"
+    },
+    "t2_uad_mask": {
+      "train_mpr": false,
+      "slices_per_input": 7,
+      "model_name": "unet2d",
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "enh_mask_uad": true,
+      "checkpoint_name": "t2_uad_2d_7ch",
+      "uad_mask_path": "/home/srivathsa/projects/studies/gad/stanford/preprocess/uad_masks"
+    }
+  },
+  "inference": {
+    "learn_residual": false,
+    "inference_mpr_avg": "mean",
+    "data_raw": "/home/srivathsa/projects/studies/gad/stanford/data",
+    "series_num": 1002,
+    "stats_base": "/home/srivathsa/projects/studies/gad/stanford/inference",
+    "procs_per_gpu": 3,
+    "input_idx": "0,1,3",
+    "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+    "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
+    "t2_basic_2d": {
+      "inference_mpr": false,
+      "description": "t2_basic_2d",
+      "num_rotations": 1,
+      "slices_per_input": 1,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint": "t2_basic_2d.checkpoint"
+    },
+    "t2_basic_7ch": {
+      "inference_mpr": false,
+      "description": "t2_basic_7ch",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint": "t2_basic_7ch.checkpoint"
+    },
+    "t2_edsr_2d": {
+      "inference_mpr": false,
+      "description": "t2_edsr_2d",
+      "num_rotations": 1,
+      "slices_per_input": 1,
+      "model_name": "edsr2d",
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint": "t2_edsr_2d.checkpoint"
+    },
+    "t2_uad_2d": {
+      "inference_mpr": false,
+      "description": "t2_uad_2d_7ch",
+      "num_rotations": 1,
+      "slices_per_input": 7,
+      "file_ext": "npy",
+      "resize": 512,
+      "checkpoint": "t2_uad_2d_7ch.checkpoint"
+    }
+  }
+}
