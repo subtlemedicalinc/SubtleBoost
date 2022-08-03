@@ -65,5 +65,4 @@ job_id=$(echo ${fcontent} | sha1sum | awk '{print $1}' | cut -c1-6)
 out_folder=${commit}_${job_id}
 logfile=$2/log_inference_${out_folder}.log
 
-#python inference_process.py ${exp_str} ${gpu_str} --out_folder ${out_folder} > ${logfile} 2>${logfile}
-python inference_process.py ${exp_str} ${gpu_str} --out_folder ${out_folder} 
+python inference_process.py ${exp_str} ${gpu_str} --out_folder ${out_folder} > ${logfile} 2>${logfile}
