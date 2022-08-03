@@ -56,6 +56,36 @@
       "model_config": "wavg_gt7ch_n4",
       "input_idx": "0,1,3,4",
       "pretrain_ckps": "fboost_branch1,fboost_branch2,fboost_branch3"
+    },
+    "rrdb_b1_7ch": {
+      "model_name": "rrdb2d",
+      "l1_lambda": 10,
+      "ssim_lambda": 3,
+      "multi_slice_gt": true,
+      "input_idx": "0,1",
+      "enh_mask_uad": false,
+      "enh_mask": true,
+      "batch_size": 4
+    },
+    "rrdb_b2_7ch": {
+      "model_name": "rrdb2d",
+      "l1_lambda": 10,
+      "ssim_lambda": 3,
+      "multi_slice_gt": true,
+      "input_idx": "0,3",
+      "enh_mask_uad": false,
+      "enh_mask": true,
+      "batch_size": 4
+    },
+    "rrdb_b3_7ch": {
+      "model_name": "rrdb2d",
+      "l1_lambda": 10,
+      "ssim_lambda": 3,
+      "multi_slice_gt": true,
+      "input_idx": "0,4",
+      "enh_mask_uad": false,
+      "enh_mask": true,
+      "batch_size": 4
     }
   },
   "inference": {
