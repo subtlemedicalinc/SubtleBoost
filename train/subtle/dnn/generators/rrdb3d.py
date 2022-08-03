@@ -3,7 +3,7 @@ Based on RRDB implementation in https://github.com/rajatkb/RDNSR-Residual-Dense-
 """
 
 import keras.models
-from keras.layers import Input, Conv2D, Concatenate
+from keras.layers import Input, Conv3D, Concatenate
 from keras.layers.merge import add as keras_add
 
 from subtle.dnn.generators.base import GeneratorBase
@@ -11,18 +11,18 @@ from subtle.dnn.layers.Subpixel import Subpixel
 from keras.optimizers import Adam
 
 
-class GeneratorRRDB2D(GeneratorBase):
+class GeneratorRRDB3D(GeneratorBase):
     def __init__(self, **kwargs):
-        self.model_name = 'rrdb2d'
+        self.model_name = 'rrdb3d'
         super().__init__(**kwargs)
 
         self._build_model()
 
     def _conv(
-        self, x, features=None, activation='relu', padding='same', kernel_size=(3, 3),
-        strides=(1, 1), name=None
+        self, x, features=None, activation='relu', padding='same', kernel_size=(3, 3, 3),
+        strides=(1, 1, 1), name=None
     ):
-        return Conv2D(
+        return Conv3D(
             filters=features, kernel_size=kernel_size, strides=strides, padding=padding,
             activation=activation, name=name
         )(x)
@@ -33,22 +33,21 @@ class GeneratorRRDB2D(GeneratorBase):
 
         for idx in range(1, self.num_rd_iters):
             li.append(pas)
-            out = Concatenate(axis=3, name='cat_rdb{}_{}'.format(rd_idx, idx))(li)
+            out = Concatenate(axis=4, name='cat_rdb{}_{}'.format(rd_idx, idx))(li)
             pas = self._conv(out, self.num_rdb_filters, name='conv_rdb{}_{}'.format(rd_idx, idx))
 
         li.append(pas)
-        out = Concatenate(axis=3, name='cat_rdb{}_{}'.format(rd_idx, idx+1))(li)
+        out = Concatenate(axis=4, name='cat_rdb{}_{}'.format(rd_idx, idx+1))(li)
         feat = self._conv(
-            out, self.num_rdb_filters * 2, kernel_size=(1, 1),
+            out, self.num_rdb_filters * 2, kernel_size=(1, 1, 1),
             name = 'conv_rdb{}_local'.format(rd_idx)
         )
 
         return keras_add([feat, x], name='add_rdb{}'.format(rd_idx))
 
     def _build_model(self):
-        print('Building RRDB 2D model...')
-        print('config vals', self.num_rd_iters, self.num_rd_blocks, self.num_rdb_filters)
-        inputs = Input(shape=(self.img_rows, self.img_cols, self.num_channel_input), name='model_input')
+        print('Building RRDB 3D model...')
+        inputs = Input(shape=(self.img_rows, self.img_cols, self.img_depth, self.num_channel_input), name='model_input')
 
         if self.verbose:
             print(inputs)
@@ -63,9 +62,9 @@ class GeneratorRRDB2D(GeneratorBase):
             rdb = self._rdblock(rdb, idx)
             rdb_list.append(rdb)
 
-        out = Concatenate(axis=3, name='cat_rdb_list')(rdb_list)
+        out = Concatenate(axis=4, name='cat_rdb_list')(rdb_list)
         out = self._conv(
-            out, self.num_rdb_filters * 2, kernel_size=(1, 1), name='conv_post_rdb_1',
+            out, self.num_rdb_filters * 2, kernel_size=(1, 1, 1), name='conv_post_rdb_1',
             activation=None
         )
         out = self._conv(out, self.num_rdb_filters * 2, name='conv_post_rdb_2', activation=None)
