@@ -63,8 +63,8 @@ def get_model_config(model_name, config_key='base', model_type='generators', dir
     sub_config = all_config[config_key]
     return utils_misc.dict_merge(base_config, sub_config)
 
-def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='all', start=None, end=None):
-    fpath_json = os.path.join(dirpath_exp, exp_name, 'data.json')
+def get_experiment_data(exp_name, dirpath_exp='./configs/experiments', dataset='all', start=None, end=None, fname='data'):
+    fpath_json = os.path.join(dirpath_exp, exp_name, '{}.json'.format(fname))
     json_str = open(fpath_json, 'r').read()
     data_dict = json.loads(json_str)
 

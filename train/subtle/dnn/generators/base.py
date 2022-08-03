@@ -5,7 +5,7 @@ Network architecture for SubtleGad project.
 Copyright Subtle Medical (https://www.subtlemedical.com)
 Created on 2018/05/25
 '''
-
+import os
 import tensorflow as tf
 import keras.models
 import keras.callbacks
@@ -50,7 +50,8 @@ class GeneratorBase:
         self._init_model_config()
 
     def _init_model_config(self):
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config='/home/jiang/projects/SubtleGad/train/configs/models')
+        dpath_config = '{}/projects/SubtleGad/train/configs/models'.format(os.path.expanduser('~'))
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config=dpath_config)
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}

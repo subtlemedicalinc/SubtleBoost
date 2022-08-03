@@ -34,6 +34,10 @@ MODEL_MAP = {
         'model': 'generators.GeneratorRRDB2D',
         'data_loader': 'slice_loader.SliceLoader'
     },
+    'rrdb3d': {
+        'model': 'generators.GeneratorRRDB3D',
+        'data_loader': 'block_loader.BlockLoader'
+    },
     'edsr3d': {
         'model': 'generators.GeneratorEDSR3D',
         'data_loader': 'block_loader.BlockLoader'
@@ -69,13 +73,15 @@ def clear_keras_memory():
     keras.backend.clear_session()
 
 # use part of memory
-def set_keras_memory(limit=0.9):
+def set_keras_memory(limit=0.9, num_cpus=10):
     from tensorflow import ConfigProto as tf_ConfigProto
     from tensorflow import Session as tf_Session
     from keras.backend.tensorflow_backend import set_session
     config = tf_ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = limit
     config.gpu_options.allow_growth = True
+    config.intra_op_parallelism_threads = num_cpus
+    config.inter_op_parallelism_threads = num_cpus
     set_session(tf_Session(config=config))
 
 def make_image(im):

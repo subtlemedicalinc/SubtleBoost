@@ -12,6 +12,7 @@ import sys
 import os # FIXME: transition from os to pathlib
 import pathlib
 import pydicom
+from pydicom.encaps import encapsulate as encaps_dcm
 import h5py
 import numpy as np
 from glob import glob
@@ -19,7 +20,7 @@ from tqdm import tqdm
 import pdb
 
 def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
-        series_desc_pre='SubtleGad:', desc=None, series_desc_post='', series_num=None):
+        series_desc_pre='SubtleGad: ', desc=None, series_desc_post=' ', series_num=None):
     """Write output numpy array to dicoms, given input dicoms.
     Args:
         input_dicom_folder (str): input dicom folder path.
@@ -64,13 +65,13 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
     dicom.SliceThickness = abs(delta_z)
     try:
         sdesc = desc if desc is not None else dicom.StudyDescription
-        dicom.StudyDescription = 'SubtleGad:' + sdesc
+        dicom.StudyDescription = series_desc_pre + sdesc
     except AttributeError:
         pass
 
     try:
         sdesc = desc if desc is not None else dicom.SeriesDescription
-        dicom.SeriesDescription = '{} {} {}'.format(series_desc_pre, sdesc, series_desc_post)
+        dicom.SeriesDescription = '{}{}{}'.format(series_desc_pre, sdesc, series_desc_post)
     except AttributeError:
         pass
 
@@ -80,8 +81,13 @@ def write_dicoms(input_dicom_folder, output, output_dicom_folder, row=0, col=0,
         output[np.where(output<0)] = 0
     output = output.astype(dtype)
 
+    dcm_decompress = 'JPEG' in str(dicom.PixelData)
+
     for i in range(output_shape[0]):
         pixel_array = output[i]
+        if dcm_decompress:
+            dicom.decompress()
+            print('JPEG decompress is enabled...')
         dicom.InstanceNumber = str(i + 1)
         dicom.SOPInstanceUID = pydicom.uid.generate_uid()
         dicom.ImageIndex = len(output) - i + 1
@@ -203,7 +209,7 @@ def dicom_files(dicom_dir, normalize=False):
                 lstDCM.append(os.path.join(dirName,filename))
 
     # sort the list
-    lstDCM.sort()
+    lstDCM = sorted(lstDCM, key=lambda f: int(pydicom.dcmread(f).InstanceNumber))
 
     # Preallocation information
 
@@ -312,7 +318,7 @@ def get_npy_files(data_dir, max_data_sets=np.inf):
 
 def load_file(input_file, file_type=None, params={'h5_key': 'data'}):
     slice_data = load_slices(input_file, slices=None, file_type=file_type, params=params)
-    return slice_data.astype(np.float16)
+    return slice_data.astype(np.float32)
 
 def load_h5_file(h5_file, h5_key='data'):
     return load_slices_h5(h5_file, slices=None, h5_key=h5_key)

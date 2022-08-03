@@ -80,7 +80,6 @@ class SliceLoader(keras.utils.Sequence):
 
         self.uad_masks = {}
         self._init_uad_masks()
-        self._init_img_cache()
         self.csf_quant_dict = {}
         self._init_csf_quant_dict()
         self._init_img_cache()
@@ -328,10 +327,11 @@ class SliceLoader(keras.utils.Sequence):
 
             slices_X = slices[:,self.input_idx,:,:][None,...]
             slices_X_mask = slices_mask[:,self.input_idx,:,:][None,...]
+            all_slices_X = slices_mask[:,[0,1,2],:,:][None,...]
 
             data_list_X.append(slices_X)
             data_list_X_mask.append(slices_X_mask)
-            all_slices_X_mask.append(slices_mask)
+            all_slices_X_mask.append(all_slices_X)
 
             if not self.predict:
                 if self.multi_slice_gt:

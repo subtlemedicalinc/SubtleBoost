@@ -136,15 +136,15 @@ def train_process(args):
 
     set_keras_memory(args.keras_memory)
 
-    lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda])
+    # lw_sum = np.sum([args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda])
 
-    if lw_sum > 1.0:
-        args.l1_lambda /= lw_sum
-        args.ssim_lambda /= lw_sum
-        args.perceptual_lambda /= lw_sum
-        args.wloss_lambda /= lw_sum
-
-        print('Loss weight sum is > 1. Normalizing loss weights to add up to one. New loss weights are: \n\n# l1_lambda={:.3f}\n# ssim_lambda={:.3f}\n# perceptual_lambda={:.3f}\n# wloss_lambda={:.3f}'.format(args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda))
+    # if lw_sum > 1.0:
+    #     args.l1_lambda /= lw_sum
+    #     args.ssim_lambda /= lw_sum
+    #     args.perceptual_lambda /= lw_sum
+    #     args.wloss_lambda /= lw_sum
+    #
+    #     print('Loss weight sum is > 1. Normalizing loss weights to add up to one. New loss weights are: \n\n# l1_lambda={:.3f}\n# ssim_lambda={:.3f}\n# perceptual_lambda={:.3f}\n# wloss_lambda={:.3f}'.format(args.l1_lambda, args.ssim_lambda, args.perceptual_lambda, args.wloss_lambda, args.style_lambda))
 
     loss_function = suloss.mixed_loss(l1_lambda=args.l1_lambda, ssim_lambda=args.ssim_lambda, perceptual_lambda=args.perceptual_lambda, wloss_lambda=args.wloss_lambda, style_lambda=args.style_lambda, img_shape=(nx, ny, 3), enh_mask=enh_mask_mode, vgg_resize_shape=args.vgg_resize_shape)
 
