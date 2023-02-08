@@ -12,7 +12,7 @@ from skimage.transform import resize as imresize
 import pandas as pd
 
 class TensorBoardImageCallback(keras.callbacks.Callback):
-    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None, file_ext='npy', uad_mask_path=None, uad_file_ext=None, use_enh_uad=False, use_uad_ch_input=False, uad_ip_channels=1, fpath_uad_masks=[], uad_mask_threshold=0.1, enh_mask_t2=False, multi_slice_gt=False):
+    def __init__(self, model, data_list, slice_dict_list, log_dir, slices_per_epoch=1, slices_per_input=1, batch_size=1, verbose=0, residual_mode=False, max_queue_size=2, num_workers=4, use_multiprocessing=True, shuffle=False, tag='test', gen_type='legacy', positive_only=False, image_index=None, mode='random', input_idx=[0,1], output_idx=[2], resize=None, slice_axis=[0], resample_size=None, brain_only=None, brain_only_mode=None, use_enh_mask=False, enh_pfactor=1.0, model_name=None, block_size=64, block_strides=32, gan_mode=False, detailed_plot=True, plot_list=None, file_ext='npy', uad_mask_path=None, uad_file_ext=None, use_enh_uad=False, use_uad_ch_input=False, uad_ip_channels=1, fpath_uad_masks=[], uad_mask_threshold=0.1, enh_mask_t2=False, multi_slice_gt=False, train_args=None):
         super().__init__()
         self.tag = tag
         self.data_list = data_list
@@ -60,12 +60,13 @@ class TensorBoardImageCallback(keras.callbacks.Callback):
         self.enh_mask_t2 = enh_mask_t2
         self.uad_file_ext = uad_file_ext
         self.multi_slice_gt = multi_slice_gt
+        self.train_args = train_args
 
         self._init_generator()
 
 
     def _init_generator(self):
-        data_loader = load_data_loader(self.model_name)
+        data_loader = load_data_loader(self.train_args)
 
         case_nums = [
             c.split('/')[-1].replace(self.file_ext, '').replace('.', '')
