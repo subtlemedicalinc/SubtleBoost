@@ -822,7 +822,12 @@ def preprocess_multi_contrast(args):
     dcmdir_mc = utils_io.get_dcmdir_with_kw(args.path_base, mc_kw)
     assert dcmdir_mc is not None, 'Study does not have a valid scan with keywords {}'.format(mc_kw)
 
-    dcmdir_t1_pre, dcmdir_t1_low, dcmdir_t1_full = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+    t1_dirs = utils_io.get_dicom_dirs(args.path_base, override=args.override)
+    if len(t1_dirs) == 3:
+        dcmdir_t1_pre, dcmdir_t1_low, dcmdir_t1_full = t1_dirs
+    else:
+        dcmdir_t1_pre, dcmdir_t1_full = t1_dirs
+        dcmdir_t1_low = dcmdir_t1_full
     mc_vol, mc_hdr = utils_io.dicom_files(dcmdir_mc)
     t1_pre = t1_data[0, :, 0]
     t1_low = t1_data[0, :, 1]
@@ -857,20 +862,30 @@ def preprocess_multi_contrast(args):
         im_moving_spacing=mc_spacing, ref_fixed=ref_fixed, ref_moving=ref_moving
     )
 
+    print('Multi contrast volume after registration before crop/pad', mc_vol.shape)
+
     if mc_vol.shape[0] > t1_pre.shape[0]:
         mc_vol = sup.center_crop(mc_vol, np.zeros((t1_pre.shape[0], t1_pre.shape[1], t1_pre.shape[2])))
     elif mc_vol.shape[0] < t1_pre.shape[0]:
-        diff_z = (t1_pre.shape[0] - mc_vol.shape[0]) // 2
-        mc_vol = np.pad(mc_vol, pad_width=[(diff_z, diff_z), (0, 0), (0, 0)],
+        diff = (t1_pre.shape[0] - mc_vol.shape[0])
+        pad_z = diff // 2
+        if pad_z == 0:
+            padw = (1, 0)
+        elif diff % 2 != 0:
+            padw = (pad_z, pad_z + 1)
+        else:
+            padw = (pad_z, pad_z)
+        mc_vol = np.pad(mc_vol, pad_width=[padw, (0, 0), (0, 0)],
                         mode='constant', constant_values=0)
 
-    print('Multi contrast volume shape after registration', mc_vol.shape)
+    print('Multi contrast volume shape after crop/pad', mc_vol.shape)
 
     ### Skull stripping
     print('Skull stripping...')
     mask = t1_data[1, :, 2] >= 0.1
     mask = binary_closing(mask)
 
+    print('mc_vol, mask', mc_vol.shape, mask.shape)
     mc_vol_mask = mc_vol * mask
 
     ## Scaling
