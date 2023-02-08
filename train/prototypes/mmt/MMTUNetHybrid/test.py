@@ -44,6 +44,9 @@ parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--n_contrast', type=int, default=4, help='total number of contrast in the dataset')
 parser.add_argument('--save_enc_out', action='store_true', help='Saves encoder output from MMT model - useful for t-SNE visualization')
+parser.add_argument('--mra_synth', action='store_true', help='Test IXI MRA Synth', default=False)
+parser.add_argument('--split', type=str, help='Dataset split', default='test')
+parser.add_argument('--no_cross_contrast_attn', action='store_true', help='If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed', default=False)
 
 args = parser.parse_args()
 
@@ -119,7 +122,8 @@ if __name__ == "__main__":
                                 patch_norm=config.MODEL.SWIN.PATCH_NORM,
                                 use_checkpoint=config.TRAIN.USE_CHECKPOINT,
                                 seg=args.seg,
-                                num_contrast=args.n_contrast).cuda()
+                                num_contrast=args.n_contrast,
+                                cross_contrast_attn=not args.no_cross_contrast_attn).cuda()
 
     state_dict = torch.load(os.path.join(args.model_path, args.ckpt), map_location='cpu')
     G.load_state_dict(state_dict['G'])

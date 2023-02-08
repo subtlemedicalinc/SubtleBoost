@@ -75,11 +75,12 @@ class MMTDecoderBlock(nn.Module):
         drop_path (float, optional): Stochastic depth rate. Default: 0.0
         act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., drop_path=0.,
-                 act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+                 act_layer=nn.GELU, norm_layer=nn.LayerNorm, cross_contrast_attn=True):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -87,6 +88,7 @@ class MMTDecoderBlock(nn.Module):
         self.window_size = window_size
         self.shift_size = shift_size
         self.mlp_ratio = mlp_ratio
+        self.cross_contrast_attn = cross_contrast_attn
         if self.input_resolution[0] <= self.window_size[0] or self.input_resolution[1] <= self.window_size[1]:
             # if window size is larger than input resolution, we don't partition windows
             self.shift_size = (0, 0)
@@ -145,7 +147,6 @@ class MMTDecoderBlock(nn.Module):
 
         B, n_contrast, H, W, C = x.shape
 
-
         ###### self attn
         shortcut = x
         x = self.norm1(x)  # B, n_contrast, H, W, C
@@ -158,13 +159,24 @@ class MMTDecoderBlock(nn.Module):
 
         # partition windows
         x_windows = window_partition(shifted_x, self.window_size)  # nW*B, n_contrast, window_size, window_size, C
+
         # W-MSA/SW-MSA
         x_windows_embedded = self.with_pos_embed(x_windows, contrast_token)
-        attn_windows, _ = self.self_attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size*n_contrast, C
+
+        if self.cross_contrast_attn:
+            attn_windows, _ = self.self_attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size*n_contrast, C
+        else:
+            x_windows = x_windows.view(
+                x_windows.shape[0] * n_contrast, 1, self.window_size[0], self.window_size[1], C
+            )
+            x_windows_embedded = x_windows_embedded.view(
+                x_windows_embedded.shape[0] * n_contrast, 1, self.window_size[0],
+                self.window_size[1], C
+            )
+            attn_windows, _ = self.self_attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)
 
         # merge windows
         attn_windows = attn_windows.view(-1, n_contrast, self.window_size[0], self.window_size[1], C) # nW*B, n_contrast, window_size, window_size, C
-
 
         shifted_x = window_reverse(attn_windows, self.window_size, H, W)  # B n_contrast H' W'  C
 
@@ -175,7 +187,6 @@ class MMTDecoderBlock(nn.Module):
             x = shifted_x
 
         x = shortcut + self.drop_path(x)
-
 
         ##### cross attn
         shortcut = x
@@ -219,7 +230,6 @@ class MMTDecoderBlock(nn.Module):
         if min(self.shift_size) > 0:
             x = cyclic_shift(shifted_x, shifts=self.shift_size, dims=(2, 3))
             attn = cyclic_shift(shifted_attn, shifts=self.shift_size, dims=(2, 3)) if return_attention else None
-
         else:
             x = shifted_x
             attn = shifted_attn if return_attention else None
@@ -268,17 +278,20 @@ class MMTDecoderLayer(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
         upsample (nn.Module | None, optional): Downsample layer at beginning of the layer. Default: None
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, dim, input_resolution, depth, num_heads, window_size,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., norm_layer=nn.LayerNorm, upsample=None, use_checkpoint=False):
+                 drop_path=0., norm_layer=nn.LayerNorm, upsample=None, use_checkpoint=False,
+                 cross_contrast_attn=True):
 
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
         self.use_checkpoint = use_checkpoint
+        self.cross_contrast_attn = cross_contrast_attn
 
         # patch merging layer
         if upsample is not None:
@@ -295,7 +308,7 @@ class MMTDecoderLayer(nn.Module):
                                  qkv_bias=qkv_bias, qk_scale=qk_scale,
                                  drop=drop, attn_drop=attn_drop,
                                  drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
-                                 norm_layer=norm_layer)
+                                 norm_layer=norm_layer, cross_contrast_attn=cross_contrast_attn)
             for i in range(depth)])
 
 
@@ -335,6 +348,7 @@ class MMT(nn.Module):
         ape (bool): If True, add absolute position embedding to the patch embedding. Default: False
         patch_norm (bool): If True, add normalization after patch embedding. Default: True
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, img_size=224, patch_size=4, in_chans=3, out_chans=1,
@@ -342,7 +356,7 @@ class MMT(nn.Module):
                  window_size=7, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, ape=False, patch_norm=True, ce=True,
-                 use_checkpoint=False, final_upsample="expand_first", num_contrast=4, seg=False, seg_channel=3, **kwargs):
+                 use_checkpoint=False, final_upsample="expand_first", num_contrast=4, seg=False, seg_channel=3, cross_contrast_attn=True, return_indiv_dec_outs=False, **kwargs):
         super().__init__()
 
         print("SwinTransformerSys expand initial----depths:{};depths_decoder:{};drop_path_rate:{}".format(depths,
@@ -357,18 +371,26 @@ class MMT(nn.Module):
         self.mlp_ratio = mlp_ratio
         self.final_upsample = final_upsample
         self.n_contrast = num_contrast
+        self.cross_contrast_attn = cross_contrast_attn
+        self.return_indiv_dec_outs = return_indiv_dec_outs
+
+        print('CROSS CONTRAST ATTN=', cross_contrast_attn)
 
         self.heads = nn.ModuleList()
+        conv_ch_num = int(embed_dim/patch_size**2)
+        if conv_ch_num == 1:
+            conv_ch_num = 3
+
         for _ in range(self.n_contrast):
-            head = Head(in_channels=1, out_channels=int(embed_dim/patch_size**2))
+            head = Head(in_channels=1, out_channels=conv_ch_num)
             self.heads.append(head)
 
         self.tails = nn.ModuleList()
         for _ in range(self.n_contrast):
-            tail = Tail(in_channels=int(embed_dim/patch_size**2), out_channels=1)
+            tail = Tail(in_channels=conv_ch_num, out_channels=1)
             self.tails.append(tail)
         if seg:
-            self.tails.append(Tail(in_channels=int(embed_dim/patch_size**2), out_channels=seg_channel, relu=False))
+            self.tails.append(Tail(in_channels=conv_ch_num, out_channels=seg_channel, relu=False))
 
 
         patches_resolution = [img_size[0] // patch_size, img_size[1] // patch_size]
@@ -395,8 +417,10 @@ class MMT(nn.Module):
         self.encoder = SwinUNet(img_size=img_size, patch_size=patch_size, in_chans=in_chans,
                                 out_chans=out_chans, embed_dim=embed_dim, depths=depths,
                                 num_heads=num_heads, window_size=window_size, mlp_ratio=mlp_ratio,
-                                qkv_bias=qkv_bias, qk_scale=qk_scale, drop_rate=drop_rate, drop_path_rate=drop_path_rate,
-                                ape=ape, patch_norm=patch_norm, use_checkpoint=use_checkpoint)
+                                qkv_bias=qkv_bias, qk_scale=qk_scale, drop_rate=drop_rate,
+                                drop_path_rate=drop_path_rate, ape=ape, patch_norm=patch_norm,
+                                use_checkpoint=use_checkpoint,
+                                cross_contrast_attn=cross_contrast_attn)
 
         # build transformer decoder layers
         self.layers_dec = nn.ModuleList()
@@ -414,12 +438,13 @@ class MMT(nn.Module):
                                      depths[:(self.num_layers - 1 - i_layer) + 1])],
                                  norm_layer=norm_layer,
                                  upsample=PatchExpand if (i_layer > 0) else None,
-                                 use_checkpoint=use_checkpoint)
+                                 use_checkpoint=use_checkpoint,
+                                 cross_contrast_attn=cross_contrast_attn)
             self.layers_dec.append(layer)
 
         if self.final_upsample == "expand_first":
             print("---final upsample expand_first---")
-            self.up = FinalPatchExpand_X4(input_resolution=(img_size[0]//patch_size, img_size[1]//patch_size), dim_scale=4,
+            self.up = FinalPatchExpand_X4(input_resolution=(img_size[0]//patch_size, img_size[1]//patch_size), dim_scale=patch_size,
                                           dim=embed_dim//patch_size**2)
 
         self.apply(self._init_weights)

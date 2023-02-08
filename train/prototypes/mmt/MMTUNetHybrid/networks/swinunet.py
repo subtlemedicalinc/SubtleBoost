@@ -38,11 +38,12 @@ class SwinUNetBlock(nn.Module):
         drop_path (float, optional): Stochastic depth rate. Default: 0.0
         act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
+        cross_contrast_attn (bool, optional): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, dim, input_resolution, num_heads, window_size=(5, 6), shift_size=(0, 0),
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., drop_path=0.,
-                 act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+                 act_layer=nn.GELU, norm_layer=nn.LayerNorm, cross_contrast_attn=True):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -65,6 +66,7 @@ class SwinUNetBlock(nn.Module):
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+        self.cross_contrast_attn = cross_contrast_attn
 
         if min(self.shift_size) > 0:
             # calculate attention mask for SW-MSA
@@ -113,11 +115,25 @@ class SwinUNetBlock(nn.Module):
 
         # partition windows
         x_windows = window_partition(shifted_x, self.window_size)  # nW*B, n_contrast, window_size, window_size, C
+
         x_windows_embedded = self.with_pos_embed(x_windows, contrast_embed)
         # W-MSA/SW-MSA
-        attn_windows, _ = self.attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size*n_contrast, C
+
+        if self.cross_contrast_attn:
+            attn_windows, _ = self.attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size*n_contrast, C
+        else:
+            x_windows = x_windows.view(
+                x_windows.shape[0] * n_contrast, 1, self.window_size[0], self.window_size[1], C
+            )
+            x_windows_embedded = x_windows_embedded.view(
+                x_windows_embedded.shape[0] * n_contrast, 1, self.window_size[0],
+                self.window_size[1], C
+            )
+            attn_windows, _ = self.attn(x_q=x_windows_embedded, x_k=x_windows_embedded, x_v=x_windows, mask=self.attn_mask)
+
         # merge windows
         attn_windows = attn_windows.view(-1, n_contrast, self.window_size[0], self.window_size[1], C) # nW*B, n_contrast, window_size, window_size, C
+
         shifted_x = window_reverse(attn_windows, self.window_size, H, W)  # B n_contrast H' W'  C
 
         # reverse cyclic shift
@@ -168,17 +184,20 @@ class SwinUNetEncoderLayer(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
         downsample (nn.Module | None, optional): Downsample layer at beginning of the layer. Default: None
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, dim, input_resolution, depth, num_heads, window_size,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., norm_layer=nn.LayerNorm, downsample=None, use_checkpoint=False):
+                 drop_path=0., norm_layer=nn.LayerNorm, downsample=None, use_checkpoint=False,
+                 cross_contrast_attn=True):
 
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
         self.use_checkpoint = use_checkpoint
+        self.cross_contrast_attn = cross_contrast_attn
 
         # patch merging layer
         if downsample is not None:
@@ -195,7 +214,7 @@ class SwinUNetEncoderLayer(nn.Module):
                                  qkv_bias=qkv_bias, qk_scale=qk_scale,
                                  drop=drop, attn_drop=attn_drop,
                                  drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
-                                 norm_layer=norm_layer)
+                                 norm_layer=norm_layer, cross_contrast_attn=cross_contrast_attn)
             for i in range(depth)])
 
 
@@ -239,17 +258,19 @@ class SwinUNetDecoderLayer(nn.Module):
         norm_layer (nn.Module, optional): Normalization layer. Default: nn.LayerNorm
         downsample (nn.Module | None, optional): Downsample layer at the end of the layer. Default: None
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, dim, input_resolution, depth, num_heads, window_size,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., norm_layer=nn.LayerNorm, upsample=None, use_checkpoint=False, concat=True):
+                 drop_path=0., norm_layer=nn.LayerNorm, upsample=None, use_checkpoint=False, concat=True, cross_contrast_attn=True):
 
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
         self.use_checkpoint = use_checkpoint
+        self.cross_contrast_attn = cross_contrast_attn
 
         # patch merging layer
         if upsample is not None:
@@ -270,7 +291,7 @@ class SwinUNetDecoderLayer(nn.Module):
                                  qkv_bias=qkv_bias, qk_scale=qk_scale,
                                  drop=drop, attn_drop=attn_drop,
                                  drop_path=drop_path[i] if isinstance(drop_path, list) else drop_path,
-                                 norm_layer=norm_layer)
+                                 norm_layer=norm_layer, cross_contrast_attn=cross_contrast_attn)
             for i in range(depth)])
 
     def forward(self, x, x_enc=None, contrast_embed=None):
@@ -318,6 +339,7 @@ class SwinUNet(nn.Module):
         ape (bool): If True, add absolute position embedding to the patch embedding. Default: False
         patch_norm (bool): If True, add normalization after patch embedding. Default: True
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False
+        cross_contrast_attn (bool): If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed
     """
 
     def __init__(self, img_size=(160, 192), patch_size=4, out_chans=1,
@@ -325,7 +347,8 @@ class SwinUNet(nn.Module):
                  window_size=(5, 6), mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, ape=False, patch_norm=True, ce=True,
-                 use_checkpoint=False, final_upsample="expand_first", num_contrast=4, **kwargs):
+                 use_checkpoint=False, final_upsample="expand_first", num_contrast=4,
+                 cross_contrast_attn=True, **kwargs):
         super().__init__()
 
         self.out_chans = out_chans
@@ -339,6 +362,7 @@ class SwinUNet(nn.Module):
         self.mlp_ratio = mlp_ratio
         self.final_upsample = final_upsample
         self.n_contrast = num_contrast
+        self.cross_contrast_attn = cross_contrast_attn
 
         patches_resolution = [img_size[0] // patch_size, img_size[1] // patch_size]
         num_patches = patches_resolution[0] * patches_resolution[1]
@@ -369,7 +393,8 @@ class SwinUNet(nn.Module):
                                  drop_path=dpr[sum(depths[:i_layer]):sum(depths[:i_layer + 1])],
                                  norm_layer=norm_layer,
                                  downsample=PatchMerging if (i_layer > 0) else None,
-                                 use_checkpoint=use_checkpoint)
+                                 use_checkpoint=use_checkpoint,
+                                 cross_contrast_attn=cross_contrast_attn)
             self.layers_enc.append(layer)
 
         # build decoder layers
@@ -389,7 +414,8 @@ class SwinUNet(nn.Module):
                                  norm_layer=norm_layer,
                                  upsample=PatchExpand if (i_layer > 0) else None,
                                  concat = i_layer > 0,
-                                 use_checkpoint=use_checkpoint)
+                                 use_checkpoint=use_checkpoint,
+                                 cross_contrast_attn=cross_contrast_attn)
             self.layers_dec.append(layer)
 
         # self.norm = norm_layer(self.num_features)

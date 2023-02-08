@@ -39,8 +39,13 @@ parser.add_argument('--lambda_triplet', type=float, default=0, help='weight of t
 parser.add_argument('--margin', type=float, default=0.1, help='margin for triplet loss')
 parser.add_argument('--lambda_GAN', type=float, default=0.1, help='weight of GAN loss')
 parser.add_argument('--lambda_seg', type=float, default=0, help='weight of segmentation loss')
+parser.add_argument('--lambda_perceptual', type=float, default=0,
+help='weight of vgg19 perceptual loss')
+parser.add_argument('--lambda_ssim', type=float, default=0, help='MSF_SSIM loss')
+parser.add_argument('--enh_weight', action='store_true', help='Weight the cross reconstruction loss with enhancement of post-pre', default=False)
 parser.add_argument('--seg_channel', type=int, default=3, help='number of segmentation channels')
 parser.add_argument('--label_smoothing', action='store_true', help='use label smoothing for training discriminator')
+parser.add_argument('--no_cross_contrast_attn', action='store_true', help='If True, attention is computed across multiple input contrasts, else the contrast dimension is collapsed', default=False)
 
 # set up optimizer
 parser.add_argument('--optimizer', type=str, default='sgd')
@@ -100,7 +105,8 @@ if __name__ == "__main__":
                   use_checkpoint=config.TRAIN.USE_CHECKPOINT,
                   seg = args.lambda_seg>0,
                   seg_channel = args.seg_channel,
-                  num_contrast= args.n_contrast).cuda()
+                  num_contrast = args.n_contrast,
+                  cross_contrast_attn = not args.no_cross_contrast_attn).cuda()
 
     D = None
     if args.lambda_GAN > 0:
