@@ -74,7 +74,7 @@ class SliceLoader(keras.utils.Sequence):
         self.uad_file_ext = uad_file_ext
         self.num_channel_output = num_channel_output
 
-        self.ims_cache = ExpiringDict(max_len=250, max_age_seconds=24*60*60)
+        self.ims_cache = ExpiringDict(max_len=600, max_age_seconds=24*60*60)
 
         self._init_slice_info()
 
@@ -136,6 +136,7 @@ class SliceLoader(keras.utils.Sequence):
         self.num_slices = len(self.slice_list_files)
 
     def _init_img_cache(self):
+        print('Initializing image cache...')
         for fpath in tqdm(self.data_list, total=len(self.data_list)):
             data, data_mask = load_file(fpath, file_type=self.file_ext, params={'h5_key': 'all'})
             self._cache_img(fpath, data, data_mask)
@@ -168,7 +169,6 @@ class SliceLoader(keras.utils.Sequence):
         else:
             tic = time.time()
             X, Y = self._data_generation(file_list, slice_list, enforce_raw_data, data_npy)
-
             if self.verbose > 1:
                 print('generated batch in {} s'.format(time.time() - tic))
 
@@ -190,16 +190,13 @@ class SliceLoader(keras.utils.Sequence):
             ims = data[:, :, slices, :]
         elif dim == 3:
             ims = data[:, :, :, slices]
-
         return ims
 
     def _get_slices(self, fpath, slices, dim, params={'h5_key': 'all'}):
         cache_cont = self.ims_cache.get(fpath)
-        from_cache = False
 
         if cache_cont is not None:
             data, data_mask = cache_cont
-            from_cache = True
         else:
             data, data_mask = load_file(fpath, file_type=self.file_ext, params=params)
             self._cache_img(fpath, data, data_mask)
@@ -234,8 +231,6 @@ class SliceLoader(keras.utils.Sequence):
         # volumes containing zero, low, and full contrast.
         # the number of slices may differ but the image dimensions
         # should be the same
-
-        t1 = time.time()
 
         data_list_X = []
         data_list_X_mask = []
@@ -347,6 +342,7 @@ class SliceLoader(keras.utils.Sequence):
             if uad_mask_slices is not None:
                 uad_mask_list.append(uad_mask_slices)
 
+
         if len(data_list_X) > 1:
             data_X = np.concatenate(data_list_X, axis=0)
             data_X_mask = np.concatenate(data_list_X_mask, axis=0)
@@ -360,11 +356,12 @@ class SliceLoader(keras.utils.Sequence):
                 data_Y = data_list_Y[0]
                 data_Y_mask = data_list_Y_mask[0]
 
-        X = data_X.copy()
-        X_mask = data_X_mask.copy()
+        X = data_X
+        X_mask = data_X_mask
         if not self.predict:
-            Y = data_Y.copy()
-            Y_mask = data_Y_mask.copy()
+            Y = data_Y
+            Y_mask = data_Y_mask
+
             if self.use_enh_mask:
                 # FIXME: if percentiles are included in the numpy metadata, then use them as the "max_val_arr" that is passed to the enancement mask (for each sample in the batch)
                 # X_mask shape - (batch_size, slices_per_input, num_inputs, height, width)
@@ -377,10 +374,12 @@ class SliceLoader(keras.utils.Sequence):
                     all_slices_X_mask = np.array(all_slices_X_mask)
                     if len(self.input_idx) == 1:
                         # single contrast model (low-dose as input) - use zero-dose to compute mask
-                        x_input = all_slices_X_mask.copy()
+                        x_input = all_slices_X_mask
                     else:
                         x_input = X_mask
                     enh_mask = enh_mask_smooth(x_input, Y_mask, center_slice=h, p=self.enh_pfactor, multi_slice_gt=self.multi_slice_gt)
+
+                    t2 = time.time()
 
             if self.uad_mode:
                 uad_mask_list = np.array(uad_mask_list)
@@ -393,25 +392,11 @@ class SliceLoader(keras.utils.Sequence):
         if self.verbose > 1:
             print('reshaped data in {} s'.format(time.time() - tic))
 
-        tic = time.time()
-        if self.residual_mode and len(self.input_idx) == 2 and len(self.output_idx) == 1:
-            if self.verbose > 1:
-                print('residual mode. train on (zero, low - zero, full - zero)')
-            X[:,:,1,:,:] -= X[:,:,0,:,:]
-            if self.positive_only:
-                X[:,:,1,:,:] = np.maximum(0, X[:,:,1,:,:])
-            if not self.predict:
-                Y -= X[:,h,0,:,:]
-                if self.positive_only:
-                    Y = np.maximum(0, Y)
-        if self.verbose > 1:
-            print('residual mode in {} s'.format(time.time() - tic))
-
-        tic = time.time()
         # dims are [batch, slices_per_input, len(input_idx), nx, ny]
         # reshape to [batch, -1, nx, ny]
         # then transpose to [batch, nx, ny, -1]
 
+        t1 = time.time()
         X = np.transpose(np.reshape(X, (X.shape[0], -1, X.shape[3], X.shape[4])), (0, 2, 3, 1))
         X_mask = np.transpose(np.reshape(X_mask, (X_mask.shape[0], -1, X_mask.shape[3], X_mask.shape[4])), (0, 2, 3, 1))
 
@@ -475,7 +460,6 @@ class SliceLoader(keras.utils.Sequence):
                 print('X, size = ', X.shape)
             else:
                 print('X, Y sizes = ', X.shape, Y.shape)
-        t2 = time.time()
 
         if self.predict:
             if self.brain_only:
