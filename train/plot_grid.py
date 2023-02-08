@@ -184,10 +184,14 @@ if __name__ == '__main__':
     parser.add_argument('--input', action='store', dest='input', type=str, help='input npy file')
     parser.add_argument('--output', action='store', dest='output', type=str, help='save output instead of plotting', default=None)
     parser.add_argument('--h5_key', action='store', dest='h5_key', type=str, help='H5 key to get the images from, for plotting', default='data')
+    parser.add_argument('--multi_contrast', action='store_true', default=False)
     parser.add_argument('--video', action='store_true', dest='video', help='If true, the preprocessed and difference is stored as an MP4 video', default=False)
 
     args = parser.parse_args()
-    plot_h5(args.input, args.output, args.idx, args.h5_key, args.axis)
+    if args.multi_contrast:
+        plot_multi_contrast(args.input, args.output, args.idx, args.h5_key)
+    else:
+        plot_h5(args.input, args.output, args.idx, args.h5_key, args.axis)
 
     if args.video:
         save_video(args.input, args.output, args.h5_key)
