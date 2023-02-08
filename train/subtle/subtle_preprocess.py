@@ -20,7 +20,6 @@ from scipy.ndimage.morphology import binary_fill_holes
 from skimage.morphology import binary_dilation, binary_erosion, rectangle, square, cube, binary_closing
 from scipy.ndimage.interpolation import zoom as zoom_interp
 from scipy.ndimage import label as cc_label
-import cv2
 from dicom2nifti.convert_dicom import dicom_series_to_nifti
 import nibabel as nib
 import pydicom
@@ -65,14 +64,17 @@ def mask_im(im, threshold=.08, noise_mask_area=False, use_selem=True):
     return mask
 
 def get_largest_connected_component(mask):
-    components = cc_label(mask)[0]
-    max_area = np.max([reg.area for reg in regionprops(components)])
+    try:
+        components = cc_label(mask)[0]
+        max_area = np.max([reg.area for reg in regionprops(components)])
 
-    for val in np.unique(components):
-        if val != 0:
-            mask_label = (components == val)
-            if np.sum(mask_label) == max_area:
-                return mask_label
+        for val in np.unique(components):
+            if val != 0:
+                mask_label = (components == val)
+                if np.sum(mask_label) == max_area:
+                    return mask_label
+    except Exception:
+        return mask
 
 def normalize_data(data, verbose=False, fun=np.mean, axis=(0,1,2), nslices=5):
     ntic = time.time()
@@ -183,7 +185,7 @@ def scale_im(im_fixed, im_moving, levels=1024, points=7, mean_intensity=True, ve
 
 def register_im(im_fixed, im_moving, param_map=None, verbose=True, im_fixed_spacing=None,
 im_moving_spacing=None, max_iter=400, return_params=True, non_rigid=False, fixed_mask=None,
-moving_mask=None, ref_fixed=None, ref_moving=None):
+moving_mask=None, ref_fixed=None, ref_moving=None, return_sitk_img=False):
     '''
     Image registration using SimpleElastix.
     Register im_moving to im_fixed
@@ -254,6 +256,9 @@ moving_mask=None, ref_fixed=None, ref_moving=None):
 
     if not return_params:
         return im_out
+
+    if return_sitk_img:
+        return sim_out, param_map_out
 
     return im_out, param_map_out
 
@@ -334,6 +339,7 @@ def undo_scaling(im_predict, metadata, verbose=False, im_gt=None):
     return out
 
 def resample_slices(slices, resample_size=None):
+    import cv2
     if resample_size is None or resample_size == slices.shape[2]:
         return slices
 
@@ -516,6 +522,7 @@ def enhancement_mask(X, Y, center_slice, th=.05):
 def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False, multi_slice_gt=False):
     'Create a smooth enhancement mask'
     # max_val_arr should be length (batch_size, 1)
+
     if multi_slice_gt:
         Y = np.reshape(Y, (X.shape[0], X.shape[1], Y.shape[2], Y.shape[3], Y.shape[4]))
         im_diff = Y[:, :, 0, ...] - X[:, :, 0, ...]
@@ -525,15 +532,15 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
     if weighted:
         # To give more weight to enhancement present in full dose but not in low dose
         im_diff_low = X[:, center_slice, 1, ...] - X[:, center_slice, 0, ...]
-        mask_diff = (im_diff >= 0.5).astype(np.float32) - (im_diff_low >= 0.5).astype(np.float32)
+        mask_diff = (im_diff >= 0.5).astype(np.float32) - (im_diff_low >= 0.5)
         mask_diff = (
             np.interp(mask_diff, (mask_diff.min(), mask_diff.max()), (0, 1)) > 0.9
-        ).astype(np.float32)
+        )
 
         mask_diff = np.array([
             binary_dilation(mask_diff_sl, selem=square(3))
             for mask_diff_sl in mask_diff
-        ]).astype(np.float32)
+        ])
 
         mask_diff[mask_diff == 1] = im_diff.max()
         mask_diff[mask_diff == 0] = 1.0
@@ -551,6 +558,7 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
     # FIXME: currently hard-coded to minimum value of 1. This obviates the need for the following np.divide
     # check in the future, if global scaling of data changes, that this doesn't mess it up
     max_val_arr = np.clip(max_val_arr, 1.0, max_val_arr.max())
+    # print('Enh mask computation. X=', X.shape, 'Y=', Y.shape, 'Center Slice=', center_slice, 'max_val_arr=', max_val_arr.shape, 'im_diff=', im_diff.shape)
 
     if not multi_slice_gt:
         enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:,None,None], where=max_val_arr[:,None,None]>1E-4) ** p
@@ -558,7 +566,7 @@ def enh_mask_smooth(X, Y, center_slice, p=1.0, max_val_arr=None, weighted=False,
         enh_mask = np.divide(im_diff - np.min(im_diff), max_val_arr[:, :, None, None], where=max_val_arr[:, :, None, None]>1E-4) ** p
 
     enh_mask = enh_mask.reshape(Y.shape)
-    enh_mask = np.clip(enh_mask, 0.01, 10)
+    enh_mask = np.clip(enh_mask, 0.01, enh_mask.max())
     #print(enh_mask.min(), enh_mask.max())
     return enh_mask
 
