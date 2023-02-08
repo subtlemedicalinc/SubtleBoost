@@ -18,7 +18,8 @@
     "discard_end_percent": 0,
     "mask_threshold": 0.1,
     "scale_matching": true,
-    "skip_hist_norm": false,
+    "skip_hist_norm": true,
+    "joint_normalize": true,
     "out_dir": "/home/srivathsa/projects/studies/gad/radnet/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
@@ -108,6 +109,18 @@
     "rad_enh_vgg_dlsim_full": {
       "checkpoint": "rad_enh_vgg_dlsim_full.checkpoint",
       "description": "rad_enh_vgg_dlsim_full"
+    },
+    "boost_2d": {
+      "inference_mpr": false,
+      "description": "radnet_2d_boost",
+      "num_rotations": 1,
+      "input_idx": "0,2",
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/radnet/preprocess/data",
+      "checkpoint": "stanford_enh_vgg.checkpoint"
     }
   }
 }

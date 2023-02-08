@@ -3,10 +3,12 @@
   "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
   "verbose": 1,
   "gpu": 0,
-  "slices_per_input": 5,
+  "slices_per_input": 7,
+  "model_name": "unet2d",
+  "model_config": "base",
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data",
-    "transform_type": "rigid",
+    "transform_type": "affine",
     "normalize": true,
     "normalize_fun": "mean",
     "discard_start_percent": 0,
@@ -17,19 +19,21 @@
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "fsl_mask": true,
     "fsl_mask_all_ims": true,
-    "resample_isotropic": 1,
-    "batch1": {
-      "data_batch": "209,210"
+    "use_fsl_reg": false,
+    "union_brain_masks": false,
+    "register_with_dcm_reference": true,
+    "file_ext": "npy",
+    "t2_process": {
+      "multi_contrast_mode": true,
+      "multi_contrast_kw": "ax,t2",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots/t2",
+      "file_ext": "npy"
     },
-    "batch2": {
-      "data_batch": "300,360"
-    },
-    "batch3": {
-      "data_batch": "360,375"
+    "fl_process": {
+      "multi_contrast_mode": true,
+      "multi_contrast_kw": "space,flair",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots/flair",
+      "file_ext": "npy"
     }
-  },
-  "train": {
-  },
-  "inference": {
   }
 }

@@ -18,7 +18,7 @@
     "scale_matching": true,
     "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
     "fsl_mask": true,
-    "fsl_mask_all_ims": true,
+    "fsl_mask_all_ims": false,
     "use_fsl_reg": false,
     "union_brain_masks": false,
     "register_with_dcm_reference": true,
@@ -106,7 +106,7 @@
     },
     "fl_process": {
       "multi_contrast_mode": true,
-      "multi_contrast_kw": "cube,flair",
+      "multi_contrast_kw": "space,flair",
       "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots/flair",
       "file_ext": "npy"
     },
