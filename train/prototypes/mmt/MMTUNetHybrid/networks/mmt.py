@@ -491,10 +491,14 @@ class MMT(nn.Module):
     #Decoder
     def forward_decoder(self, x, enc_out, contrast_embeds=None, contrast_tokens=None, return_attention=False):
         att_maps = []
+        dec_outs = []
         for i, layer_dec in enumerate(self.layers_dec):
             x, att_map = layer_dec(x, enc_out[i], contrast_embed=contrast_embeds[self.num_layers-1-i],
                           contrast_token=contrast_tokens[self.num_layers-1-i], return_attention=return_attention)
+            dec_outs += x
             att_maps += att_map
+        if self.return_indiv_dec_outs:
+            return x, att_maps, dec_outs
         return x, att_maps
 
     def up_x4(self, x):
@@ -512,15 +516,23 @@ class MMT(nn.Module):
         enc_out = self.forward_encoder(x, inputs, contrast_embeds=contrast_embeds)
         img_outputs = []
         att_maps = []
+        indiv_dec_outs = []
         for output in outputs:
             contrast_tokens = [self.contrast_tokens[i].weight[[output]] for i in range(self.num_layers)]
             B, _, H, W, C = enc_out[0].shape
             tgt = torch.zeros(B, 1, H, W, C).cuda()
-            x, att_map = self.forward_decoder(tgt, enc_out, contrast_embeds=contrast_embeds, contrast_tokens=contrast_tokens,
-                                     return_attention=return_attention)
+            if self.return_indiv_dec_outs:
+                x, att_map, dec_outs = self.forward_decoder(tgt, enc_out, contrast_embeds=contrast_embeds, contrast_tokens=contrast_tokens,
+                                         return_attention=return_attention)
+                indiv_dec_outs += dec_outs
+            else:
+                x, att_map = self.forward_decoder(tgt, enc_out, contrast_embeds=contrast_embeds, contrast_tokens=contrast_tokens,
+                                         return_attention=return_attention)
             att_maps += att_map
             x = self.up_x4(x)
             img_outputs.append(self.tails[output](x[0]))
+        if self.return_indiv_dec_outs:
+            return img_outputs, enc_out, att_maps, indiv_dec_outs
         return img_outputs, enc_out, att_maps
 
     def flops(self):

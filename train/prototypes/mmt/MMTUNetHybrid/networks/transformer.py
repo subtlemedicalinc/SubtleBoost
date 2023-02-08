@@ -273,7 +273,7 @@ class FinalPatchExpand_X4(nn.Module):
         self.dim = dim
         self.dim_scale = dim_scale
         # self.expand = nn.Linear(dim, 16*dim, bias=False)
-        self.output_dim = dim 
+        self.output_dim = dim
         self.norm = norm_layer(self.output_dim)
 
     def forward(self, x):
@@ -335,5 +335,3 @@ class PatchEmbed(nn.Module):
         if self.norm is not None:
             flops += Ho * Wo * self.embed_dim
         return flops
-
-
