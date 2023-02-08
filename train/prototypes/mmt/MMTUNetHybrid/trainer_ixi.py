@@ -21,11 +21,13 @@ from timm.scheduler.cosine_lr import CosineLRScheduler
 from utils import list2str, make_image_grid, EDiceLoss, make_seg_grid
 
 
-input_combination = [[0], [1], [2], [0, 1], [0, 2], [1, 2]]
+input_combination = [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2],
+                     [0, 1, 3], [0, 2, 3], [1, 2, 3]]
 
+input_combination_3 = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]]
 input_combination_2 = [[1, 2], [0, 2], [0, 1]]
 
-
+input_mra_synth = [[0, 1]]
 
 def cosine_similarity(x, y):
     cos = nn.CosineSimilarity(dim=0)
@@ -76,12 +78,12 @@ def random_missing_input(n, k=None):
     return contrast_input, contrast_output
 
 
-def random_split_data(data,  k=None, zero_gad=False):
+def random_split_data(data,  k=None, mra_synth=False):
     n_contrast = len(data)
     contrasts = list(range(n_contrast))
-    if zero_gad:
-        contrast_input = [0, 2, 3]
-        contrast_output = [1]
+    if mra_synth:
+        contrast_input = [0, 1]
+        contrast_output = [3]
     else:
         random.shuffle(contrasts)
         if not k:
@@ -114,9 +116,10 @@ def trainer_ixi(args, G, D, snapshot_path):
     base_lr_g = args.base_lr_g
     base_lr_d = args.base_lr_d
     batch_size = args.batch_size * args.n_gpu
+
     db_train = IXI_dataset(base_dir=args.root_path, split="train",
-                               transform=transforms.Compose(
-                                   [RandomGeneratorIXI(flip=True, scale=[0.9, 1.1])]))
+                               transform=transforms.Compose([RandomGeneratorIXI(flip=True, scale=[0.9, 1.1], n_contrast=4 if args.mra_synth else 3)])
+                           )
     print("The length of train set is: {}".format(len(db_train)))
 
     def worker_init_fn(worker_id):
@@ -173,7 +176,7 @@ def trainer_ixi(args, G, D, snapshot_path):
         lr_scheduler_g.load_state_dict(state_dict['lr_scheduler_g'])
         lr_scheduler_d.load_state_dict(state_dict['lr_scheduler_d'])
 
-    writer = SummaryWriter(snapshot_path + '/log')
+
     iter_num = 0
     max_epoch = args.max_epochs
     max_iterations = args.max_epochs * len(trainloader)  # max_epoch = max_iterations // len(trainloader) + 1
@@ -186,6 +189,7 @@ def trainer_ixi(args, G, D, snapshot_path):
         model_D = D.module if args.n_gpu>1 else D
 
     for epoch_num in trange(args.start_epoch, max_epoch):
+        writer = SummaryWriter(snapshot_path + '/log')
         G.train()
         if args.lambda_GAN > 0:
             D.train()
@@ -200,7 +204,7 @@ def trainer_ixi(args, G, D, snapshot_path):
             img_data = [d.detach().cuda() for d in data]
             loss_g = 0
             iter_num = iter_num + 1
-            img_inputs, img_targets, contrast_inputs, contrast_outputs = random_split_data(img_data, args.k)
+            img_inputs, img_targets, contrast_inputs, contrast_outputs = random_split_data(img_data, args.k, mra_synth=args.mra_synth)
             if args.lambda_self > 0:
                 # compute self reconstruction loss
                 img_outs, enc_out, _ = G(img_inputs, contrast_inputs, contrasts)
@@ -290,17 +294,25 @@ def trainer_ixi(args, G, D, snapshot_path):
 
         # test on validation set
         if epoch_num % args.val_freq == 0:
-            if args.k == 2:
+            if args.mra_synth:
+                val_combination = [[0, 1]]
+            elif args.k == 3:
+                val_combination = input_combination_3
+            elif args.k == 2:
                 val_combination = input_combination_2
             else:
                 val_combination = input_combination
-            val_metrics = evaluator_ixi(args, G, val_combination, split='val')
+
+            val_metrics, _, _ = evaluator_ixi(
+                args, G, val_combination, mra_synth=args.mra_synth, split='val'
+            )
             performance_mae = 0
             performance_mse = 0
             performance_ssim = 0
             performance_psnr = 0
             for i in range(len(val_combination)):
-                output_combination = list(set(range(4)) - set(val_combination[i]))
+                nc = 4 if args.mra_synth else 3
+                output_combination = list(set(range(nc)) - set(val_combination[i]))
                 for j in range(len(val_metrics[i])):
                     writer.add_scalar(f'val_{list2str(val_combination[i])}/ssim_{output_combination[j]}', val_metrics[i][j]['ssim'], epoch_num)
                     performance_ssim += val_metrics[i][j]['ssim']
@@ -340,5 +352,5 @@ def trainer_ixi(args, G, D, snapshot_path):
         torch.save(state_dict, save_path)
         logging.info("save model to {}".format(save_path))
 
-    writer.close()
+        writer.close()
     return "Training Finished!"

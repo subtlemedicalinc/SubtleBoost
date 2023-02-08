@@ -78,7 +78,7 @@ def random_missing_input(n, k=None):
     return contrast_input, contrast_output
 
 
-def random_split_data(data,  k=None, zero_gad=False):
+def random_split_data(data, k=None, zero_gad=False):
     n_contrast = len(data)
     contrasts = list(range(n_contrast))
     if zero_gad:

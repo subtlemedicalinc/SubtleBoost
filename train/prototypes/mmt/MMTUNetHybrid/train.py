@@ -31,7 +31,8 @@ parser.add_argument('--cfg', type=str, default='configs/mmt.yml', help='model co
 parser.add_argument('--exp', type=str, default='MMT', help='name of experiment')
 parser.add_argument('--k', type=int,
                     default=None, help='number of inputs')
-parser.add_argument('--zero_gad', action='store_true', help='synthesis T1Gd only')
+parser.add_argument('--zero_gad', action='store_true', help='synthesis T1Gd only', default=False)
+parser.add_argument('--mra_synth', action='store_true', help='MRA Synthesis from T1+T2 using IXI', default=False)
 # set up loss function
 parser.add_argument('--lambda_self', type=float, default=5, help='weight of self-recon loss')
 parser.add_argument('--lambda_cross', type=float, default=20, help='weight of self-cross loss')
@@ -61,6 +62,7 @@ parser.add_argument('--warmup_epoch', type=int, default=3, help='epochs for lr w
 parser.add_argument('--max_epochs', type=int,
                     default=50, help='maximum epoch number to train')
 parser.add_argument('--ckpt', type=str, default=None, help='load ckpt and resume training')
+parser.add_argument('--continue_training', action='store_true', help='Continue training from previous checkpoint', default=False)
 parser.add_argument('--val_freq', type=int, default=1, help='validation frequency')
 parser.add_argument('--vis_freq', type=int, default=50, help='frequency of save images to tensorboard')
 parser.add_argument('--deterministic', type=int,  default=0,

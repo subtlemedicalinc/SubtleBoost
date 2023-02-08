@@ -13,7 +13,7 @@ from kornia.augmentation import RandomVerticalFlip, RandomAffine
 
 
 class RandomGeneratorIXI(object):
-    def __init__(self, scale=None, flip=False, n_contrast=3):
+    def __init__(self, scale=None, flip=False, n_contrast=4):
         self.scale = scale
         self.flip = flip
         self.n_contrast = n_contrast

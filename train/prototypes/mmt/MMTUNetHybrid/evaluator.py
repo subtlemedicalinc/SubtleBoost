@@ -12,7 +12,7 @@ import torch.optim as optim
 from tensorboardX import SummaryWriter
 from torch.nn import L1Loss, MSELoss
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from torchvision import transforms
 from datasets.dataset_brats import BRATS_dataset, RandomGeneratorBRATS
 from datasets.dataset_ixi import IXI_dataset, RandomGeneratorIXI
@@ -68,10 +68,11 @@ class AverageMeter(object):
         self.count = 0
 
     def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
+        if np.isfinite(val):
+            self.val = val
+            self.sum += val * n
+            self.count += n
+            self.avg = self.sum / self.count
 
 
 def split_data(data, inputs, targets):
@@ -127,7 +128,7 @@ def eval_brats(model, inputs, targets, dataloader, seg=False, masked=False):
                     metrics_meters[i][1].update(mae(img_o, img_t))
                     metrics_meters[i][2].update(ssim(img_o, img_t))
                     metrics_meters[i][3].update(psnr(img_t, img_o))
-                    #metrics_meters[i][4].update(lpips_metrics(img_t, img_o))
+                    # metrics_meters[i][4].update(lpips_metrics(img_t, img_o))
             if masked:
                 for i, outputs in enumerate(img_outputs):
                     output_imgs = outputs.detach().cpu().numpy()
@@ -153,7 +154,7 @@ def eval_brats(model, inputs, targets, dataloader, seg=False, masked=False):
         metrics[i]['mae'] = metrics_meters[i][1].avg
         metrics[i]['ssim'] = metrics_meters[i][2].avg
         metrics[i]['psnr'] = metrics_meters[i][3].avg
-        #metrics[i]['lpips'] = metrics_meters[i][4].avg
+        # metrics[i]['lpips'] = metrics_meters[i][4].avg
     print(f"***Inputs: {inputs}; Outputs: {targets}; {metrics}")
     if seg:
         metrics_seg = {}
@@ -184,8 +185,9 @@ def evaluator_brats(args, model, input_combination, split='test', seg=False, mas
     def worker_init_fn(worker_id):
         random.seed(args.seed + worker_id)
 
-    dataloader = DataLoader(db, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True,
-                             worker_init_fn=worker_init_fn)
+    batch_size = 16 # temporary
+
+    dataloader = DataLoader(db, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=False, worker_init_fn=worker_init_fn)
 
     metrics = []
     metrics_seg = []
@@ -193,6 +195,7 @@ def evaluator_brats(args, model, input_combination, split='test', seg=False, mas
     for inputs in input_combination:
         targets = list(set(range(4)) - set(inputs))
         metric, metric_seg, metric_masked = eval_brats(model, inputs, targets, dataloader, seg=seg, masked=masked)
+        metric[0]['input_combination'] = inputs
         metrics.append(metric)
         metrics_seg.append(metric_seg)
         metrics_masked.append(metric_masked)
@@ -222,39 +225,44 @@ def eval_ixi(model, inputs, targets, dataloader):
                     metrics_meters[i][1].update(mae(img_o, img_t))
                     metrics_meters[i][2].update(ssim(img_o, img_t))
                     metrics_meters[i][3].update(psnr(img_t, img_o))
-                    #metrics_meters[i][4].update(lpips(img_t, img_o))
+                    metrics_meters[i][4].update(lpips_metrics(img_t, img_o))
     metrics = [{} for _ in range(len(targets))]
     for i in range(len(targets)):
         metrics[i]['mse'] = metrics_meters[i][0].avg
         metrics[i]['mae'] = metrics_meters[i][1].avg
         metrics[i]['ssim'] = metrics_meters[i][2].avg
         metrics[i]['psnr'] = metrics_meters[i][3].avg
-        #metrics[i]['lpips'] = metrics_meters[i][4].avg
+        metrics[i]['lpips'] = metrics_meters[i][4].avg
     print(f"***Inputs: {inputs}; Outputs: {targets}; {metrics}")
-    return metrics
+    return metrics, None, None
 
 
-def evaluator_ixi(args, model, input_combination, split='test'):
+def evaluator_ixi(args, model, input_combination, mra_synth=False, split='test'):
 
     batch_size = args.batch_size * args.n_gpu
     db = IXI_dataset(base_dir=args.root_path, split=split,
                                transform=transforms.Compose(
-                                   [RandomGeneratorIXI(flip=False, scale=None, n_contrast=3)]))
+                                   [RandomGeneratorIXI(flip=False, scale=None, n_contrast=4 if args.mra_synth else 3)]))
 
     print("The length of data set is: {}".format(len(db)))
 
     def worker_init_fn(worker_id):
         random.seed(args.seed + worker_id)
 
-    dataloader = DataLoader(db, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True,
+    batch_size = 6 # temporary
+
+    dataloader = DataLoader(db, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True,
                              worker_init_fn=worker_init_fn)
 
     metrics = []
     for inputs in input_combination:
-        targets = list(set(range(3)) - set(inputs))
-        metric = eval_ixi(model, inputs, targets, dataloader)
+        if args.mra_synth:
+            targets = [3]
+        else:
+            targets = list(set(range(3)) - set(inputs))
+        metric, _, _ = eval_ixi(model, inputs, targets, dataloader)
         metrics.append(metric)
-    return metrics
+    return metrics, None, None
 
 
 def generate_spine_images(img_data, model, contrast_input, contrast_output, crop_size=256):

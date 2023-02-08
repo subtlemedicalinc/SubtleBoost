@@ -18,6 +18,8 @@ input_combination_3 = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]]
 
 input_combination_zerogad = [[0, 2, 3]]
 
+input_combination_mrasynth = [[0, 1]]
+
 input_combination_ixi = [[0], [1], [2], [0, 1], [0, 2], [1, 2]]
 
 input_combination_2 = [[1, 2], [0, 2], [0, 1]]
@@ -98,7 +100,11 @@ def visualize_results(args, model, input_combination, split='test', vis_dir='vis
         files += glob.glob(f'{case}/*.npy')
     print("The length of data set is: {}".format(len(files)))
     for inputs in input_combination:
-        targets = get_op_comb(inputs)
+        if args.mra_synth:
+            targets = [3]
+        else:
+            targets = get_op_comb(inputs)
+
         print(f"***Inputs: {inputs}; Outputs: {targets}")
         vis_results(model, inputs, targets, files, args.model_path, split, vis_dir=vis_dir, dataset=args.dataset, save_enc_out=args.save_enc_out)
 
@@ -131,6 +137,8 @@ if __name__ == "__main__":
 
     if args.zero_gad:
         input_combination = input_combination_zerogad
+    elif args.mra_synth:
+        input_combination = input_combination_mrasynth
     elif args.k == 4:
         input_combination = [[0, 1, 2, 3]]
     elif args.k == 3:
@@ -140,15 +148,15 @@ if __name__ == "__main__":
     else:
         input_combination = input_combination_brats if args.dataset == 'BRATS' else input_combination_ixi
     if args.vis:
-        visualize_results(args, G, input_combination, split='test', vis_dir=args.vis_dir)
+        visualize_results(args, G, input_combination, split=args.split, vis_dir=args.vis_dir)
 
     if args.dataset == 'BRATS':
-        metrics, metrics_seg, metrics_masked = evaluator_brats(args, G, input_combination, split='test', seg=args.seg,
+        metrics, metrics_seg, metrics_masked = evaluator_brats(args, G, input_combination, split=args.split, seg=args.seg,
                                                            masked=args.masked)
     elif args.dataset == 'IXI':
-        metrics = evaluator_ixi(args, G, input_combination, split='test')
+        metrics, _, _ = evaluator_ixi(args, G, input_combination, split=args.split)
     else:
-        metrics = evaluator_spine(args, G, input_combination, split='test')
+        metrics = evaluator_spine(args, G, input_combination, split=args.split)
 
     get_op_comb = lambda ip_comb: (
         [[0]] if args.k == 4 else list(set(range(args.n_contrast)) - set(ip_comb))

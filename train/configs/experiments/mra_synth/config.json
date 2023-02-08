@@ -1,0 +1,83 @@
+{
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/mra_synth/train/checkpoints",
+  "data_dir": "/home/srivathsa/projects/studies/gad/mra_synth/preprocess/data",
+  "verbose": 1,
+  "gpu": 0,
+  "slices_per_input": 7,
+  "model_name": "unet2d",
+  "model_config": "base",
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/mra_synth/data",
+    "transform_type": "affine",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/mra_synth/preprocess/plots",
+    "discard_end_percent": 0,
+    "mask_threshold": 0.1,
+    "scale_matching": false,
+    "out_dir": "/home/srivathsa/projects/studies/gad/mra_synth/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": false,
+    "use_fsl_reg": false,
+    "union_brain_masks": false,
+    "register_with_dcm_reference": true,
+    "file_ext": "npy",
+    "override": true,
+    "skip_hist_norm": true,
+    "skip_registration": true,
+    "batch1": {
+      "data_batch": "248,568"
+    }
+  },
+  "train": {
+    "max_data_sets": 500,
+    "validation_split": 0.25,
+    "learning_rate": 0.001,
+    "log_dir": "/home/srivathsa/projects/studies/gad/mra_synth/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/mra_synth/train/history",
+    "l1_lambda": 0.6,
+    "file_ext": "h5",
+    "ssim_lambda": 0.4,
+    "batch_size": 16,
+    "no_save_best_only": false,
+    "save_all_weights": true,
+    "queue_size": 8,
+    "num_workers": 4,
+    "simple_2pt5d": {
+      "data_dir": "/home/srivathsa/projects/studies/gad/mra_synth/preprocess/slices",
+      "pre_sliced_mpr": true,
+      "resize": 512,
+      "file_ext": "npy",
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.3,
+      "perceptual_lambda": 0.1,
+      "enh_mask": true,
+      "enh_pfactor": 1.75,
+      "checkpoint_name": "simple_2pt5d"
+    }
+  },
+  "inference": {
+    "learn_residual": false,
+    "file_ext": "h5",
+    "inference_mpr_avg": "mean",
+    "data_raw": "/home/srivathsa/projects/studies/gad/mra_synth/data",
+    "series_num": 1002,
+    "stats_base": "/home/srivathsa/projects/studies/gad/mra_synth/inference",
+    "zoom": 0,
+    "procs_per_gpu": 2,
+    "512_nompr": {
+      "inference_mpr": false,
+      "resize": 512,
+      "num_rotations": 1,
+      "file_ext": "npy",
+      "slices_per_input": 7,
+      "description": "512_onlyvgg_ds256",
+      "checkpoint": "512_onlyvgg_ds256.checkpoint"
+    }
+  }
+}
