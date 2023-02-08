@@ -3,8 +3,10 @@ import torch
 from medpy import metric
 from scipy.ndimage import zoom
 import torch.nn as nn
+from torch.nn import functional as F
 import SimpleITK as sitk
 from torchvision.utils import make_grid
+from torchvision import models, transforms
 
 
 def make_image_grid(tensor_list):
@@ -37,6 +39,60 @@ def list2str(x):
     for x_i in x:
         f += f'{x_i}'
     return f
+
+class VGGLoss(nn.Module):
+    def __init__(self, resize=True, requires_grad=False, lossfn_type='mse'):
+        super(VGGLoss, self).__init__()
+        blocks = []
+        blocks.append(models.vgg19(pretrained=True).features[:3].eval())
+        blocks.append(models.vgg19(pretrained=True).features[3:8].eval())
+        blocks.append(models.vgg19(pretrained=True).features[8:17].eval())
+        #blocks.append(models.vgg19(pretrained=True).features[17:26].eval())
+        #blocks.append(models.vgg19(pretrained=True).features[26:35].eval())
+        for bl in blocks:
+            for p in bl.parameters():
+                p.requires_grad = requires_grad
+        self.blocks = nn.ModuleList(blocks)
+        self.transform = nn.functional.interpolate
+        self.resize = resize
+
+        # RGB mean, std
+        # https://pytorch.org/vision/stable/models.html
+        mean = torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+        std = torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+        self.register_buffer('mean', mean)
+        self.register_buffer('std', std)
+
+        if lossfn_type == 'l1':
+            self.lossfn = nn.L1Loss()
+        else:
+            self.lossfn = nn.MSELoss()
+
+    def vgg_feat(self, x):
+        x = x.repeat(1, 3, 1, 1)
+        x = (x - self.mean) / self.std
+
+        if self.resize:
+            x = self.transform(x, mode='bilinear', size=(224, 224), align_corners=False)
+
+        feat = []
+        feat.append(x)
+        for block in self.blocks:
+            x = block(x).div(12.75)
+            feat.append(x)
+
+        return feat
+
+    def forward(self, x, gt):
+        x_vgg, gt_vgg = self.vgg_feat(x), self.vgg_feat(gt)
+        loss = 0.
+        if isinstance(x_vgg, list):
+            n = len(x_vgg)
+            for i in range(n):
+                loss += (1./n) * self.lossfn(x_vgg[i], gt_vgg[i].detach())
+        else:
+            loss += self.lossfn(x_vgg, gt_vgg.detach())
+        return loss
 
 class EDiceLoss(nn.Module):
     """Dice loss tailored to Brats need.

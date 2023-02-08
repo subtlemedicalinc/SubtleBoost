@@ -18,7 +18,8 @@ from datasets.dataset_brats import BRATS_dataset, RandomGeneratorBRATS
 from evaluator import evaluator_brats, AverageMeter
 import pdb
 from timm.scheduler.cosine_lr import CosineLRScheduler
-from utils import list2str, make_image_grid, EDiceLoss, make_seg_grid
+from utils import list2str, make_image_grid, EDiceLoss, make_seg_grid, VGGLoss
+from loss_ssim import MSF_SSIM
 
 
 input_combination = [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2],
@@ -94,13 +95,21 @@ def random_split_data(data,  k=None, zero_gad=False):
     return img_inputs, img_targets, contrast_input, contrast_output
 
 
-def recon_loss(outputs, targets, criterion):
+def recon_loss(outputs, targets, criterion, enh_weight=False, enh_weight_input=None):
+    if enh_weight:
+        img_ref = enh_weight_input[0] # for t1 pre
+        img_con = targets[0] # for t1 post
+        enh_mask = (img_con - img_ref) + 1e-8
     loss = 0
     for output, target in zip(outputs, targets):
-        loss += criterion(output, target)
+        if enh_weight:
+            output_weighted = output * enh_mask
+            target_weighted = target * enh_mask
+            loss += criterion(output_weighted, target_weighted)
+        else:
+            loss += criterion(output, target)
     loss = loss/len(outputs)
     return loss
-
 
 def trainer_brats(args, G, D, snapshot_path):
     best_performance_mae = np.inf
@@ -163,16 +172,29 @@ def trainer_brats(args, G, D, snapshot_path):
     if args.ckpt:
         state_dict = torch.load(args.ckpt, map_location='cpu')
         G.load_state_dict(state_dict['G'])
-        D.load_state_dict(state_dict['D'])
-        args.start_epoch = state_dict['epoch'] + 1
+        if args.lambda_GAN > 0:
+            D.load_state_dict(state_dict['D'])
+
+        if args.continue_training:
+            args.start_epoch = state_dict['epoch'] + 1
+
         best_performance_mae = state_dict['mae']
         best_performance_mse = state_dict['mse']
-        best_performance_psnr = state_dict['psnr']
-        best_performance_ssim = state_dict['ssim']
+        if 'psnr' in state_dict:
+            best_performance_psnr = state_dict['psnr']
+        else:
+            best_performance_psnr = 0
+        if 'ssim' in state_dict:
+            best_performance_ssim = state_dict['ssim']
+        else:
+            best_performance_ssim = 0
+
         opt_G.load_state_dict(state_dict['opt_G'])
-        opt_D.load_state_dict(state_dict['opt_D'])
+        if args.lambda_GAN > 0:
+            opt_D.load_state_dict(state_dict['opt_D'])
         lr_scheduler_g.load_state_dict(state_dict['lr_scheduler_g'])
-        lr_scheduler_d.load_state_dict(state_dict['lr_scheduler_d'])
+        if args.lambda_GAN > 0:
+            lr_scheduler_d.load_state_dict(state_dict['lr_scheduler_d'])
 
     writer = SummaryWriter(snapshot_path + '/log')
     iter_num = 0
@@ -181,7 +203,11 @@ def trainer_brats(args, G, D, snapshot_path):
     logging.info("{} iterations per epoch. {} max iterations ".format(len(trainloader), max_iterations))
 
     criterion_img = L1Loss()
+    criterion_ssim = MSF_SSIM(
+        img_shape=[1, 160, 192], data_range=10., size_average=True, kadid10k_opt=True
+    ).to('cuda')
     criterion_seg = EDiceLoss(do_sigmoid=True)
+    criterion_perceptual = VGGLoss().to('cuda')
     model_G = G.module if args.n_gpu>1 else G
     if args.lambda_GAN > 0:
         model_D = D.module if args.n_gpu>1 else D
@@ -196,12 +222,17 @@ def trainer_brats(args, G, D, snapshot_path):
             loss_meter_gan_d = AverageMeter()
         if args.lambda_seg > 0:
             loss_meter_seg = AverageMeter()
+        if args.lambda_perceptual > 0:
+            loss_meter_perceptual = AverageMeter()
+        if args.lambda_ssim > 0:
+            loss_meter_ssim = AverageMeter()
+
         loss_meter_rec = AverageMeter()
         n_contrast = model_G.n_contrast
         contrasts = list(range(n_contrast))
         for i_batch, data in enumerate(tqdm(trainloader)):
-            import pdb
-            pdb.set_trace()
+            # import pdb
+            # pdb.set_trace()
             img_data = data[:-1]
             img_data = [d.detach().cuda() for d in img_data]
             loss_g = 0
@@ -253,7 +284,10 @@ def trainer_brats(args, G, D, snapshot_path):
                 img_outputs, enc_out, _ = G(img_inputs, contrast_inputs, contrast_outputs)
 
             # compute cross recontruction loss
-            loss_output_rec = recon_loss(img_outputs, img_targets, criterion_img)
+            loss_output_rec = recon_loss(
+                img_outputs, img_targets, criterion_img, enh_weight=args.enh_weight,
+                enh_weight_input=img_inputs if args.enh_weight else None
+            )
             loss_g += args.lambda_cross * loss_output_rec
             writer.add_scalar('train/loss_output_rec', loss_output_rec, iter_num)
 
@@ -285,6 +319,19 @@ def trainer_brats(args, G, D, snapshot_path):
                 loss_meter_gan_d.update(loss_gan_d.item())
                 loss_meter_gan_g.update(loss_gan_g.item())
                 loss_g += args.lambda_GAN*loss_gan_g
+
+            if args.lambda_perceptual > 0:
+                loss_vgg = recon_loss(
+                    img_outputs, img_targets, criterion_perceptual
+                )
+                loss_g += args.lambda_perceptual * loss_vgg
+                loss_meter_perceptual.update(loss_vgg.item())
+
+            if args.lambda_ssim > 0:
+                loss_ssim = recon_loss(img_outputs, img_targets, criterion_ssim)
+                loss_ssim = (1 - loss_ssim)
+                loss_g += args.lambda_ssim * loss_ssim
+                loss_meter_ssim.update(loss_ssim.item())
 
             # update generator
             opt_G.zero_grad()
@@ -330,8 +377,11 @@ def trainer_brats(args, G, D, snapshot_path):
                       'lr_scheduler_g': lr_scheduler_g.state_dict()}
         if args.lambda_GAN > 0:
             state_dict['D'] = model_D.state_dict()
-            state_dict['opt_D'] = opt_D.state_dict()
+            state_dict['opt_d'] = opt_D.state_dict()
             state_dict['lr_scheduler_d'] = lr_scheduler_d.state_dict()
+
+        if args.lambda_perceptual > 0:
+            writer.add_scalar('epoch/loss_perceptual', loss_meter_perceptual.avg, epoch_num)
 
         # test on validation set
         if epoch_num % args.val_freq == 0:
