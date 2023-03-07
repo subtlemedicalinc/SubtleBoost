@@ -133,6 +133,4 @@ def load_data_loader(args):
     mod_path = MODEL_MAP[args.model_name]['data_loader']
     mod_path = 'subtle.data_loaders.' + mod_path
 
-    if args.pre_sliced_mpr:
-        mod_path = 'subtle.data_loaders.pre_sliced_mpr_loader.PreSlicedMPRLoader'
     return _load_module(mod_path)
