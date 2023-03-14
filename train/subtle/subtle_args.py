@@ -25,7 +25,7 @@ def _shared_args(parser):
     parser.add_argument('--verbose', action='store_true', dest='verbose', help='verbose')
     parser.add_argument('--gpu', action='store', dest='gpu', type=str, help='set GPU', default=None)
     parser.add_argument('--use_multiprocessing', action='store_true', dest='use_multiprocessing', help='use multiprocessing in generator', default=False)
-    parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=1)
+    parser.add_argument('--num_workers', action='store', dest='num_workers', type=int, help='number of workers for generator', default=8)
     parser.add_argument('--procs_per_gpu', action='store', dest='procs_per_gpu', type=int, help='For parallel MPR processing, this number specifies the number of processes to be run on a single GPU', default=1)
     parser.add_argument('--max_queue_size', action='store', dest='max_queue_size', type=int, help='generator queue size', default=16)
     parser.add_argument('--id', action='store', dest='job_id', type=str, help='job id for logging', default='')

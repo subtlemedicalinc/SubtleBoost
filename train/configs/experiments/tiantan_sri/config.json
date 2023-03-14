@@ -1,5 +1,5 @@
 {
-  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/slices",
   "verbose": 1,
   "gpu": 0,
   "model_name": "unet2d",
@@ -47,9 +47,10 @@
     "train_mpr": true,
     "num_epochs": 100,
     "shuffle": true,
+    "slices_per_input": 7,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
     "l1_lambda": 0.6,
-    "file_ext": "h5",
+    "file_ext": "npy",
     "batch_size": 8,
     "ssim_lambda": 0.4,
     "no_save_best_only": true,

@@ -15,14 +15,16 @@ import time
 import numpy as np
 from functools import wraps
 
-import tensorflow as tf
-from tensorflow import log as tf_log
-from tensorflow import constant as tf_constant
-import keras.losses
-from keras import backend as K
+import torch
 
-from keras.applications.vgg19 import VGG19
-from keras.models import Model
+# import tensorflow as tf
+# from tensorflow import log as tf_log
+# from tensorflow import constant as tf_constant
+# import keras.losses
+# from keras import backend as K
+#
+# from keras.applications.vgg19 import VGG19
+# from keras.models import Model
 
 """
 * Using VGG19's preprocess_input method caused the following error during hyperparameter search execution and hence using mobilenet's method instead
@@ -31,7 +33,7 @@ from keras.models import Model
 
 * Imagenet's preprocess_input and vgg19's preprocess input have the same functionality - refer https://github.com/keras-team/keras-applications/blob/master/keras_applications/imagenet_utils.py
 """
-from keras.applications.imagenet_utils import preprocess_input as vgg_preprocess
+# from keras.applications.imagenet_utils import preprocess_input as vgg_preprocess
 
 
 """
@@ -110,8 +112,7 @@ def extract_image_patches(x, ksizes, ssizes, padding='same',
 
     return patches
 
-@extract_weights
-def ssim_loss(y_true, y_pred, weights, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
+def ssim_loss(y_true, y_pred, kernel=(3, 3), k1=.01, k2=.03, kernel_size=3, max_value=1.):
     # ssim parameters
     cc1 = (k1 * max_value) ** 2
     cc2 = (k2 * max_value) ** 2
@@ -165,9 +166,8 @@ def weighted_l1_loss(y_true, y_pred, weights):
     y_pred *= weights
     return keras.losses.mean_absolute_error(y_true, y_pred)
 
-@extract_weights
-def l1_loss(y_true, y_pred, weights):
-    return keras.losses.mean_absolute_error(y_true, y_pred)
+def l1_loss(y_true, y_pred):
+    return torch.nn.L1Loss()(y_true, y_pred)
 
 @extract_weights
 def perceptual_loss(y_true, y_pred, weights, img_shape, resize_shape):

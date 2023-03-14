@@ -37,13 +37,17 @@ def process_mpr_tiantan(vol, plane):
         x1 = 0
     vol = vol.transpose(tr)
     vol = np.rot90(vol, k=3, axes=(1, 2))
-    vol = sp.util.resize(vol, [vol.shape[0], vol.shape[1], 240])
-    vol = remove_noisy_bg(vol)
+    vol = sp.util.resize(vol, [vol.shape[0], 240, 240])
+    # vol = remove_noisy_bg(vol)
     return vol
 
 def process_case(fpath_data, mode='mra'):
     data = suio.load_file(fpath_data, params={'h5_key': 'all'})
     data = data.transpose(0, 2, 1, 3, 4)
+
+    if 'Prisma' in fpath_data:
+        data = data[..., 8:-8, 8:-8]
+
     data_or1 = None
     data_or2 = None
 
@@ -97,7 +101,7 @@ if __name__ == '__main__':
     cases = sorted([
         c.split('/')[-1].replace(f'.{file_ext}', '')
         for c in glob('{}/*.{}'.format(src_path, file_ext))
-        if 'meta' not in c
+        if 'meta' not in c and 'TwoDim' not in c
     ])
 
     for cnum in tqdm(cases, total=len(cases)):
