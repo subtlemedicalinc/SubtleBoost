@@ -329,7 +329,7 @@ def inference_process(args):
     args.input_idx = [int(idx) for idx in args.input_idx.split(',')]
     args.output_idx = [int(idx) for idx in args.output_idx.split(',')]
 
-    data_loader = load_data_loader(args.model_name)
+    data_loader = load_data_loader(args)
 
     mconf_dict = utils_exp.get_model_config(args.model_name, args.model_config, model_type='generators')
     num_poolings = mconf_dict['num_poolings'] if 'num_poolings' in mconf_dict else 3
@@ -616,7 +616,7 @@ def inference_process(args):
     #     print('Y prediction shape after undoing zero pad', Y_prediction.shape)
 
     data_out = supre.undo_scaling(Y_prediction, metadata, verbose=args.verbose, im_gt=im_gt)
-    
+
     utils_io.write_dicoms(args.path_low, data_out, args.path_out, series_desc_pre='SubtleGad: ', series_desc_post=args.description, series_num=args.series_num)
 
     # if args.brain_only:
