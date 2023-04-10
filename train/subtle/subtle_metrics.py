@@ -184,6 +184,6 @@ def ssim(x_truth, x_predict, axis=None, dynamic_range=None):
     if x_truth.dtype != x_predict.dtype:
         warnings.warn('x_truth.dtype == {} != {} == x_predict.dtype. Casting x_predict to x_truth'.format(x_truth.dtype, x_predict.dtype))
         x_predict = x_predict.astype(dtype=x_truth.dtype)
-    
-    score = ssim_score(x_truth, x_predict, data_range=dynamic_range)
+
+    score = ssim_score(x_truth, x_predict, data_range=dynamic_range, channel_axis=0)
     return score

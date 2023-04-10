@@ -270,6 +270,7 @@ def dcm_to_sitk(fpath_dcm):
     img_reader.SetFileNames(series_files)
     img_reader.MetaDataDictionaryArrayUpdateOn()
     img_reader.LoadPrivateTagsOn()
+    img_reader.SetOutputPixelType(sitk.sitkFloat32)
 
     return img_reader.Execute()
 

@@ -135,6 +135,7 @@ def _preprocess_args(parser):
 def _train_args(parser):
     parser.add_argument('--keras_memory', action='store', dest='keras_memory', type=float, help='set Keras memory (0 to 1)', default=1.)
     parser.add_argument('--checkpoint', action='store', dest='checkpoint', type=str, help='checkpoint file', default=None)
+    parser.add_argument('--resume_from_checkpoint', action='store', dest='resume_from_checkpoint', type=str, help='If specified, training script will resume training from the given checkpoint', default=None)
     parser.add_argument('--learn_residual', action='store_true', dest='residual_mode', help='learn residual, (zero, low - zero, full - zero)', default=False)
     parser.add_argument('--learning_rate', action='store', dest='lr_init', type=float, help='intial learning rate', default=.001)
     parser.add_argument('--optimizer', action='store', dest='optimizer', type=str, help='Optimizer used to train the model', default='adam')
@@ -145,6 +146,7 @@ def _train_args(parser):
     parser.add_argument('--ssim_lambda', action='store', type=float, dest='ssim_lambda', help='include ssim loss with weight ssim_lambda', default=0.)
     parser.add_argument('--l1_lambda', action='store', type=float, dest='l1_lambda', help='include L1 loss with weight l1_lambda', default=1.)
     parser.add_argument('--perceptual_lambda', action='store', type=float, dest='perceptual_lambda', help='Loss from VGG19 ImageNet model', default=0.)
+    parser.add_argument('--vgg19_ckp', action='store', type=str, dest='vgg19_ckp', help='Checkpoint path of customized pretrained VGG 19 imagenet weights imported from tensorflow', default=None)
     parser.add_argument('--wloss_lambda', action='store', type=float, dest='wloss_lambda', help='Wasserstein loss', default=0.)
     parser.add_argument('--style_lambda', action='store', type=float, dest='style_lambda', help='Style or texture loss lambda', default=0.)
     parser.add_argument('--vgg_resize_shape', action='store', type=int, dest='vgg_resize_shape',

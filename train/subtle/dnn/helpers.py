@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+from torchvision.utils import make_grid
 
 MODEL_MAP = {
     'unet2d': {
@@ -7,22 +9,16 @@ MODEL_MAP = {
     }
 }
 
-def make_image(im):
-    """
-    Convert an numpy representation image to Image protobuf.
-    Copied from https://github.com/lanpa/tensorboard-pytorch/
-    """
-    import imageio
-    import io
-    nx, ny = im.shape
-    im_uint = im.astype(np.uint8)
-    output = io.BytesIO()
-    imageio.imwrite(output, im, format='png')
-    image_string = output.getvalue()
-    output.close()
-    return tf.Summary.Image(height=nx,
-                         width=ny,
-                         encoded_image_string=image_string)
+def make_image_grid(tensor_list):
+    images = []
+    for tensor in tensor_list:
+        image = tensor.unsqueeze(0)
+        eps = 1e-7
+        image = (image - image.min() + eps) / (image.max() - image.min() + eps)
+        image = image.repeat(3, 1, 1)
+        images.append(image)
+    image_grid = make_grid(images, padding=0)
+    return image_grid
 
 def _load_module(mod_path):
     components = mod_path.split('.')

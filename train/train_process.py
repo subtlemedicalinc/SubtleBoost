@@ -1,4 +1,5 @@
 import os
+import time
 
 import subtle.utils.experiment as utils_exp
 import subtle.subtle_args as sargs
@@ -12,17 +13,14 @@ if __name__ == '__main__':
 
     config = utils_exp.get_config(args.experiment, args.sub_experiment, config_key='train')
 
-    if config.save_all_weights:
-        config.checkpoint_dir = os.path.join(config.checkpoint_dir, args.sub_experiment)
+    exp_name = args.experiment if args.sub_experiment is None else '{}_{}'.format(args.experiment, args.sub_experiment)
+    tstr = str(time.time()).split('.')[0]
 
-        if os.path.exists(config.checkpoint_dir):
-            raise ValueError('Checkpoint directory {} already exists'.format(config.checkpoint_dir))
+    config.checkpoint_dir = os.path.join(
+        config.checkpoint_dir, '{}_{}'.format(exp_name, tstr)
+    )
+
+    if not args.resume_from_checkpoint:
         os.makedirs(config.checkpoint_dir)
-
-        config.checkpoint = os.path.join(
-            config.checkpoint_dir, 'weights-{epoch:02d}-{val_loss:.2f}.checkpoint'
-        )
-    else:
-        config.checkpoint = os.path.join(config.checkpoint_dir, '{}.checkpoint'.format(config.checkpoint_name))
 
     train_execute(config)

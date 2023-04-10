@@ -44,12 +44,12 @@ class GeneratorBase(nn.Module):
         self.model = None # to be assigned by _build_model() in children classes
 
         self._init_model_config()
-        self._dummy_run()
+        self._init_layers()
 
-    def _dummy_run(self):
-        X_np = np.zeros((1, self.num_channel_input, self.img_rows, self.img_cols))
-        X = torch.from_numpy(X_np.astype(np.float32))
-        _ = self.forward(X)
+    def _init_layers(self):
+        for layer in self.children():
+            if isinstance(layer, nn.Conv2d):
+                nn.init.xavier_uniform_(layer.weight)
 
     def _init_model_config(self):
         dpath_config = '{}/projects/SubtleGad/train/configs/models'.format(os.path.expanduser('~'))

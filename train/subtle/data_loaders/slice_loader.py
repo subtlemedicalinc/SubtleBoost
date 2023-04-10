@@ -18,8 +18,6 @@ from glob import glob
 import random
 from torch.utils.data import Dataset
 
-from multiprocessing import Pool
-
 from subtle.utils.slice import build_slice_list, get_num_slices
 from subtle.subtle_preprocess import enh_mask_smooth
 
@@ -31,25 +29,24 @@ def get_context_slices(params):
     fnum = int(params['fpath'].split('/')[-1].replace('.{}'.format(params['file_ext']), ''))
     delta = params['slices_per_input'] // 2
 
-    sl_idxs = np.arange(fnum - delta, fnum + delta)
+    sl_idxs = np.arange(fnum - delta, fnum + delta + 1)
     sl_idxs = np.clip(sl_idxs, min_idx, max_idx)
 
-    num_mod = len(params['input_idx']) + len(params['output_idx'])
+    num_mod = len(params['input_idx']) + len(params['output_idx']) + 1
+    # + 1 for enh_mask that is pre_computed and stored in the data
+
     slices = np.zeros((params['slices_per_input'], num_mod, params['resize'], params['resize']))
-    slices_mask = np.zeros((params['slices_per_input'], num_mod, params['resize'], params['resize']))
 
     slice_dir = os.path.join(params['data_src'], case_id, ax_str)
     for idx, sl_idx in enumerate(sl_idxs):
         fp = os.path.join(slice_dir, '{:03d}.{}'.format(sl_idx, params['file_ext']))
-        data, data_mask = np.load(fp)
-
+        sl_data = np.load(fp)
         try:
-            slices[idx, :] = data
-            slices_mask[idx, :] = data_mask
+            slices[idx, :] = sl_data
         except Exception as exc:
             print('ERROR in {}'.format(fp))
 
-    return slices, slices_mask
+    return slices
 
 
 class SliceLoader(Dataset):
@@ -93,7 +90,7 @@ class SliceLoader(Dataset):
 
         for cnum in self.case_ids:
             self.min_max_range[cnum] = {}
-            sl_ax_list = [0, 2, 3]
+            sl_ax_list = self.slice_axis
 
             # randomize saggital and coronal views for each case. all cases have axial
             # if random.uniform(0, 1) > 0.5:
@@ -137,14 +134,9 @@ class SliceLoader(Dataset):
             self.ims_cache[fpath] = slices
         return slices
 
-    def __getitem__(self, index):
+    def __getitem__(self, index=0, fpath=None):
         t1 = time.time()
-
-        fpath = self.slice_list_files[index]
-        num_mod = len(self.input_idx) + len(self.output_idx)
-
-        dlist = []
-        dmlist = []
+        fpath = fpath if fpath is not None else self.slice_list_files[index]
 
         proc_params = {
             'fpath': fpath,
@@ -157,10 +149,8 @@ class SliceLoader(Dataset):
             'data_src': self.data_src
         }
 
-        data, data_mask = get_context_slices(proc_params)
-
+        data = get_context_slices(proc_params)
         data = data[None].astype(np.float32)
-        data_mask = data_mask[None].astype(np.float32)
 
         t2 = time.time()
 
@@ -172,12 +162,10 @@ class SliceLoader(Dataset):
 
         h = self.slices_per_input // 2
         Y_data = data[:, h, self.output_idx, :].squeeze()
-
         enh_mask = np.zeros((1, self.resize, self.resize))
         if self.use_enh_mask:
-            X_input = data_mask[:, :, self.input_idx, ...]
-            Y_input = data_mask[:, [h], self.output_idx, ...][:, :, None, ...]
-            enh_mask = enh_mask_smooth(X_input, Y_input, center_slice=h, p=self.enh_pfactor).squeeze()
+            enh_mask = data[:, h, -1] ** self.enh_pfactor
+            enh_mask = np.clip(enh_mask, 1e-3, data[:, h, -2].max())
 
         Y = np.zeros((1, 2, self.resize, self.resize))
         Y[:, 0] = Y_data
