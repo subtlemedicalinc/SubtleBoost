@@ -1,6 +1,5 @@
 {
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
-  "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data",
   "verbose": 1,
   "gpu": 0,
   "slices_per_input": 7,
@@ -111,9 +110,9 @@
       "file_ext": "npy"
     },
     "smr_bracco": {
-      "out_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/data_smr/SRE",
-      "dicom_data": "/home/srivathsa/projects/studies/gad/stanford/data/smr_processed/SRE",
-      "out_dir_plots": "/home/srivathsa/projects/studies/gad/stanford/preprocess/plots/smr/SRE",
+      "out_dir": "/home/srivathsa/projects/studies/gad/boost/1_cases_mr/npy",
+      "dicom_data": "/home/srivathsa/projects/studies/gad/boost/1_cases_mr",
+      "out_dir_plots": "/home/srivathsa/projects/studies/gad/boost/1_cases_mr/npy",
       "override": true,
       "joint_normalize": true,
       "skip_hist_norm": true
@@ -133,6 +132,9 @@
     "batch_size": 8,
     "no_save_best_only": true,
     "queue_size": 4,
+    "data_dir": "/home/srivathsa/projects/studies/gad/stanford/preprocess/slices",
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
+    "vgg_resize_shape": 256,
     "simple_2d": {
       "resize": 512,
       "file_ext": "npy",
@@ -199,6 +201,42 @@
       "enh_mask": false,
       "checkpoint_name": "512_mpr_07222020"
     },
+    "l1_ssim": {
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.6,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "resize": 512,
+      "train_mpr": true,
+      "file_ext": "npy",
+      "checkpoint_name": "stanford_l1_ssim",
+      "slices_per_input": 7,
+      "num_epochs": 100
+    },
+    "vgg_no_enh": {
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": false,
+      "resize": 512,
+      "train_mpr": true,
+      "file_ext": "npy",
+      "checkpoint_name": "stanford_vgg_no_enh",
+      "slices_per_input": 7,
+      "num_epochs": 100
+    },
+    "enh_l1_ssim": {
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.6,
+      "perceptual_lambda": 0,
+      "enh_mask": true,
+      "resize": 512,
+      "train_mpr": true,
+      "file_ext": "npy",
+      "checkpoint_name": "stanford_enh_l1_ssim",
+      "slices_per_input": 7,
+      "num_epochs": 100
+    },
     "enh_vgg": {
       "ssim_lambda": 0.25,
       "l1_lambda": 0.25,
@@ -207,7 +245,9 @@
       "resize": 512,
       "train_mpr": true,
       "file_ext": "npy",
-      "checkpoint_name": "stanford_enh_vgg"
+      "checkpoint_name": "stanford_enh_vgg",
+      "slices_per_input": 7,
+      "num_epochs": 250
     }
   },
   "inference": {

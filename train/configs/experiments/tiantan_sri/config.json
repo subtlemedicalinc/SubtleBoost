@@ -48,6 +48,7 @@
     "num_epochs": 100,
     "shuffle": true,
     "slices_per_input": 7,
+    "num_workers": 4,
     "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
     "l1_lambda": 0.6,
     "file_ext": "npy",
@@ -55,6 +56,7 @@
     "ssim_lambda": 0.4,
     "no_save_best_only": true,
     "queue_size": 4,
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
     "swap_input_unet": {
       "checkpoint_name": "swap_input_unet",
       "slices_per_input": 7
@@ -67,13 +69,67 @@
       "checkpoint_name": "normal_2d_unet",
       "slices_per_input": 1
     },
-    "enhao_2d_l1": {
-      "checkpoint_name": "enhao_2d_l1",
+    "twod_l1": {
+      "checkpoint_name": "twod_l1",
       "slices_per_input": 1,
       "l1_lambda": 1.0,
       "ssim_lambda": 0.0,
       "train_mpr": false,
-      "num_epochs": 50
+      "num_epochs": 100
+    },
+    "twod_l1_mpr": {
+      "checkpoint_name": "twod_l1_mpr",
+      "slices_per_input": 1,
+      "l1_lambda": 1.0,
+      "ssim_lambda": 0.0,
+      "train_mpr": true,
+      "num_epochs": 100
+    },
+    "twopt5d_l1_mpr": {
+      "checkpoint_name": "twopt5d_l1_mpr",
+      "slices_per_input": 7,
+      "l1_lambda": 1.0,
+      "ssim_lambda": 0.0,
+      "train_mpr": true,
+      "num_epochs": 100
+    },
+    "l1_ssim": {
+      "checkpoint_name": "l1_ssim",
+      "slices_per_input": 7,
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "train_mpr": true,
+      "num_epochs": 100
+    },
+    "enh_l1_ssim": {
+      "checkpoint_name": "enh_l1_ssim",
+      "slices_per_input": 7,
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "train_mpr": true,
+      "num_epochs": 100,
+      "enh_mask": true
+    },
+    "enh_vgg": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "checkpoint_name": "enh_vgg",
+      "train_mpr": true,
+      "num_epochs": 400
+    },
+    "enh_vgg_rs": {
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "checkpoint_name": "enh_vgg_rs",
+      "train_mpr": true,
+      "num_epochs": 100,
+      "vgg_resize_shape": 128
     },
     "nz_init_lrelu": {
       "model_config": "lrelu",
@@ -88,16 +144,6 @@
       "enh_mask": true,
       "checkpoint_name": "enh_mask_smooth",
       "slices_per_input": 7
-    },
-    "enh_vgg": {
-      "slices_per_input": 7,
-      "ssim_lambda": 0.25,
-      "l1_lambda": 0.25,
-      "perceptual_lambda": 0.5,
-      "enh_mask": true,
-      "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
-      "checkpoint_name": "enh_vgg_wssim",
-      "file_ext": "h5"
     },
     "enh_vgg_2d": {
       "train_mpr": false,

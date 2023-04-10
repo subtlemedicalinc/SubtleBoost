@@ -1,5 +1,4 @@
 {
-  "data_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
   "verbose": 1,
   "gpu": 0,
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/checkpoints",
@@ -62,6 +61,8 @@
     "no_save_best_only": true,
     "learning_rate": 0.001,
     "checkpoint_name": "mres_vgg_loss",
+    "data_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/slices",
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
     "simple_2d": {
       "resize": 256,
       "train_mpr": false,
@@ -83,12 +84,15 @@
       "checkpoint_name": "siemens_vgg_no_enh"
     },
     "enh_vgg": {
-      "file_ext": "h5",
+      "file_ext": "npy",
       "ssim_lambda": 0.25,
       "l1_lambda": 0.25,
       "perceptual_lambda": 0.5,
       "enh_mask": true,
       "resize": 256,
+      "slices_per_input": 7,
+      "train_mpr": true,
+      "num_epochs": 300,
       "checkpoint_name": "siemens_enh_vgg"
     }
   },
