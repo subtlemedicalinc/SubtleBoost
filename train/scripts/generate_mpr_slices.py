@@ -58,7 +58,12 @@ def process_mpr_sag(vol, plane, rs=240):
         x1 = 0
     vol = vol.transpose(tr)
     vol = np.rot90(vol, k=3, axes=(1, 2))
-    vol = sp.util.resize(vol, [vol.shape[0], rs, rs])
+    if vol.shape[2] / rs < 0.5:
+        rs_tmp = rs // 2
+        vol = sp.util.resize(vol, [vol.shape[0], vol.shape[1], rs_tmp])
+        vol = resize(vol, [vol.shape[0], vol.shape[1], rs])
+    else:
+        vol = sp.util.resize(vol, [vol.shape[0], rs, rs])
     return vol
 
 def process_case(fpath_data, acq_plane, rs_dim):
@@ -178,6 +183,7 @@ def get_acq_plane(case_num):
         'Id': 'sag',
         'Patient': 'ax',
         'NO': 'sag',
+        'Brain': 'sag',
         'Prisma': 'sag'
     }
 
@@ -188,9 +194,9 @@ def get_acq_plane(case_num):
     raise ValueError('Cannot find acquisition plane for Case:{}'.format(case_num))
 
 if __name__ == '__main__':
-    dest_path = '/mnt/raid/srivathsa/stanford/preprocess/slices'
-    src_path = '/home/srivathsa/projects/studies/gad/stanford/preprocess/data'
-    plot_path = '/home/srivathsa/projects/studies/gad/stanford/preprocess/slices/plots'
+    dest_path = '/mnt/local_datasets/srivathsa/all/preprocess/slices'
+    src_path = '/home/srivathsa/projects/studies/gad/all/preprocess/data'
+    plot_path = '/mnt/local_datasets/srivathsa/all/preprocess/slices/plots'
     file_ext = 'npy'
     rs_dim = 512
 
@@ -201,18 +207,7 @@ if __name__ == '__main__':
     ])
 
     cases = [
-        "Patient_0088", "Patient_0090", "Patient_0101", "Patient_0102", "Patient_0103",
-        "Patient_0104", "Patient_0105", "Patient_0106", "Patient_0107", "Patient_0108",
-        "Patient_0109", "Patient_0110", "Patient_0112", "Patient_0113", "Patient_0114",
-        "Patient_0115", "Patient_0116", "Patient_0117", "Patient_0118", "Patient_0119",
-        "Patient_0120", "Patient_0121", "Patient_0122", "Patient_0123", "Patient_0124",
-        "Patient_0125", "Patient_0126", "Patient_0127", "Patient_0128", "Patient_0129",
-        "Patient_0130", "Patient_0131", "Patient_0132", "Patient_0133", "Patient_0134",
-        "Patient_0135", "Patient_0136", "Patient_0137", "Patient_0138", "Patient_0139",
-        "Patient_0140", "Patient_0141", "Patient_0142", "Patient_0143", "Patient_0144",
-        "Patient_0145", "Patient_0146", "Patient_0147", "Patient_0148", "Patient_0149",
-        "Patient_0150", "Patient_0151", "Patient_0152", "Patient_0153", "Patient_0154",
-        "Patient_0155", "Patient_0156", "Patient_0157", "Patient_0158", "Patient_0159"
+        "Brain2H-600441599", "Brain4H-601044594"
     ]
 
     proc_params = []

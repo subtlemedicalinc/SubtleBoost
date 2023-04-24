@@ -1,5 +1,5 @@
 {
-  "data_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/data",
+  "data_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/slices",
   "verbose": 1,
   "gpu": 0,
   "checkpoint_dir": "/home/srivathsa/projects/studies/gad/all/train/checkpoints",
@@ -7,7 +7,7 @@
   "preprocess": {
     "dicom_data": "/home/srivathsa/projects/studies/gad/all/data",
     "out_dir_plots": "/home/srivathsa/projects/studies/gad/all/preprocess/plots",
-    "out_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/data",
+    "out_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/slices",
     "fsl_mask": true,
     "pad_for_size": 512,
     "resample_isotropic": 0.5,
@@ -57,6 +57,7 @@
     "batch_size": 8,
     "no_save_best_only": true,
     "queue_size": 4,
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
     "ablation_2d": {
       "l1_lambda": 0.6,
       "ssim_lambda": 0.4,
@@ -94,7 +95,8 @@
       "resize": 512,
       "vgg_resize_shape": 256,
       "train_mpr": true,
-      "checkpoint_name": "gen_enh_vgg_thk1"
+      "checkpoint_name": "unified_enh_vgg",
+      "num_epochs": 200
     }
   },
   "inference": {

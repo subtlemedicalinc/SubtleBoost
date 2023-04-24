@@ -139,13 +139,17 @@ def train_process(args):
         data_val_list = data_list[:r]
         data_train_list = data_list[r:]
 
-    # if args.verbose:
-    #     print('using {} datasets for training:'.format(len(data_train_list)))
-    #     for d in data_train_list:
-    #         print(d)
-    #     print('using {} datasets for validation:'.format(len(data_val_list)))
-    #     for d in data_val_list:
-    #         print(d)
+    if args.data_batch is not None:
+        idx1, idx2 = [int(s) for s in args.data_batch.split(',')]
+        data_train_list = data_train_list[idx1:idx2]
+
+    if args.verbose:
+        print('using {} datasets for training:'.format(len(data_train_list)))
+        for d in data_train_list:
+            print(d)
+        print('using {} datasets for validation:'.format(len(data_val_list)))
+        for d in data_val_list:
+            print(d)
 
     num_epochs = args.num_epochs
     db_class = load_db_class(args)
@@ -195,6 +199,8 @@ def train_process(args):
     start_epoch = 0
 
     if args.resume_from_checkpoint:
+        print('Resuming from checkpoint - {}'.format(args.resume_from_checkpoint))
+
         args.checkpoint_dir = os.path.join(
             '/'.join(args.checkpoint_dir.split('/')[:-1]), args.resume_from_checkpoint
         )
@@ -245,7 +251,6 @@ def train_process(args):
             fpath_ckp=args.vgg19_ckp, img_resize=args.vgg_resize_shape
         ).to('cuda')
 
-
     for epoch_num in np.arange(start_epoch, num_epochs):
         G.train()
 
@@ -263,17 +268,18 @@ def train_process(args):
 
             # print('X', X.min(), X.max(), 'Y', Y.min(), Y.max())
             Y_pred = G(X)
-            # print('Y pred', Y.min(), Y.max())
+            # print('Y pred', Y_pred.min().item(), Y_pred.max().item())
 
             loss_g, indiv_loss = suloss.mixed_loss(args, Y, Y_pred, vgg_loss)
             # indiv_loss is not scaled with lambda
 
             mean_total = torch.mean(loss_g).item()
             mean_l1 = torch.mean(indiv_loss['l1']).item()
+            mean_ssim = indiv_loss['ssim'].item()
 
             l_total.update(mean_total)
             l_l1.update(mean_l1)
-            l_ssim.update(indiv_loss['ssim'].item())
+            l_ssim.update(mean_ssim)
 
             pbar.set_description(
                 f'Total weighted loss: {mean_total:03f}, L1: {mean_l1:03f}'
@@ -282,7 +288,7 @@ def train_process(args):
             tb_writer.add_scalar('train/loss_total', mean_total, iter_num)
             tb_writer.add_scalar('train/loss_l1', mean_l1, iter_num)
             tb_writer.add_scalar(
-                'train/loss_ssim', indiv_loss['ssim'].item(), iter_num
+                'train/loss_ssim', mean_ssim, iter_num
             )
             opt_G.zero_grad()
             loss_g.sum().backward()

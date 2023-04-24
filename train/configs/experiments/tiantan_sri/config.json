@@ -118,7 +118,7 @@
       "enh_mask": true,
       "checkpoint_name": "enh_vgg",
       "train_mpr": true,
-      "num_epochs": 400
+      "num_epochs": 100
     },
     "enh_vgg_rs": {
       "slices_per_input": 7,

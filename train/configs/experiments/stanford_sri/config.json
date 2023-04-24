@@ -157,49 +157,17 @@
       "enh_mask": false,
       "checkpoint_name": "vgg_no_enh"
     },
-    "512_mpr_fsl": {
-      "brain_only": true,
-      "resize": 512,
-      "brain_only_mode": "mixed",
-      "train_mpr": true,
-      "checkpoint_name": "512mpr_fsl"
-    },
-    "512_mpr": {
-      "resize": 512,
-      "train_mpr": true,
-      "checkpoint_name": "512mpr"
-    },
-    "320_mpr": {
-      "resize": 320,
-      "train_mpr": true,
-      "checkpoint_name": "320mpr"
-    },
-    "320_nompr": {
-      "resize": 320,
-      "train_mpr": false,
-      "checkpoint_name": "320nompr"
-    },
-    "512_nompr": {
-      "resize": 512,
-      "file_ext": "npy",
-      "train_mpr": false,
-      "slices_per_input": 7,
-      "ssim_lambda": 0.25,
-      "l1_lambda": 0.25,
-      "perceptual_lambda": 0.5,
-      "enh_mask": false,
-      "checkpoint_name": "512_onlyvgg_ds256"
-    },
-    "512_mpr_07222020": {
-      "resize": 512,
-      "file_ext": "npy",
-      "train_mpr": true,
-      "slices_per_input": 7,
-      "ssim_lambda": 0.6,
-      "l1_lambda": 0.4,
+    "l1_only": {
+      "ssim_lambda": 0,
+      "l1_lambda": 1.0,
       "perceptual_lambda": 0,
       "enh_mask": false,
-      "checkpoint_name": "512_mpr_07222020"
+      "resize": 512,
+      "train_mpr": true,
+      "file_ext": "npy",
+      "checkpoint_name": "stanford_l1_only",
+      "slices_per_input": 7,
+      "num_epochs": 100
     },
     "l1_ssim": {
       "ssim_lambda": 0.4,

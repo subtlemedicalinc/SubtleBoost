@@ -72,11 +72,17 @@ class GeneratorUNet2D(GeneratorBase):
         )
         setattr(self, layer_name, conv_output)
 
+        if self.get_config('activation', layer_name) == 'relu':
+            relu_output = nn.ReLU(inplace=False)
+            setattr(self, 'act_{}'.format(layer_name), relu_output)
+
     def _conv(self, x, filters, kernel_size=None, padding=None, activation=None, name=None):
         conv_layer = getattr(self, name)
         out = conv_layer(x)
 
         if hasattr(self, 'act_{}'.format(name)):
+            if 'output' in name:
+                print('relu-ing output')
             act_fn = getattr(self, 'act_{}'.format(name))
             return act_fn(out)
         return out

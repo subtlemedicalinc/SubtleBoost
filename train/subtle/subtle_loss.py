@@ -255,8 +255,10 @@ class VGGLoss(torch.nn.Module):
     def vgg_feat(self, x):
         x = x.repeat(1, 3, 1, 1)
         if self.img_resize > 0:
+            # print('x before resize', x.min().item(), x.max().item())
             x = resize(x, [self.img_resize, self.img_resize])
             x = torch.clip(x, self._z, x.max())
+            # print('x after resize', x.min().item(), x.max().item())
 
         # x = (x - x.min()) / (x.max() - x.min())
         # x = (x - self.mean) / self.std
@@ -302,6 +304,8 @@ def mixed_loss(args, y_true, y_pred, vgg_loss):
         ssim = ssim_loss(y_true[:, 0][:, None], y_pred)
         total_loss += args.ssim_lambda * ssim
         indiv_loss['ssim'] = ssim
+    else:
+        indiv_loss['ssim'] = l1
 
     if vgg_loss is not None:
         ploss = vgg_loss(y_true, y_pred)
