@@ -17,6 +17,13 @@ def _model_arch_args(parser):
 
     return parser
 
+def _breast_processing(parser):
+    parser.add_argument('--breast_gad', action='store_true', dest='breast_gad', help='If true, breast specific pre-processing is done')
+    parser.add_argument('--breast_mask_path', action='store', dest='breast_mask_path', type=str, help='Path to where breast masks are stored', default='')
+    parser.add_argument('--external_reg_ref', action='store', dest='external_reg_ref', type=str, help='Path to series for external registration reference')
+
+    return parser
+
 def _shared_args(parser):
     parser.add_argument('--experiment', action='store', dest='experiment', type=str, help='Name of the experiment for which preprocess/train/inference is to be run', default=None)
     parser.add_argument('--sub_experiment', action='store', dest='sub_experiment', type=str, help='Name of the sub experiment for which preprocess/train/inference is to be run', default=None)
@@ -203,6 +210,9 @@ def _train_args(parser):
     return parser
 
 def _inference_args(parser):
+    parser.add_argument('--num_channel_output', type=int, dest='num_channel_output', help='Number of channels output for the model', default=1)
+    parser.add_argument('--dcm_pre', type=str, dest='dcm_pre', help='DICOM path for pre-contrast')
+    parser.add_argument('--dcm_post', type=str, dest='dcm_post', help='DICOM path for post-contrast or low-dose')
     parser.add_argument('--out_folder', action='store', dest='out_folder', type=str, help='Output folder name for inference pipeline')
     parser.add_argument('--predict_full_volume', action='store_true', dest='predict_full_volume', help='If true, then inference is run on whole volume', default=False)
     parser.add_argument('--data_preprocess', action='store', dest='data_preprocess', type=str, help='load already-preprocessed data', default=False)
@@ -233,5 +243,6 @@ def get_parser(usage_str='', description_str=''):
     parser = _inference_args(parser)
     parser = _multi_contrast_args(parser)
     parser = _uad_args(parser)
+    parser = _breast_processing(parser)
 
     return parser

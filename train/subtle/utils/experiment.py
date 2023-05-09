@@ -6,7 +6,10 @@ import subtle.subtle_args as sargs
 from . import misc as utils_misc
 from scripts.utils.print_config_json import IGNORE_KEYS as OVERRIDE_CONFIG_KEYS
 
-def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp='./configs/experiments'):
+def get_config(
+    fpath_json=None, exp_name=None, subexp_name=None, config_key='preprocess',
+    dirpath_exp='./configs/experiments'
+):
     class _ExperimentConfig:
         def __init__(self, config_dict):
             self.config_dict = config_dict
@@ -29,8 +32,9 @@ def get_config(exp_name, subexp_name=None, config_key='preprocess', dirpath_exp=
         def __str__(self):
             return ', '.join(['{}:{}'.format(key, val) for key, val in self.config_dict.items()])
 
-    fname = 'config.json'
-    fpath_json = os.path.join(dirpath_exp, exp_name, fname)
+    if fpath_json is None:
+        fname = 'config.json'
+        fpath_json = os.path.join(dirpath_exp, exp_name, fname)
 
     if not os.path.exists(fpath_json):
         raise ValueError("Given experiment name {}, is not valid".format(exp_name))

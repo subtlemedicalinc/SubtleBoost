@@ -5,8 +5,6 @@ import json
 # import tensorflow as tf
 # import keras
 
-from subtle.dnn.helpers import load_db_class
-from subtle.utils.misc import print_progress_bar
 from skimage.transform import resize as imresize
 import pandas as pd
 

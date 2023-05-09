@@ -1,0 +1,63 @@
+{
+  "slices_per_input": 7,
+  "preprocess": {
+    "fsl_mask": false,
+    "resample_isotropic": 0.5,
+    "file_ext": "npy",
+    "register_with_dcm_reference": true,
+    "pad_for_size": 512,
+    "other": {
+      "override": true,
+      "transform_type": "affine",
+      "normalize": true,
+      "normalize_fun": "mean",
+      "scale_matching": true,
+      "acq_plane": "SAG"
+    },
+    "philips": {
+      "override": true,
+      "transform_type": "affine",
+      "normalize": true,
+      "normalize_fun": "mean",
+      "scale_matching": true,
+      "acq_plane": "SAG"
+    },
+    "siemens": {
+      "transform_type": "affine",
+      "skip_hist_norm": true,
+      "normalize": true,
+      "normalize_fun": "mean",
+      "joint_normalize": true,
+      "fsl_mask_all_ims": false,
+      "use_fsl_reg": false,
+      "mask_threshold": 0.1,
+      "scale_matching": true,
+      "override": true
+    },
+    "ge": {
+      "transform_type": "affine",
+      "normalize": true,
+      "normalize_fun": "mean",
+      "mask_threshold": 0.08,
+      "scale_matching": true,
+      "skip_hist_norm": true,
+      "fsl_mask_all_ims": false
+    }
+  },
+  "inference": {
+    "pad_for_size": 512,
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "unified_mpr",
+    "num_rotations": 3,
+    "num_channel_output": 1,
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "reshape_for_mpr_rotate": true,
+    "procs_per_gpu": 4,
+    "resample_isotropic": 0.5,
+    "file_ext": "npy",
+    "description": "unified_mpr"
+  }
+}

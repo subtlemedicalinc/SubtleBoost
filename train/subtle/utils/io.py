@@ -291,6 +291,10 @@ def dicom_header(dicom_dir):
 
     return hdr_list, lstDCM, fileOut
 
+def get_manufacturer_str(dicom_dir):
+    fp_dcm = [fp for fp in glob('{}/*.dcm'.format(dicom_dir))][0]
+    hdr = pydicom.dcmread(fp_dcm)
+    return hdr.Manufacturer
 
 def get_pixel_spacing(hdr):
     ''' Get pixel spacing from dicom header '''

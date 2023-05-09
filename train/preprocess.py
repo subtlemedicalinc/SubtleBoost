@@ -26,10 +26,10 @@ from glob import glob
 from scipy.ndimage import zoom, gaussian_filter
 from skimage.morphology import binary_closing
 
-try:
-    from deepbrain import Extractor as BrainExtractor
-except:
-    warnings.warn('Module deepbrain not found - cannot perform brain extraction')
+# try:
+#     from deepbrain import Extractor as BrainExtractor
+# except:
+#     warnings.warn('Module deepbrain not found - cannot perform brain extraction')
 
 import SimpleITK as sitk
 
@@ -308,55 +308,89 @@ def register(args, ims, metadata):
             low_shape = list(low_stk.GetSize()[::-1])
             full_shape = list(full_stk.GetSize()[::-1])
 
-        stk_ref_imgs = [zero_stk, low_stk, full_stk]
+        if args.external_reg_ref:
+            print('Using external registration reference...')
+            cnum = args.path_zero.split('/')[-2]
+            ext_bpath = os.path.join(args.external_reg_ref, cnum)
+            ext_reg_ref = [s for s in glob('{}/*'.format(ext_bpath))][0]
+            old_zero_stk = zero_stk
+            zero_stk = sup.dcm_to_sitk(ext_reg_ref)
 
-        ims[:, 1, :, :], spars1_reg = sup.register_im(ims[:, 0, :, :], ims[:, 1], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_low, non_rigid=args.non_rigid_reg,
-        ref_fixed=zero_stk, ref_moving=low_stk)
+            ref_npy = sitk.GetArrayFromImage(zero_stk)
+            ref_npy = ref_npy / ref_npy.mean()
 
+            reg_pre, _ = sup.register_im(ref_npy, ims[:, 0], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_low, non_rigid=args.non_rigid_reg, ref_fixed=zero_stk, ref_moving=old_zero_stk)
 
-        if args.verbose:
-            print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
+            reg_low, _ = sup.register_im(ref_npy, ims[:, 1], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_low, non_rigid=args.non_rigid_reg, ref_fixed=zero_stk, ref_moving=low_stk)
 
-        ims[:, 2, :, :], spars2_reg = sup.register_im(ims[:, 0, :, :], ims[:, 2], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_full, non_rigid=args.non_rigid_reg,
-        ref_fixed=zero_stk, ref_moving=full_stk)
+            reg_full, _ = sup.register_im(ref_npy, ims[:, 2], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_full, non_rigid=args.non_rigid_reg,
+            ref_fixed=zero_stk, ref_moving=full_stk)
 
-        reg_params = [None, spars1_reg, spars2_reg]
-        spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
-
-        if args.use_fsl_reg:
-            print('Planning to apply registration params computed from skull stripped images...')
-            reg_transform = lambda idx: (
-                lambda images: sup.apply_reg_transform(
-                    images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx],
-                    ref_img=stk_ref_imgs[0]
-                )
-            )
+            ims = np.array([reg_pre, reg_low, reg_full]).transpose(1, 0, 2, 3)
         else:
-            print('Planning to re-run registration on full brain images...')
-            reg_transform = lambda idx: (
-                lambda images: sup.register_im(
-                    images[:, 0, :, :,], images[:, idx, :, :],
-                    param_map=spars, verbose=args.verbose,
-                    im_fixed_spacing=metadata['pixel_spacing_zero'],
-                    im_moving_spacing=metadata[spacing_keys[idx]],
-                    non_rigid=args.non_rigid_reg,
-                    return_params=False, ref_fixed=zero_stk, ref_moving=stk_ref_imgs[idx]
+            ref_npy = ims[:, 0]
+
+            stk_ref_imgs = [zero_stk, low_stk, full_stk]
+
+            ims[:, 1], spars1_reg = sup.register_im(ref_npy, ims[:, 1], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_low, non_rigid=args.non_rigid_reg,
+            ref_fixed=zero_stk, ref_moving=low_stk)
+
+            if args.verbose:
+                print('low dose transform parameters: {}'.format(spars1_reg[0]['TransformParameters']))
+
+            ims[:, 2], spars2_reg = sup.register_im(ref_npy, ims[:, 2], param_map=spars, verbose=args.verbose, im_fixed_spacing=spacing_zero, im_moving_spacing=spacing_full, non_rigid=args.non_rigid_reg,
+            ref_fixed=zero_stk, ref_moving=full_stk)
+
+            reg_params = [None, spars1_reg, spars2_reg]
+            spacing_keys = ['pixel_spacing_zero', 'pixel_spacing_low', 'pixel_spacing_full']
+
+            if args.use_fsl_reg:
+                print('Planning to apply registration params computed from skull stripped images...')
+                reg_transform = lambda idx: (
+                    lambda images: sup.apply_reg_transform(
+                        images[:, idx, :, :], metadata[spacing_keys[idx]], reg_params[idx],
+                        ref_img=stk_ref_imgs[0]
+                    )
                 )
-            )
+            else:
+                print('Planning to re-run registration on full brain images...')
+                reg_transform = lambda idx: (
+                    lambda images: sup.register_im(
+                        images[:, 0, :, :,], images[:, idx, :, :],
+                        param_map=spars, verbose=args.verbose,
+                        im_fixed_spacing=metadata['pixel_spacing_zero'],
+                        im_moving_spacing=metadata[spacing_keys[idx]],
+                        non_rigid=args.non_rigid_reg,
+                        return_params=False, ref_fixed=zero_stk, ref_moving=stk_ref_imgs[idx]
+                    )
+                )
 
-        eye = lambda images: images[:, 0, :, :]
+            eye = lambda images: images[:, 0, :, :]
 
-        metadata['lambda'].append({
-            'name': 'register',
-            'fn': [eye, reg_transform(1), reg_transform(2)]
-        })
+            metadata['lambda'].append({
+                'name': 'register',
+                'fn': [eye, reg_transform(1), reg_transform(2)]
+            })
 
-        if args.verbose:
-            print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
+            if args.verbose:
+                print('full dose transform parameters: {}'.format(spars2_reg[0]['TransformParameters']))
     else:
         metadata['reg'] = 0
 
     return ims, metadata
+
+def breast_processing(args, ims, metadata):
+    if args.breast_gad:
+        print('HERE inside breast processing...')
+        cnum = args.path_zero.split('/')[-2]
+        mask = np.load('{}/{}.npy'.format(args.breast_mask_path, cnum))
+
+        ims[:, 0] = ims[:, 0] * mask
+        ims[:, 1] = ims[:, 1] * mask
+        ims[:, 2] = ims[:, 2] * mask
+
+    return ims, metadata
+
 
 def zoom_process(args, ims, metadata):
     if args.zoom:
@@ -420,7 +454,6 @@ def match_scales(args, ims, ims_mod, metadata):
 
         levels = np.linspace(.5, 1.5, 30)
         max_iter = 3
-
 
         ntic = time.time()
         scale_low = sup.scale_im_enhao(ims_mod[:, 0], ims_mod[:, 1], levels=levels, max_iter=max_iter)
@@ -617,7 +650,9 @@ def resample_isotropic(args, ims, metadata):
         print('Resampling images to {}mm isotropic...'.format(args.resample_isotropic))
         print('Current image shapes...', ims[:, 0, ...].shape)
         new_spacing = [args.resample_isotropic] * 3
-        # new_spacing = [1.0, args.resample_isotropic, args.resample_isotropic]
+        # new_spacing = [
+        #     metadata['pixel_spacing_zero'][-1], args.resample_isotropic, args.resample_isotropic
+        # ]
 
         spacing_zero = _get_spacing_from_dicom(args.path_zero)
         spacing_low = _get_spacing_from_dicom(args.path_low)
@@ -650,8 +685,11 @@ def resample_isotropic(args, ims, metadata):
         print('Resampling low dose...')
         ims_low, _ = sup.zoom_iso(ims_low, spacing_low, new_spacing)
 
-        print('Resampling full dose...')
-        ims_full, _ = sup.zoom_iso(ims_full, spacing_full, new_spacing)
+        if metadata['inference_only']:
+            ims_full = ims_low
+        else:
+            print('Resampling full dose...')
+            ims_full, _ = sup.zoom_iso(ims_full, spacing_full, new_spacing)
 
         print('New image shape', ims_zero.shape)
         metadata['resampled_size'] = (ims_zero.shape[1], ims_zero.shape[2])
@@ -661,7 +699,10 @@ def resample_isotropic(args, ims, metadata):
             (1, 0, 2, 3)
         )
         return ims_iso, metadata
-
+    else:
+        metadata['resampled_size'] = metadata['original_size']
+        metadata['new_spacing'] = metadata['pixel_spacing_zero']
+        metadata['old_spacing_low'] = metadata['pixel_spacing_low']
     return ims, metadata
 
 def reshape_fsl_mask(args, fsl_mask, metadata):
@@ -708,7 +749,6 @@ def zero_pad(args, ims, metadata):
         ims_pad = sup.zero_pad(ims, target_size=args.pad_for_size)
         print('Shape after zero padding...', ims_pad.shape)
         metadata['zero_pad_size'] = (ims_pad.shape[2], ims_pad.shape[3])
-        metadata['resampled_size'] = (ims_pad.shape[2], ims_pad.shape[3])
 
         return ims_pad, metadata
 
@@ -744,11 +784,7 @@ def gaussian_blur_input(args, ims, metadata):
     return ims, metadata
 
 
-def preprocess_chain(args):
-    metadata = {
-        'lambda': []
-    }
-
+def preprocess_chain(args, metadata={'lambda': []}):
     ims, hdr, metadata = get_images(args, metadata)
     unmasked_ims = np.copy(ims)
 
@@ -765,6 +801,7 @@ def preprocess_chain(args):
     # scale and register images based on BET images
     ims, metadata = dicom_scaling(args, ims, hdr, metadata)
     ims, metadata = register(args, ims, metadata)
+    ims, metadata = breast_processing(args, ims, metadata)
     ims, metadata = hist_norm(args, ims, metadata)
     ims, metadata = zoom_process(args, ims, metadata)
 
@@ -780,7 +817,10 @@ def preprocess_chain(args):
 
 
     ims, _ = resample_isotropic(args, ims, metadata) # dont save to metadata on masked ims
-    unmasked_ims, metadata = resample_isotropic(args, unmasked_ims, metadata)
+    if args.fsl_mask:
+        unmasked_ims, metadata = resample_isotropic(args, unmasked_ims, metadata)
+    else:
+        unmasked_ims = ims
     fsl_mask = reshape_fsl_mask(args, fsl_mask, metadata)
 
     ims, metadata = fsl_reject_slices(args, ims, fsl_mask, metadata)
