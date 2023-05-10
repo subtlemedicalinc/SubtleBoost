@@ -53,7 +53,7 @@ def get_config(
 
     return _ExperimentConfig(config_dict)
 
-def get_model_config(model_name, config_key='base', model_type='generators', dirpath_config='./configs/models'):
+def get_model_config(model_name, config_key='base', model_type='generators', dirpath_config='train/configs/models'):
     fpath_json = os.path.join(dirpath_config, model_type, '{}.json'.format(model_name))
     if not os.path.exists(fpath_json):
         raise ValueError("Given model name {}, is not valid".format(model_name))

@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torchvision.utils import make_grid
 
 MODEL_MAP = {
     'unet2d': {
@@ -10,6 +9,7 @@ MODEL_MAP = {
 }
 
 def make_image_grid(tensor_list):
+    from torchvision.utils import make_grid
     images = []
     for tensor in tensor_list:
         image = tensor.unsqueeze(0)

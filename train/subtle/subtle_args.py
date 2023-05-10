@@ -210,6 +210,7 @@ def _train_args(parser):
     return parser
 
 def _inference_args(parser):
+    parser.add_argument('--config', type=str, dest='config', help='Path to inference config file')
     parser.add_argument('--num_channel_output', type=int, dest='num_channel_output', help='Number of channels output for the model', default=1)
     parser.add_argument('--dcm_pre', type=str, dest='dcm_pre', help='DICOM path for pre-contrast')
     parser.add_argument('--dcm_post', type=str, dest='dcm_post', help='DICOM path for post-contrast or low-dose')

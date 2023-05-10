@@ -52,8 +52,7 @@ class GeneratorBase(nn.Module):
                 nn.init.xavier_uniform_(layer.weight)
 
     def _init_model_config(self):
-        dpath_config = '{}/projects/SubtleGad/train/configs/models'.format(os.path.expanduser('~'))
-        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators', dirpath_config=dpath_config)
+        self.config_dict = get_model_config(self.model_name, self.model_config, model_type='generators')
 
         if self.tunable_params:
             self.config_dict = {**self.config_dict, **self.tunable_params}

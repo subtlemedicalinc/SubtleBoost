@@ -36,8 +36,6 @@ import subtle.utils.io as utils_io
 import subtle.utils.experiment as utils_exp
 from subtle.data_loaders import InferenceLoader
 import subtle.subtle_metrics as sumetrics
-import subtle.subtle_plot as suplot
-from subtle.dnn.callbacks import plot_tb
 from preprocess import preprocess_chain
 import subtle.subtle_preprocess as supre
 
