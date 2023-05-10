@@ -16,3 +16,5 @@ WORKDIR /opt
 
 RUN rm -rf elastix*
 RUN python3.7 -c "import SimpleITK as sitk; sitk.ElastixImageFilter(); print('SimpleElastix successfully installed');"
+
+ENTRYPOINT ["python3.7", "train/inference.py"]
