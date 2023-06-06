@@ -124,7 +124,7 @@ node {
         """
 
         echo "Building subtle-app-utilities dependence"
-        docker.image('python:3.10-stretch').inside(" --user 0 ") {
+        docker.image('python:3.10-bullseye').inside(" --user 0 ") {
             sh """
                 cd subtle-app-utilities/subtle_python_packages
                 python3.10 setup.py bdist_wheel
