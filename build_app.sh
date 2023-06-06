@@ -60,7 +60,7 @@ then
     apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6
 fi
 
-#$PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
+$PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
 
 echo ">>> installing SimpleElastix"
 
@@ -138,7 +138,7 @@ mkdir -p ${BUILD_DIR}/bin
 cp /usr/local/cuda-11.7/bin/ptxas ${BUILD_DIR}/bin/ptxas
 
 # # export LD_LIBRARY_PATH for convert_models_to_trt to be able to use TensorRT
-# export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${BUILD_DIR}/libs"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${BUILD_DIR}/libs"
 
 # encrypt model files and remove the plain text files
 $PYTHON -m subtle.util.encrypt_models --delete-original manifest.json app/models/

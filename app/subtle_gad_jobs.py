@@ -89,7 +89,7 @@ class SubtleGADJobType(BaseJobType):
         # not manufacturer specific
         "perform_registration": True,
         "skull_strip": True,
-        "skull_strip_union": True,
+        "skull_strip_union": False,
         "skull_strip_prob_threshold": 0.5,
         "num_scale_context_slices": 20,
         "blur_lowdose": False,
@@ -525,20 +525,34 @@ class SubtleGADJobType(BaseJobType):
 
         return images, np.array(mask)
 
-    def _apply_brain_mask(self, images: np.ndarray, brain_mask: np.ndarray) -> np.ndarray:
-        """
-        Method to apply the computed brain mask on the zero and low dose images
+    def apply_brain_mask(self, ims, brain_mask):
+        ims_mask = np.copy(ims)
+        if True:
+            print('Applying computed brain masks on images. Mask shape -', brain_mask.shape)
+            ims_mask = np.zeros_like(ims)
 
-        :param images: Zero and low dose images as a numpy array
-        :param brain_mask: The computed skull stripped brain mask
-        :return: The skull stripped brain images
-        """
-        self._logger.info("Applying computed brain mask on images")
-        masked_images = np.copy(images)
+            if brain_mask.ndim == 4:
+                ims_mask = brain_mask * ims
+            else:
+                for cont in range(ims.shape[0]):
+                    ims_mask[cont,:, :, :] = brain_mask * ims[cont,:, :, :]
 
-        masked_images[0] *= brain_mask
-        masked_images[1] *= brain_mask
-        return masked_images
+        return ims_mask
+
+    # def _apply_brain_mask(self, images: np.ndarray, brain_mask: np.ndarray) -> np.ndarray:
+    #     """
+    #     Method to apply the computed brain mask on the zero and low dose images
+
+    #     :param images: Zero and low dose images as a numpy array
+    #     :param brain_mask: The computed skull stripped brain mask
+    #     :return: The skull stripped brain images
+    #     """
+    #     self._logger.info("Applying computed brain mask on images")
+    #     masked_images = np.copy(images)
+
+    #     masked_images[0] *= brain_mask
+    #     masked_images[1] *= brain_mask
+    #     return masked_images
 
     def _has_dicom_scaling_info(self) -> bool:
         """
@@ -1017,20 +1031,21 @@ class SubtleGADJobType(BaseJobType):
             print('Extracting brain regions using deepbrain...')
             device = int(0)
             ## Temporarily using DL based method for extraction
-            mask_zero = self._mask_npy(ims[:, 0, ...], self._itk_data['zero_dose'], device)
+            mask_zero = self._mask_npy(ims[0,:, ...], self._itk_data['zero_dose'], device)
 
-            if False:
-                mask_low = _mask_npy(ims[:, 1, ...], self._itk_data['low_dose'], device)
+            if True:
+                mask_low = self._mask_npy(ims[1,:,  ...], self._itk_data['low_dose'], device)
 
-                mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
+                #mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
 
                 if False:
                     # union of all masks
                     mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
                 else:
-                    mask = np.array([mask_zero, mask_low, mask_full]).transpose(1, 0, 2, 3)
+                    mask = np.array([mask_zero, mask_low]).transpose(0,1, 2, 3)
             else:
                 mask = mask_zero
+
         return mask
 
     def _preprocess_raw_pixel_data(self) -> Dict:
@@ -1044,28 +1059,36 @@ class SubtleGADJobType(BaseJobType):
         for frame_seq_name, data_array in self._raw_input.items():
             input_data_full = data_array.copy()
 
+            print(f'0th step raw image {input_data_full.shape}')
             # write preprocess chain here
             ims,mask = self._mask_noise(input_data_full)
 
-            print('shape of mask ', mask.shape)
+            print(f'1st step mask image {ims.shape} {mask.shape}')
 
             # next apply a BET mask to remove non-brain tissue
             brain_mask = self._brain_mask(ims)
+            print(f'2nd step apply brain mask image {brain_mask.shape} {ims.shape}')
+            
+            input_data_mask = self.apply_brain_mask(ims, brain_mask)
 
-            print('shape of ims ', ims.shape)
-            print('brain mask shape', brain_mask.shape)
-
-            input_data_mask = self._apply_brain_mask(ims[:,0,:,:], brain_mask[0,:])
+            print(f'3rd step brain mask image {input_data_mask.shape}')
 
             #brain_mask = (input_data_mask[0,:]) #self._strip_skull
             
             
             input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask)
+            print(f'4th step scale intensity image {input_data_mask.shape}')
+
             input_data_mask = self._register(input_data_mask)
+            print(f'5th step register image {input_data_mask.shape}')
+
             input_data_mask = self._match_histogram(input_data_mask)
 
-            print('input data mask shape', input_data_mask.shape)
+            print(f'6th step match histogram image {input_data_mask.shape}')
+            
             input_data_mask = self._scale_intensity(ims, mask)
+
+            print(f'7th step scale intensity image {input_data_mask.shape}')
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
 
