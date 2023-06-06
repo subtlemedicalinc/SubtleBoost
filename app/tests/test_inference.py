@@ -75,7 +75,7 @@ class InferenceTest(unittest.TestCase):
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
         print(self.path_data)
 
-        self.model_dir = os.path.join(self.path_data, "model", "20230517105336-unified")
+        self.model_dir = os.path.join(self.path_data, "model", "20230606105336-unified")
 
         self.processing_config = processing_config
 
