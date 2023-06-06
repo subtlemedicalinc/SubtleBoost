@@ -18,7 +18,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20230517105336-unified"
+      model_id: "20230606105336-unified"
       noise_mask_threshold: 0.01
       slices_per_input: 7
       num_channel_output: 1
