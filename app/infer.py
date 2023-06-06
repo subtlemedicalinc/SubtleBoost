@@ -14,6 +14,9 @@ import traceback
 from subtle.dcmutil.dicom_filter import DicomFilter
 from subtle.util.subtle_app import SubtleApp
 import subtle_gad_jobs
+import tensorflow.compat.v1 as tf
+
+tf.disable_v2_behavior()
 
 SCRIPT_DIR = os.path.dirname(__file__)
 
@@ -80,7 +83,7 @@ class SubtleGADApp(SubtleApp):
         # update output path
         output_path_dicom = os.path.join(output_path, self._out_dicom_dir)
         # create list of tasks based on dicom input
-        dicom_filter_obj = DicomFilter(self._config)
+        dicom_filter_obj = DicomFilter(self._config, methodname= "itk")
         tasks, unmatched_series = dicom_filter_obj.process_incoming(input_path)
         # check valid number of tasks are found
         if not tasks:
@@ -120,6 +123,7 @@ class SubtleGADApp(SubtleApp):
                 self._save_model_ver(model_id)
 
                 model_dir = os.path.join(SCRIPT_DIR, "models", model_id)
+                print('directory of model ', model_dir)
                 if not os.path.isdir(model_dir):
                     raise FileNotFoundError("Model Directory {} does not exist".format(model_dir))
 

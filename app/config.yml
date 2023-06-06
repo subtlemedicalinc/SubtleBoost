@@ -5,6 +5,7 @@ not_for_clinical_use: False
 enable_multiple_jobs: True
 all_reports: True
 warn_unmatched_series: False
+itk_process: True
 
 jobs:
   - job_name: "gad_ge"
@@ -17,47 +18,17 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20200817105336-unified"
+      model_id: "20230517105336-unified"
       noise_mask_threshold: 0.01
-  - job_name: "gad_philips"
-    series_required:
-      - "zero_dose_philips"
-      - "low_dose_philips"
-    slice_location_tolerance: "none"
-    fov_tolerance: "inf"
-    exec_config:
-      series_number_offset: 100
-      series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":research_only"
-      model_id: "20200817105336-unified"
-  - job_name: "gad_philips_cs"
-    series_required:
-      - "zero_dose_philips_cs"
-      - "low_dose_philips_cs"
-    slice_location_tolerance: "none"
-    fov_tolerance: "inf"
-    exec_config:
-      series_number_offset: 100
-      series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":research_only"
-      model_id: "20200818150236-philipscs"
-      blur_lowdose: True
-  - job_name: "gad_siemens"
-    series_required:
-      - "zero_dose_siemens"
-      - "low_dose_siemens"
-    slice_location_tolerance: "none"
-    fov_tolerance: "inf"
-    exec_config:
-      series_number_offset: 100
-      series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":research_only"
-      model_id: "20200817105336-unified"
-      reshape_for_mpr_rotate: True
+      slices_per_input: 7
+      num_channel_output: 1
+      num_rotations: 3
+      inference_mpr: True
+      #layer_params: {slices_per_input: 14 , num_channel_output: 1}
 
 series:
   - name: "zero_dose_ge"
-    reg_match: "zerodose"
+    reg_match: "zero_dose"
     reg_exclude: ""
     manufacturer_match: "ge"
     slice_range: [1, 400]
@@ -65,7 +36,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "low_dose_ge"
-    reg_match: "lowdose"
+    reg_match: "low_dose"
     reg_exclude: ""
     manufacturer_match: "ge"
     slice_range: [1, 400]

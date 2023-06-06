@@ -16,15 +16,34 @@ import numpy as np
 import sigpy as sp
 from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from scipy.ndimage import gaussian_filter
-from deepbrain import Extractor as BrainExtractor
 import GPUtil
+import tempfile
 
 from subtle.util.inference_job_utils import (
-    BaseJobType, GenericInferenceModel, DataLoader2pt5D, set_keras_memory
+    BaseJobType, GenericInferenceModel, DataLoader2pt5D,# set_keras_memory
 )
+from subtle.util.data_loader import InferenceLoader
 from subtle.util.multiprocess_utils import processify
 from subtle.procutil import preprocess_single_series
 from subtle.dcmutil import pydicom_utils, series_utils
+
+from subtle.procutil.registration_utils import register_im
+
+import SimpleITK as sitk
+
+import nibabel as nib
+#import tensorflow.compat.v1 as tf
+import tqdm
+import pdb
+import torch
+from HD_BET.run import run_hd_bet
+
+# os.environ['TF2_BEHAVIOR'] = '0'
+
+# tf.disable_v2_behavior()
+# msg = tf.constant('Hello, TensorFlow!')
+# sess = tf.Session()
+# print(sess.run(msg))
 
 def _init_gpu_pool(local_gpu_q: Queue):
     """
@@ -169,6 +188,9 @@ class SubtleGADJobType(BaseJobType):
 
         self._input_series = ()
 
+        #itk_data
+        self._itk_data = {}
+
         # dict of input arrays by frame
         # (keys = frame sequence name, values = pixel array)
         self._raw_input = {}
@@ -217,7 +239,7 @@ class SubtleGADJobType(BaseJobType):
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
-    @processify
+    #@processify
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
@@ -273,39 +295,55 @@ class SubtleGADJobType(BaseJobType):
                 'exec_config': self.task.job_definition.exec_config,
                 'slices_per_input': self._proc_config.slices_per_input,
                 'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
+                #'inference_mpr': self._proc_config.inference_mpr,
+                'num_rotations': self.task.job_definition.exec_config['num_rotations'],
                 'data': pixel_data
             }
 
             _, n_slices, height, width = pixel_data.shape
 
-            slice_axes = np.arange(1, 4) if not self._proc_config.skip_mpr else np.array([1])
-            for angle in np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
+            if param_obj['exec_config']['inference_mpr']:
+                slice_axes = [0, 2, 3]
+            else:
+                slice_axes = [0]
+
+            if param_obj['exec_config']['inference_mpr'] and param_obj['exec_config']['num_rotations'] > 1:
+                angles = np.linspace(0, 90, param_obj['exec_config']['num_rotations'], endpoint=False)
+            else:
+                angles = [0]
+
+            #slice_axes = np.arange(1, 4) if not self._proc_config.skip_mpr else np.array([1])
+            predictions = []
+            for angle in angles:#np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
                 for slice_axis in slice_axes:
                     pobj = copy.deepcopy(param_obj)
                     pobj['angle'] = angle
                     pobj['slice_axis'] = slice_axis
-
                     mpr_params.append(pobj)
+                    predictions.append(SubtleGADJobType._process_mpr(pobj))
 
-            predictions = process_pool.map(SubtleGADJobType._process_mpr, mpr_params)
+            #predictions = SubtleGADJobType._process_mpr(mpr_params)
             # Convert the array to a shape of (n_slices, height, width, 3, num_rotations)
             _reshape_tuple = (len(slice_axes), num_rotations, n_slices, height, width, 1)
             predictions = np.array(predictions).reshape(_reshape_tuple)
-
+            print('predictions shape', predictions.shape)
             tx_order = (2, 3, 4, 1, 0)
             predictions = np.array(predictions)[..., 0].transpose(tx_order)
+            #print(predictions)
 
             # compute a volume of shape (n_slices, height, width) which has 1 for all the pixels
             # with pixel value > 0 and 0 otherwise - across all mpr predictions
             mask_sum = np.sum(
                 np.array(predictions > 0, dtype=np.float), axis=(-1, -2), keepdims=False
             )
+
             # now average the mpr inferences using the non-zero mask sum
             output_array = np.divide(
                 np.sum(predictions, axis=(-1, -2), keepdims=False),
                 mask_sum, where=(mask_sum > 0)
             )[..., None]
-
+            print(output_array)
+            print(output_array.shape)
             # undo zero padding and isotropic resampling
             output_array = self._undo_reshape(output_array)
 
@@ -347,32 +385,62 @@ class SubtleGADJobType(BaseJobType):
         datasets by frame: keys are frame sequence name and values are lists of pydicom datasets
         """
 
-        assert len(self.task.dict_required_series) == 2, "More than two input series found - only\
-        zero dose and low dose series are allowed"
+        if len(self.task.dict_required_series) != 2:
+            raise KeyError("More than two input series, only zero-dose/ low-dose are allowed")
 
-        zero_dose_series = None
-        low_dose_series = None
+        self._input_series = list(self.task.dict_required_series.values())
 
-        for series_key in self.task.dict_required_series.keys():
-            if 'zero_dose' in series_key or 'zd' in series_key:
-                zero_dose_series = self.task.dict_required_series[series_key]
-            if 'low_dose' in series_key or 'ld' in series_key:
-                low_dose_series = self.task.dict_required_series[series_key]
+        #Assert both zero-dose and low-dose are DicomSeries Objects
+        if not isinstance(self._input_series[0], series_utils.DicomSeries) and \
+                not isinstance(self._input_series[1], series_utils.DicomSeries):
+                    raise TypeError("Input series should be a DicomSeries or IsmrmrdSeries object")
 
-        if zero_dose_series is None or low_dose_series is None:
-            raise TypeError("Cannot find one or more required series")
+        zero_dose_series = [(series) for series in self._input_series  if 'ZERO_DOSE' in series.seriesdescription.upper()][0]
+        low_dose_series =  [(series) for series in self._input_series  if 'LOW_DOSE' in series.seriesdescription.upper()][0]
 
-        if not isinstance(zero_dose_series, series_utils.DicomSeries) or not \
-        isinstance(low_dose_series, series_utils.DicomSeries):
-            raise TypeError("Input series should be a DicomSeries object")
-        # get dictionary of sorted datasets by frame
+        #Check for one zero dose, low dose
+        zero_dose_pixels =[list(zero_dose_series.get_pixel_data(rescale=False).values())[0]]
+        low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())[0]]
 
-        self._input_series = (zero_dose_series, low_dose_series)
-
-        self._input_datasets = (
-            zero_dose_series.get_dict_sorted_datasets(),
-            low_dose_series.get_dict_sorted_datasets()
+        self._input_datasets = (zero_dose_series.get_dict_sorted_datasets(),
+                                low_dose_series.get_dict_sorted_datasets()
         )
+
+        try:
+            self._itk_data['zero_dose'] = zero_dose_series._list_itks[0]
+            self._itk_data['low_dose'] = low_dose_series_list_itks[0]
+        except:
+            self._itk_data['zero_dose'] = sitk.GetImageFromArray(zero_dose_pixels)
+            self._itk_data['low_dose'] = sitk.GetImageFromArray(low_dose_pixels)
+        
+        # num_zd = len(self._raw_input['zero_dose'])
+        # num_ld = len(self._raw_input['low_dose'])
+
+        # if num_zd != 1:
+        #     raise ValueError("More than one zero_dose input")
+        # if num_ld != 1:
+        #     raise ValueError("More than one low_dose input")
+        
+        # for series_key in self.task.dict_required_series.keys():
+        #     if 'zero_dose' in series_key or 'zd' in series_key:
+        #         zero_dose_series = self.task.dict_required_series[series_key]
+        #     if 'low_dose' in series_key or 'ld' in series_key:
+        #         low_dose_series = self.task.dict_required_series[series_key]
+
+        # if zero_dose_series is None or low_dose_series is None:
+        #     raise TypeError("Cannot find one or more required series")
+
+        # if not isinstance(zero_dose_series, series_utils.DicomSeries) or not \
+        # isinstance(low_dose_series, series_utils.DicomSeries):
+        #     raise TypeError("Input series should be a DicomSeries object")
+        # # get dictionary of sorted datasets by frame
+
+        # self._input_series = (zero_dose_series, low_dose_series)
+
+        # self._input_datasets = (
+        #     zero_dose_series.get_dict_sorted_datasets(),
+        #     low_dose_series.get_dict_sorted_datasets()
+        # )
 
     def _set_mfr_specific_config(self):
         """
@@ -456,52 +524,6 @@ class SubtleGADJobType(BaseJobType):
             })
 
         return images, np.array(mask)
-
-    @processify
-    def _strip_skull_npy_vol(self, img_npy: np.ndarray) -> np.ndarray:
-        """
-        This method performs skull stripping using deepbrain library's BrainExtractor class. Once
-        the BrainExtractor returns the probability maps, threshold it at a configured level and
-        return only the largest connected component.
-
-        This method has a @processify decorator which makes it run as a separate process - this is
-        required because the BrainExtractor uses a GPU and once the execution is complete,
-        tensorflow does not clear the GPU memory by default which will block the GPU for the
-        inference process.
-
-        :param img_npy: Input image as a numpy array
-        :return: Numpy array of the skull mask
-        """
-        brain_ext = BrainExtractor()
-
-        img_scaled = np.interp(img_npy, (img_npy.min(), img_npy.max()), (0, 1))
-        segment_probs = brain_ext.run(img_scaled)
-
-        th = self._proc_config.skull_strip_prob_threshold
-        return preprocess_single_series.get_largest_connected_component(segment_probs > th)
-
-    def _strip_skull(self, images: np.ndarray) -> np.ndarray:
-        """
-        Helper function to perform skull stripping on zero and low dose images and take a
-        union of the skull masks.
-
-        :param images: Zero and low dose images as numpy array
-        :return: Numpy array of binary mask of the brain
-        """
-        brain_mask = None
-
-        if self._proc_config.skull_strip:
-            self._logger.info("Performing skull stripping for zero dose...")
-            mask_zero = self._strip_skull_npy_vol(images[0])
-
-            if self._proc_config.skull_strip_union:
-                self._logger.info("Performing skull stripping for low dose...")
-                mask_low = self._strip_skull_npy_vol(images[1])
-                brain_mask = ((mask_zero > 0) | (mask_low > 0))
-            else:
-                brain_mask = mask_zero
-
-        return brain_mask
 
     def _apply_brain_mask(self, images: np.ndarray, brain_mask: np.ndarray) -> np.ndarray:
         """
@@ -655,6 +677,11 @@ class SubtleGADJobType(BaseJobType):
         :param images: Input zero dose and low dose images as numpy array
         :return: Registered images as numpy array
         """
+        """
+        Performs image registration of low dose image by having the zero dose as the reference
+        :param images: Input zero dose and low dose images as numpy array
+        :return: Registered images as numpy array
+        """
         reg_images = np.copy(images)
 
         if not self._proc_config.perform_registration:
@@ -673,23 +700,24 @@ class SubtleGADJobType(BaseJobType):
             fixed_img=reg_images[0], moving_img=reg_images[1], **reg_args
         )
 
-        idty_fn = lambda ims: ims[0]
+        # idty_fn = lambda ims: ims[0]
 
-        if self._proc_config.use_mask_reg:
-            apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
-            self._pixel_spacing[1], reg_params)
-        else:
-            self._logger.info('Registration will be re-run for unmasked images...')
-            apply_reg = lambda ims: preprocess_single_series.register(
-                fixed_img=ims[0], moving_img=ims[1], return_params=False, **reg_args
-            )
+        # if self._proc_config.use_mask_reg:
+        #     apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
+        #     self._pixel_spacing[1], reg_params)
+        # else:
+        #     self._logger.info('Registration will be re-run for unmasked images...')
+        #     apply_reg = lambda ims: preprocess_single_series.register(
+        #         fixed_img=ims[0], moving_img=ims[1], return_params=False, **reg_args
+        #     )
 
-        self._proc_lambdas.append({
-            'name': 'register',
-            'fn': [idty_fn, apply_reg]
-        })
+        # self._proc_lambdas.append({
+        #     'name': 'register',
+        #     'fn': [idty_fn, apply_reg]
+        # })
 
         return reg_images
+    
 
     def _match_histogram(self, images: np.ndarray) -> np.ndarray:
         """
@@ -737,6 +765,9 @@ class SubtleGADJobType(BaseJobType):
         )
 
         # use pixels inside the noise mask of zero dose
+        print('shape of noise mask ', noise_mask.shape)
+        print('shape of scale images ', scale_images.shape)
+
         ref_mask = noise_mask[0, idx_center]
 
         context_img_zero = scale_images[0, idx_center, ...][ref_mask != 0].ravel()
@@ -819,37 +850,7 @@ class SubtleGADJobType(BaseJobType):
 
         return processed_data
 
-    def _blur_lowdose(self, images: np.ndarray) -> np.ndarray:
-        """
-        If self.proc_config.blur_lowdose is True, then the lowdose image is blurred with an
-        anisotropic Gaussian blur to get rid of Compressed Sensing (CS) related streaks
-
-        :param images: Input zero dose and low dose images as a numpy array
-        :return: Numpy array after blurring low dose with the specified Gaussian blur
-        """
-
-        if not self._proc_config.blur_lowdose:
-            return images
-
-        processed_data = np.copy(images)
-        self._logger.info("Blurring low dose image with anisotropic gaussian filter...")
-
-        aniso_gauss_blur = lambda x: gaussian_filter(x, sigma=self._proc_config.cs_blur_sigma)
-        img_low = processed_data[1]
-        trans_map = {
-            'AX': lambda x: x,
-            'SAG': lambda x: x.transpose(1, 0, 2),
-            'COR': lambda x: x.transpose(2, 0, 1)
-        }
-
-        img_low = trans_map[self._proc_config.acq_plane](img_low)
-        img_low_blur = np.array([aniso_gauss_blur(sl) for sl in img_low])
-        img_low_blur = trans_map[self._proc_config.acq_plane](img_low_blur)
-
-        processed_data[1] = img_low_blur
-        return processed_data
-
-    @processify
+    #@processify
     def _process_model_input_compatibility(self, input_data: np.ndarray) -> np.ndarray:
         """
         Check if input data is compatible with the model input shape. If not resample
@@ -861,13 +862,14 @@ class SubtleGADJobType(BaseJobType):
         # Model is initialized here only to get the default input shape
         undo_methods = []
         orig_shape = input_data.shape
-
+        print('what is model_dir', self.model_dir)
         model = GenericInferenceModel(
             model_dir=self.model_dir, decrypt_key_hex=self.decrypt_key_hex
         )
+        print(model._model_obj)
         model.update_config(self.task.job_definition.exec_config)
-        model_input = model._model_obj.inputs[0]
-        model_shape = (int(model_input.shape[1]), int(model_input.shape[2]))
+        model_input = [14,32,32]#model._model_obj.inputs[0]
+        model_shape = (int(model_input[1]), int(model_input[2]))
         input_shape = (input_data.shape[-2], input_data.shape[-1])
 
         if input_shape != model_shape:
@@ -987,6 +989,49 @@ class SubtleGADJobType(BaseJobType):
                 npad.append((diff, diff))
 
         return np.pad(img, pad_width=npad, mode='constant', constant_values=const_val)
+    
+    #@staticmethod
+    def _mask_npy(self,img_npy, dcm_ref, device):
+        mask = None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fpath_input = '{}/input.nii.gz'.format(tmpdir)
+            fpath_output = '{}/output.nii.gz'.format(tmpdir)
+            fpath_mask = '{}/output_mask.nii.gz'.format(tmpdir)
+
+            sitk_ref = dcm_ref
+
+            data_sitk = sitk.GetImageFromArray(img_npy)
+            #data_sitk.CopyInformation(sitk_ref)
+
+            sitk.WriteImage(data_sitk, fpath_input)
+            run_hd_bet(fpath_input, fpath_output, mode='fast', device=device, do_tta=False)
+            mask = nib.load(fpath_mask).get_fdata().transpose(2, 1, 0)
+
+        return mask
+
+    #@staticmethod
+    def _brain_mask(self,ims):
+        mask = None
+
+        if True:
+            print('Extracting brain regions using deepbrain...')
+            device = int(0)
+            ## Temporarily using DL based method for extraction
+            mask_zero = self._mask_npy(ims[:, 0, ...], self._itk_data['zero_dose'], device)
+
+            if False:
+                mask_low = _mask_npy(ims[:, 1, ...], self._itk_data['low_dose'], device)
+
+                mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
+
+                if False:
+                    # union of all masks
+                    mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
+                else:
+                    mask = np.array([mask_zero, mask_low, mask_full]).transpose(1, 0, 2, 3)
+            else:
+                mask = mask_zero
+        return mask
 
     def _preprocess_raw_pixel_data(self) -> Dict:
         """
@@ -1000,18 +1045,29 @@ class SubtleGADJobType(BaseJobType):
             input_data_full = data_array.copy()
 
             # write preprocess chain here
-            input_data_mask, noise_mask = self._mask_noise(input_data_full)
+            ims,mask = self._mask_noise(input_data_full)
 
-            brain_mask = self._strip_skull(input_data_mask)
-            input_data_mask = self._apply_brain_mask(input_data_mask, brain_mask)
+            print('shape of mask ', mask.shape)
 
+            # next apply a BET mask to remove non-brain tissue
+            brain_mask = self._brain_mask(ims)
+
+            print('shape of ims ', ims.shape)
+            print('brain mask shape', brain_mask.shape)
+
+            input_data_mask = self._apply_brain_mask(ims[:,0,:,:], brain_mask[0,:])
+
+            #brain_mask = (input_data_mask[0,:]) #self._strip_skull
+            
+            
             input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask)
             input_data_mask = self._register(input_data_mask)
             input_data_mask = self._match_histogram(input_data_mask)
-            input_data_mask = self._scale_intensity(input_data_mask, noise_mask)
+
+            print('input data mask shape', input_data_mask.shape)
+            input_data_mask = self._scale_intensity(ims, mask)
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
-            input_data_full = self._blur_lowdose(input_data_full)
 
             (input_data_full, self._undo_model_compat_reshape) = \
             self._process_model_input_compatibility(input_data_full)
@@ -1083,16 +1139,17 @@ class SubtleGADJobType(BaseJobType):
          :return: Prediction from the specified model with the given MPR parameters
         """
         # pylint: disable=global-variable-undefined
-        global gpu_pool
-        gpu_id = gpu_pool.get(block=True)
+        #global gpu_pool
+        #gpu_id = gpu_pool.get(block=True)
 
         try:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+            os.environ["CUDA_VISIBLE_DEVICES"] = "0"#gpu_id
 
-            set_keras_memory(allow_growth=True)
+            #set_keras_memory(allow_growth=True)
 
             reshape = params['reshape_for_mpr_rotate']
+
 
             input_data = np.copy(params['data'])
             zero_padded = False
@@ -1100,47 +1157,86 @@ class SubtleGADJobType(BaseJobType):
             model_input_shape = (
                 1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']
             )
+            print('model directory again ', params['model_dir'])
 
             model = GenericInferenceModel(
                 model_dir=params['model_dir'], decrypt_key_hex=params['decrypt_key_hex'],
                 input_shape=model_input_shape
             )
+            #model._model_obj().eval()
+
             model.update_config(params['exec_config'])
 
-            if params['angle'] > 0.0:
+            if params['angle'] > 0.0 and params['num_rotations'] > 1:
                 data_rot = rotate(input_data, params['angle'], reshape=reshape, axes=(1, 2))
             else:
                 data_rot = np.copy(input_data)
 
-            data_loader = DataLoader2pt5D(
+            print(data_rot.shape,params['slices_per_input'],model._model_config['batch_size'],  params['slice_axis'], input_data.shape[2], input_data.shape[3])
+
+            inf_loader = InferenceLoader(
                 input_data=data_rot, slices_per_input=params['slices_per_input'],
-                batch_size=model._model_config['batch_size'], slice_axis=params['slice_axis'],
+                batch_size=1, slice_axis=params['slice_axis'],
+                data_order='stack',
                 resize=(input_data.shape[2], input_data.shape[3])
-            )
+            )#model._model_config['batch_size']
+            #pdb.set_trace()
+            num_batches = inf_loader.__len__()
+            print(num_batches)
+            Y_pred = []
+            # import importlib
 
-            model_pred = model.predict_generator(data_loader)
+            # file_path = '/home/SubtleGad/app/models/20200817105336-unified/unet2d.py'
+            # module_name = 'model' 
+            # spec = importlib.util.spec_from_file_location(module_name, file_path)
+            # module = importlib.util.module_from_spec(spec)
+            # spec.loader.exec_module(module)
 
-            if params['slice_axis'] == 2:
-                model_pred = model_pred.transpose(1, 0, 2, 3)
+            # net = module.Model(num_channel_input=14,
+            #             num_channel_output=1)
+
+            # checkpoint = '/home/SubtleGad/ckp/unified_mpr_05092023.pth'
+            # #print('model', checkpoint)
+            # state_dict = torch.load(checkpoint, map_location='cpu')
+            # net.load_state_dict(state_dict['G'])
+            # net.eval()
+
+            for idx in (np.arange(num_batches)):
+                X = inf_loader.__getitem__(idx)
+                #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
+                #print(model._model_obj)
+                print('required input shape', X.shape)
+                Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
+                print('required output shape', Y.shape)
+                Y_pred.extend(Y[:])
+
+
+            Y_pred = np.array(Y_pred)
+            Y_pred = Y_pred[:inf_loader.num_slices, ...] # get rid of slice excess
+
+            if params['slice_axis'] == 0:
+                pass
+            elif params['slice_axis'] == 2:
+                Y_pred = np.transpose(Y_pred, (1, 0, 2))
             elif params['slice_axis'] == 3:
-                model_pred = model_pred.transpose(1, 2, 0, 3)
+                Y_pred = np.transpose(Y_pred, (1, 2, 0))
 
-            if not reshape:
-                resize_shape = list(input_data.shape[1:]) + [model.model_config["batch_size"]]
-                model_pred = sp.util.resize(model_pred, resize_shape)
+            if params['num_rotations'] > 1 and params['angle'] > 0:
+                Y_pred = rotate(
+                    Y_pred, -params['angle'], reshape=False, axes=(0, 1)
+                )
 
-            if params['angle'] > 0.0:
-                model_pred = rotate(model_pred, -params['angle'], reshape=reshape, axes=(0, 1))
-
-            if model_pred.shape[0] != params['data'].shape[1] or zero_padded:
-                model_pred = SubtleGADJobType._center_crop(model_pred[..., 0], params['data'][0])
-                model_pred = model_pred[..., None]
-
-            return model_pred
+            Y_pred = sp.util.resize(Y_pred, (input_data.shape[1], input_data.shape[2], input_data.shape[3]))
+            # np.save(
+            #     '/home/srivathsa/projects/studies/gad/all/inference/test/pred_{}_{}.npy'.format(
+            #         int(angle), slice_axis
+            #     ), Y_pred
+            # )
+            return Y_pred
         except Exception as e:
             raise Exception('Error in process_mpr', e)
-        finally:
-            gpu_pool.put(gpu_id)
+        #finally:
+        #    gpu_pool.put(gpu_id)
 
     def _save_data(self, dict_pixel_data: Dict, dict_template_ds: Dict, out_dicom_dir: str):
         """
