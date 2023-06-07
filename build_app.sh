@@ -19,12 +19,12 @@ case "${unameOut}" in
 esac
 
 
-if [ -z "$PYTHON" ]; then
-  export PYTHON=python3.10
-fi
-if [ -z "$PIP" ]; then
-  export PIP=python3.10 -m pip
-fi
+#if [ -z "$PYTHON" ]; then
+export PYTHON=python3.10
+#fi
+#if [ -z "$PIP" ]; then
+export PIP="python3.10 -m pip"
+#fi
 
 export BUILD_DIR=build
 if [ -d ${BUILD_DIR} ]; then

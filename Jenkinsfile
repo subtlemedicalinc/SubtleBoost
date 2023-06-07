@@ -239,7 +239,6 @@ node {
         docker.image("subtle/gad_py310_torch20:2023-06-01").inside("--runtime=nvidia  --user 0"){
             sh '''
                 export PYTHON=python3.10
-                export PIP=python3.10 -m pip
 
                 rm -rf app/models
                 cp -r default_models app/models
