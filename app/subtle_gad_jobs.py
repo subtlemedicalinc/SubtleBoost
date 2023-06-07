@@ -326,7 +326,7 @@ class SubtleGADJobType(BaseJobType):
             # Convert the array to a shape of (n_slices, height, width, 3, num_rotations)
             _reshape_tuple = (len(slice_axes), num_rotations, n_slices, height, width, 1)
             predictions = np.array(predictions).reshape(_reshape_tuple)
-            print('predictions shape', predictions.shape)
+            #print('predictions shape', predictions.shape)
             tx_order = (2, 3, 4, 1, 0)
             predictions = np.array(predictions)[..., 0].transpose(tx_order)
             #print(predictions)
@@ -342,8 +342,8 @@ class SubtleGADJobType(BaseJobType):
                 np.sum(predictions, axis=(-1, -2), keepdims=False),
                 mask_sum, where=(mask_sum > 0)
             )[..., None]
-            print(output_array)
-            print(output_array.shape)
+            #print(output_array)
+            #print(output_array.shape)
             # undo zero padding and isotropic resampling
             output_array = self._undo_reshape(output_array)
 
@@ -528,7 +528,7 @@ class SubtleGADJobType(BaseJobType):
     def apply_brain_mask(self, ims, brain_mask):
         ims_mask = np.copy(ims)
         if True:
-            print('Applying computed brain masks on images. Mask shape -', brain_mask.shape)
+            #print('Applying computed brain masks on images. Mask shape -', brain_mask.shape)
             ims_mask = np.zeros_like(ims)
 
             if brain_mask.ndim == 4:
@@ -779,8 +779,8 @@ class SubtleGADJobType(BaseJobType):
         )
 
         # use pixels inside the noise mask of zero dose
-        print('shape of noise mask ', noise_mask.shape)
-        print('shape of scale images ', scale_images.shape)
+        #print('shape of noise mask ', noise_mask.shape)
+        #print('shape of scale images ', scale_images.shape)
 
         ref_mask = noise_mask[0, idx_center]
 
@@ -876,11 +876,11 @@ class SubtleGADJobType(BaseJobType):
         # Model is initialized here only to get the default input shape
         undo_methods = []
         orig_shape = input_data.shape
-        print('what is model_dir', self.model_dir)
+        #print('what is model_dir', self.model_dir)
         model = GenericInferenceModel(
             model_dir=self.model_dir, decrypt_key_hex=self.decrypt_key_hex
         )
-        print(model._model_obj)
+        #print(model._model_obj)
         model.update_config(self.task.job_definition.exec_config)
         model_input = [14,32,32]#model._model_obj.inputs[0]
         model_shape = (int(model_input[1]), int(model_input[2]))
@@ -1028,7 +1028,7 @@ class SubtleGADJobType(BaseJobType):
         mask = None
 
         if True:
-            print('Extracting brain regions using deepbrain...')
+            #print('Extracting brain regions using deepbrain...')
             device = int(0)
             ## Temporarily using DL based method for extraction
             mask_zero = self._mask_npy(ims[0,:, ...], self._itk_data['zero_dose'], device)
@@ -1059,36 +1059,36 @@ class SubtleGADJobType(BaseJobType):
         for frame_seq_name, data_array in self._raw_input.items():
             input_data_full = data_array.copy()
 
-            print(f'0th step raw image {input_data_full.shape}')
+            #print(f'0th step raw image {input_data_full.shape}')
             # write preprocess chain here
             ims,mask = self._mask_noise(input_data_full)
 
-            print(f'1st step mask image {ims.shape} {mask.shape}')
+            #print(f'1st step mask image {ims.shape} {mask.shape}')
 
             # next apply a BET mask to remove non-brain tissue
             brain_mask = self._brain_mask(ims)
-            print(f'2nd step apply brain mask image {brain_mask.shape} {ims.shape}')
+            #print(f'2nd step apply brain mask image {brain_mask.shape} {ims.shape}')
             
             input_data_mask = self.apply_brain_mask(ims, brain_mask)
 
-            print(f'3rd step brain mask image {input_data_mask.shape}')
+            #print(f'3rd step brain mask image {input_data_mask.shape}')
 
             #brain_mask = (input_data_mask[0,:]) #self._strip_skull
             
             
             input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask)
-            print(f'4th step scale intensity image {input_data_mask.shape}')
+            #print(f'4th step scale intensity image {input_data_mask.shape}')
 
             input_data_mask = self._register(input_data_mask)
-            print(f'5th step register image {input_data_mask.shape}')
+            #print(f'5th step register image {input_data_mask.shape}')
 
             input_data_mask = self._match_histogram(input_data_mask)
 
-            print(f'6th step match histogram image {input_data_mask.shape}')
+            #print(f'6th step match histogram image {input_data_mask.shape}')
             
-            input_data_mask = self._scale_intensity(ims, mask)
+            input_data_mask = self._scale_intensity(input_data_mask, mask)
 
-            print(f'7th step scale intensity image {input_data_mask.shape}')
+            #print(f'7th step scale intensity image {input_data_mask.shape}')
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
 
@@ -1180,7 +1180,7 @@ class SubtleGADJobType(BaseJobType):
             model_input_shape = (
                 1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']
             )
-            print('model directory again ', params['model_dir'])
+            #print('model directory again ', params['model_dir'])
 
             model = GenericInferenceModel(
                 model_dir=params['model_dir'], decrypt_key_hex=params['decrypt_key_hex'],
@@ -1195,7 +1195,7 @@ class SubtleGADJobType(BaseJobType):
             else:
                 data_rot = np.copy(input_data)
 
-            print(data_rot.shape,params['slices_per_input'],model._model_config['batch_size'],  params['slice_axis'], input_data.shape[2], input_data.shape[3])
+            #print(data_rot.shape,params['slices_per_input'],model._model_config['batch_size'],  params['slice_axis'], input_data.shape[2], input_data.shape[3])
 
             inf_loader = InferenceLoader(
                 input_data=data_rot, slices_per_input=params['slices_per_input'],
@@ -1205,7 +1205,7 @@ class SubtleGADJobType(BaseJobType):
             )#model._model_config['batch_size']
             #pdb.set_trace()
             num_batches = inf_loader.__len__()
-            print(num_batches)
+            #print(num_batches)
             Y_pred = []
             # import importlib
 
@@ -1228,9 +1228,9 @@ class SubtleGADJobType(BaseJobType):
                 X = inf_loader.__getitem__(idx)
                 #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
                 #print(model._model_obj)
-                print('required input shape', X.shape)
+                #print('required input shape', X.shape)
                 Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
-                print('required output shape', Y.shape)
+                #print('required output shape', Y.shape)
                 Y_pred.extend(Y[:])
 
 
