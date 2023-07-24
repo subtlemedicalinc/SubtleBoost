@@ -20,7 +20,7 @@ import GPUtil
 import tempfile
 
 from subtle.util.inference_job_utils import (
-    BaseJobType, GenericInferenceModel, DataLoader2pt5D,# set_keras_memory
+    BaseJobType, GenericInferenceModel#, DataLoader2pt5D,# set_keras_memory
 )
 from subtle.util.data_loader import InferenceLoader
 from subtle.util.multiprocess_utils import processify
@@ -76,11 +76,11 @@ class SubtleGADJobType(BaseJobType):
 
         # manufacturer specific - these are the default values
         "perform_noise_mask": True,
-        "noise_mask_threshold": 0.05,
+        "noise_mask_threshold": 0.1,
         "noise_mask_area": False,
         "noise_mask_selem": False,
         "perform_dicom_scaling": False,
-        "transform_type": "rigid",
+        "transform_type": "affine",
         "use_mask_reg": True,
         "histogram_matching": False,
         "joint_normalize": False,
@@ -95,11 +95,11 @@ class SubtleGADJobType(BaseJobType):
         "blur_lowdose": False,
         "cs_blur_sigma": [0, 1.5],
         "acq_plane": "AX",
-        "model_resolution": [1.0, 0.5, 0.5],
+        "model_resolution": [0.5, 0.5, 0.5],
 
         # inference params:
-        "inference_mpr": True,
-        "num_rotations": 3,
+        "inference_mpr": False,
+        "num_rotations": 1,
         "skip_mpr": False,
         "slices_per_input": 7,
         "mpr_angle_start": 0,
@@ -117,7 +117,6 @@ class SubtleGADJobType(BaseJobType):
     mfr_specific_config = {
         "ge": {
             "perform_noise_mask": True,
-            "noise_mask_threshold": 0.1,
             "noise_mask_area": False,
             "noise_mask_selem": False,
             "perform_dicom_scaling": False,
@@ -129,7 +128,7 @@ class SubtleGADJobType(BaseJobType):
         },
         "siemens": {
             "perform_noise_mask": True,
-            "noise_mask_threshold": 0.1,
+            #"noise_mask_threshold": 0.1,
             "noise_mask_area": False,
             "noise_mask_selem": False,
             "perform_dicom_scaling": False,
@@ -144,11 +143,11 @@ class SubtleGADJobType(BaseJobType):
         },
         "philips": {
             "perform_noise_mask": True,
-            "noise_mask_threshold": 0.08,
+            #"noise_mask_threshold": 0.1,
             "noise_mask_area": False,
             "noise_mask_selem": False,
             "perform_dicom_scaling": False,
-            "transform_type": "rigid",
+            "transform_type": "affine",
             "histogram_matching": True,
             "joint_normalize": False,
             "scale_ref_zero_img": False,
@@ -525,6 +524,7 @@ class SubtleGADJobType(BaseJobType):
 
         return images, np.array(mask)
 
+    @processify
     def apply_brain_mask(self, ims, brain_mask):
         ims_mask = np.copy(ims)
         if True:
@@ -1024,6 +1024,7 @@ class SubtleGADJobType(BaseJobType):
         return mask
 
     #@staticmethod
+    @processify
     def _brain_mask(self,ims):
         mask = None
 
@@ -1228,21 +1229,22 @@ class SubtleGADJobType(BaseJobType):
                 X = inf_loader.__getitem__(idx)
                 #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
                 #print(model._model_obj)
-                #print('required input shape', X.shape)
+                print('required input shape', X.shape)
                 Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
-                #print('required output shape', Y.shape)
-                Y_pred.extend(Y[:])
+                print('required output shape', Y.shape)
+                Y_pred.append(Y[:])
 
 
             Y_pred = np.array(Y_pred)
+            print('Y_pred shape ', Y_pred.shape)
             Y_pred = Y_pred[:inf_loader.num_slices, ...] # get rid of slice excess
 
             if params['slice_axis'] == 0:
                 pass
             elif params['slice_axis'] == 2:
-                Y_pred = np.transpose(Y_pred, (1, 0, 2))
+                Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
             elif params['slice_axis'] == 3:
-                Y_pred = np.transpose(Y_pred, (1, 2, 0))
+                Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
 
             if params['num_rotations'] > 1 and params['angle'] > 0:
                 Y_pred = rotate(

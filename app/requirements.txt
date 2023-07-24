@@ -19,6 +19,5 @@ pytorch-ignite==0.4.11
 multiprocess==0.70.14
 GPUtil==1.4.0
 nibabel==5.1.0
-tensorflow==2.8.0
 MarkupSafe==2.0.1
 regex

@@ -19,11 +19,10 @@ jobs:
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
       model_id: "20230606105336-unified"
-      noise_mask_threshold: 0.01
       slices_per_input: 7
       num_channel_output: 1
-      num_rotations: 3
-      inference_mpr: True
+      num_rotations: 1
+      inference_mpr: False
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
 
 series:
