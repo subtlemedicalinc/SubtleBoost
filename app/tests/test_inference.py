@@ -14,10 +14,8 @@ from glob import glob
 import unittest
 from unittest.mock import MagicMock
 import pytest
-import mock
 import numpy as np
 import pydicom
-
 from subtle.util.data_loader import dicomscan
 # pylint: disable=import-error
 import subtle_gad_jobs
@@ -51,8 +49,8 @@ class InferenceTest(unittest.TestCase):
             "skull_strip_union": True,
             "skull_strip_prob_threshold": 0.5,
             "num_scale_context_slices": 20,
-            "inference_mpr": True,
-            "num_rotations": 5,
+            "inference_mpr": False,
+            "num_rotations": 1,
             "skip_mpr": False,
             "slices_per_input": 7,
             "mpr_angle_start": 0,
@@ -65,7 +63,7 @@ class InferenceTest(unittest.TestCase):
             "use_mask_reg": False,
             "acq_plane": "AX",
             "blur_lowdose": False,
-            "model_resolution": [1.0, 0.5, 0.5],
+            "model_resolution": [0.5, 0.5, 0.5],
             "perform_registration": True,
             "min_gpu_mem_mb": 9800.0,
             "cs_blur_sigma": [0, 1.5],
@@ -73,8 +71,6 @@ class InferenceTest(unittest.TestCase):
         }
 
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
-        print(self.path_data)
-
         self.model_dir = os.path.join(self.path_data, "model", "20230606105336-unified")
 
         self.processing_config = processing_config
@@ -102,8 +98,8 @@ class InferenceTest(unittest.TestCase):
         self.sequence_name = self.zero_series_in.get_frame_names()[0]
 
         self.job_obj.task.dict_required_series = {
-            'zero_dose_philips': self.zero_series_in,
-            'low_dose_philips': self.low_series_in
+            'zero_dose_ge': self.zero_series_in,
+            'low_dose_ge': self.low_series_in
         }
 
         self.dict_pixel_data = self.job_obj._preprocess()

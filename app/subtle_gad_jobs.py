@@ -71,6 +71,7 @@ class SubtleGADJobType(BaseJobType):
 
         # general params
         "not_for_clinical_use": False,
+        "metadata_comp": {},
 
         # preprocessing params:
 
@@ -211,7 +212,7 @@ class SubtleGADJobType(BaseJobType):
         information and finally get the raw pixel data
 
         """
-        self._get_dicom_data()
+        self._get_input_series()
         self._set_mfr_specific_config()
 
         self._get_pixel_spacing()
@@ -223,6 +224,86 @@ class SubtleGADJobType(BaseJobType):
         # dictionary of the data to process by frame
         dict_pixel_data = self._preprocess_raw_pixel_data()
         return dict_pixel_data
+
+    def _metadata_compatibility(self):
+
+        if self._proc_config.metadata_comp:
+            
+            for key in self._proc_config.metadata_comp.keys():
+
+                
+                if key == 'rows':
+
+                    if not self._inputs['zd'].rows or not self._inputs['ld'].rows:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.isclose(self._inputs['zd'].rows , self._inputs['ld'].rows, atol = self._proc_config.metadata_comp[key]):
+
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+
+                if key == 'columns':
+
+                    if not self._inputs['zd'].columns or not self._inputs['ld'].columns:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.isclose(self._inputs['zd'].columns , self._inputs['ld'].columns, atol = self._proc_config.metadata_comp[key]):
+
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+
+                if key == 'pixelspacing':
+
+                    if not self._inputs['zd'].pixelspacing or not self._inputs['ld'].pixelspacing:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.isclose(self._inputs['zd'].pixelspacing[0] , self._inputs['ld'].pixelspacing[0], atol = self._proc_config.metadata_comp[key]):
+
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+
+                if key ==  'patientid':
+                    
+                    if not self._inputs['zd'].patientid or not self._inputs['ld'].patientid:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.isclose(self._inputs['zd'].patientid , self._inputs['ld'].patientid, atol = self._proc_config.metadata_comp[key]):
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+                
+                if key == 'imagepositionpatient':
+
+                    if not self._inputs['zd'].imagepositionpatient or not self._inputs['ld'].imagepositionpatient:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.all(np.isclose(self._inputs['zd'].imagepositionpatient , self._inputs['ld'].imagepositionpatient, atol = self._proc_config.metadata_comp[key])):
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+
+                if key == 'slicethickness':
+
+                    if not self._inputs['zd'].slicethickness or not self._inputs['ld'].slicethickness:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if not np.isclose(self._inputs['zd'].slicethickness , self._inputs['ld'].slicethickness, atol = self._proc_config.metadata_comp[key]):
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
+
+                if key == 'accessionnumber':
+
+                    if not self._inputs['zd'].accessionnumber or not self._inputs['ld'].accessionnumber:
+                        raise ValueError(f'{key} metadata not found in the zd or ld series dicom')
+                    else:
+                        if self._inputs['zd'].accessionnumber != self._inputs['ld'].accessionnumber:
+                            raise ValueError(f'{key} is not compatible with the given tolerance level of {self._proc_config.metadata_comp[key]}')
+                        else:
+                            self._logger.info(f'{key} metadata compatibility passed')
 
     def _get_available_gpus(self) -> str:
         """
@@ -378,7 +459,7 @@ class SubtleGADJobType(BaseJobType):
         # data saving
         self._save_data(self._output_data, self._input_datasets[0], out_dicom_dir)
 
-    def _get_dicom_data(self):
+    def _get_input_series(self):
         """
         Get dicom datasets from the DicomSeries passed through the task as a dictionary of sorted
         datasets by frame: keys are frame sequence name and values are lists of pydicom datasets
@@ -396,6 +477,8 @@ class SubtleGADJobType(BaseJobType):
 
         zero_dose_series = [(series) for series in self._input_series  if 'ZERO_DOSE' in series.seriesdescription.upper()][0]
         low_dose_series =  [(series) for series in self._input_series  if 'LOW_DOSE' in series.seriesdescription.upper()][0]
+
+        self._inputs = {'zd' : zero_dose_series, 'ld': low_dose_series}
 
         #Check for one zero dose, low dose
         zero_dose_pixels =[list(zero_dose_series.get_pixel_data(rescale=False).values())[0]]
@@ -483,6 +566,11 @@ class SubtleGADJobType(BaseJobType):
         """
         Read the input series and set raw pixel data as a numpy array
         """
+
+        
+
+        self._metadata_compatibility()
+
         for frame_seq_name in self._input_datasets[0].keys():
             zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
             low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
@@ -675,13 +763,13 @@ class SubtleGADJobType(BaseJobType):
         Obtains the pixel spacing information from DICOM header of input dataset and sets it to the
         local pixel spacing attribute
         """
-        header_zero, header_low = self._get_dicom_header()
+        #header_zero, header_low = self._get_dicom_header()
 
-        x_zero, y_zero = header_zero.PixelSpacing
-        z_zero = header_zero.SliceThickness
+        x_zero, y_zero = self._inputs['zd'].pixelspacing
+        z_zero = self._inputs['zd'].slicethickness
 
-        x_low, y_low = header_low.PixelSpacing
-        z_low = header_low.SliceThickness
+        x_low, y_low = self._inputs['ld'].pixelspacing
+        z_low = self._inputs['ld'].slicethickness
 
         self._pixel_spacing = [(x_zero, y_zero, z_zero), (x_low, y_low, z_low)]
 

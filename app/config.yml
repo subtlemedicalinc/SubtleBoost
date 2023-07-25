@@ -23,6 +23,7 @@ jobs:
       num_channel_output: 1
       num_rotations: 1
       inference_mpr: False
+      metadata_comp: {'pixelspacing' : 0.5, 'imagepositionpatient' : 10, 'slicethickness' : 0.5}
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
 
 series:
