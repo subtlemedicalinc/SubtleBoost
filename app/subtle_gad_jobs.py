@@ -481,19 +481,23 @@ class SubtleGADJobType(BaseJobType):
         self._inputs = {'zd' : zero_dose_series, 'ld': low_dose_series}
 
         #Check for one zero dose, low dose
-        zero_dose_pixels =[list(zero_dose_series.get_pixel_data(rescale=False).values())[0]]
-        low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())[0]]
+        zero_dose_pixels =[list(zero_dose_series.get_pixel_data(rescale=False).values())][0][0]
+        low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())][0][0]
+        #print('low_dose_pixels', low_dose_pixels.shape)
 
         self._input_datasets = (zero_dose_series.get_dict_sorted_datasets(),
                                 low_dose_series.get_dict_sorted_datasets()
         )
-
+        
         try:
+            
             self._itk_data['zero_dose'] = zero_dose_series._list_itks[0]
-            self._itk_data['low_dose'] = low_dose_series_list_itks[0]
+            self._itk_data['low_dose'] = low_dose_series._list_itks[0]
         except:
+            
             self._itk_data['zero_dose'] = sitk.GetImageFromArray(zero_dose_pixels)
             self._itk_data['low_dose'] = sitk.GetImageFromArray(low_dose_pixels)
+            #print(self._itk_data['zero_dose'].GetSize())
         
         # num_zd = len(self._raw_input['zero_dose'])
         # num_ld = len(self._raw_input['low_dose'])
@@ -1101,9 +1105,10 @@ class SubtleGADJobType(BaseJobType):
             fpath_mask = '{}/output_mask.nii.gz'.format(tmpdir)
 
             sitk_ref = dcm_ref
-
+            
             data_sitk = sitk.GetImageFromArray(img_npy)
-            #data_sitk.CopyInformation(sitk_ref)
+            
+            data_sitk.CopyInformation(sitk_ref)
 
             sitk.WriteImage(data_sitk, fpath_input)
             run_hd_bet(fpath_input, fpath_output, mode='fast', device=device, do_tta=False)
@@ -1120,6 +1125,7 @@ class SubtleGADJobType(BaseJobType):
             #print('Extracting brain regions using deepbrain...')
             device = int(0)
             ## Temporarily using DL based method for extraction
+            
             mask_zero = self._mask_npy(ims[0,:, ...], self._itk_data['zero_dose'], device)
 
             if True:
