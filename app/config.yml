@@ -21,8 +21,8 @@ jobs:
       model_id: "20230606105336-unified"
       slices_per_input: 7
       num_channel_output: 1
-      num_rotations: 1
-      inference_mpr: False
+      num_rotations: 3
+      inference_mpr: True
       metadata_comp: {'pixelspacing' : 0.5, 'imagepositionpatient' : 10, 'slicethickness' : 0.5}
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
 

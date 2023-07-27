@@ -99,8 +99,8 @@ class SubtleGADJobType(BaseJobType):
         "model_resolution": [0.5, 0.5, 0.5],
 
         # inference params:
-        "inference_mpr": False,
-        "num_rotations": 1,
+        "inference_mpr": True,
+        "num_rotations": 3,
         "skip_mpr": False,
         "slices_per_input": 7,
         "mpr_angle_start": 0,
@@ -1328,15 +1328,17 @@ class SubtleGADJobType(BaseJobType):
             Y_pred = Y_pred[:inf_loader.num_slices, ...] # get rid of slice excess
 
             if params['slice_axis'] == 0:
-                pass
-            elif params['slice_axis'] == 2:
+                #pass
+            #elif params['slice_axis'] == 2:
                 Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
-            elif params['slice_axis'] == 3:
+            elif params['slice_axis'] == 2:
                 Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
+            elif params['slice_axis'] == 3:
+                Y_pred = np.transpose(Y_pred, (1, 2, 3, 0))
 
             if params['num_rotations'] > 1 and params['angle'] > 0:
                 Y_pred = rotate(
-                    Y_pred, -params['angle'], reshape=False, axes=(0, 1)
+                    Y_pred, -params['angle'], reshape=False, axes=(1, 2)
                 )
 
             Y_pred = sp.util.resize(Y_pred, (input_data.shape[1], input_data.shape[2], input_data.shape[3]))

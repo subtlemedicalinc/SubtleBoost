@@ -1,0 +1,40 @@
+{
+    "version": "0.0.7",
+    "schema": "1.0.0",
+    "app_utilities_version": "gad_feature",
+    "description": "Subtle App Manifest File",
+    "appName": "SubtleGAD",
+    "appDescription": "SubtleGAD app to process MRI data with dose reduction models on the Subtle Platform",
+    "aeTitle": "SubtleGAD",
+    "appId": "4000",
+    "edge": {
+        "GPU": {
+            "enabled": true,
+            "vcpus": 8,
+            "memory": 16000
+        },
+        "CPU": {
+            "enabled": true,
+            "vcpus": 8,
+            "memory": 16000
+        }
+    },
+    "cloud": {
+        "GPU": {
+            "enabled": true,
+            "vcpus": 8,
+            "memory": 16000
+        },
+        "CPU": {
+            "enabled": true,
+            "vcpus": 8,
+            "memory": 16000
+        }
+    },
+    "defaultModels": [
+        "20230606105336-unified"
+    ],
+    "compatibleModels": [
+        "20230517105336-unified"
+    ]
+}
