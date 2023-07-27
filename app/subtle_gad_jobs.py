@@ -1341,7 +1341,7 @@ class SubtleGADJobType(BaseJobType):
                     Y_pred, -params['angle'], reshape=False, axes=(1, 2)
                 )
 
-            Y_pred = sp.util.resize(Y_pred, (input_data.shape[1], input_data.shape[2], input_data.shape[3]))
+            Y_pred = sp.util.resize(Y_pred, (1, input_data.shape[1], input_data.shape[2], input_data.shape[3]))
             # np.save(
             #     '/home/srivathsa/projects/studies/gad/all/inference/test/pred_{}_{}.npy'.format(
             #         int(angle), slice_axis
