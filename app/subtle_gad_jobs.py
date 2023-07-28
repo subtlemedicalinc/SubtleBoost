@@ -730,7 +730,7 @@ class SubtleGADJobType(BaseJobType):
 
         return (img * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
 
-    def _scale_intensity_with_dicom_tags(self, images: np.ndarray) -> np.ndarray:
+    def _scale_intensity_with_dicom_tags(self, images: np.ndarray, raw_input_images: np.ndarray) -> np.ndarray:
         """
         Helper function to scale the image intensity using DICOM header information
 
@@ -749,6 +749,9 @@ class SubtleGADJobType(BaseJobType):
 
             scaled_images[0] = scale_fn(0)(scaled_images)
             scaled_images[1] = scale_fn(1)(scaled_images)
+
+            self.raw_input_images[0] = scale_fn(0)(self.raw_input_images)
+            self.raw_input_images[1] = scale_fn(1)(self.raw_input_images)
 
             self._proc_lambdas.append({
                 'name': 'dicom_scaling',
@@ -806,21 +809,23 @@ class SubtleGADJobType(BaseJobType):
             fixed_img=reg_images[0], moving_img=reg_images[1], **reg_args
         )
 
-        # idty_fn = lambda ims: ims[0]
+        idty_fn = lambda ims: ims[0]
 
-        # if self._proc_config.use_mask_reg:
-        #     apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
-        #     self._pixel_spacing[1], reg_params)
-        # else:
-        #     self._logger.info('Registration will be re-run for unmasked images...')
-        #     apply_reg = lambda ims: preprocess_single_series.register(
-        #         fixed_img=ims[0], moving_img=ims[1], return_params=False, **reg_args
-        #     )
+        if self._proc_config.use_mask_reg:
+            apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
+            self._pixel_spacing[1], reg_params)
+        else:
+            self._logger.info('Registration will be re-run for unmasked images...')
+            apply_reg = lambda ims: preprocess_single_series.register(
+                fixed_img=ims[0], moving_img=ims[1], return_params=False, **reg_args
+            )
+        
+        self.raw_input_images[1] = apply_reg(self.raw_input_images)
 
-        # self._proc_lambdas.append({
-        #     'name': 'register',
-        #     'fn': [idty_fn, apply_reg]
-        # })
+        self._proc_lambdas.append({
+            'name': 'register',
+            'fn': [idty_fn, apply_reg]
+        })
 
         return reg_images
     
@@ -841,6 +846,8 @@ class SubtleGADJobType(BaseJobType):
 
             idty_fn = lambda ims: ims[0]
             hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
+
+            self.raw_input_images[1] = hist_match_fn(self.raw_input_images)
 
             self._proc_lambdas.append({
                 'name': 'histogram_matching',
@@ -892,6 +899,10 @@ class SubtleGADJobType(BaseJobType):
 
         sfactors = [1, scale_factor]
         match_scales_fn = lambda idx: (lambda ims: ims[idx] * sfactors[idx])
+
+        self.raw_input_images[0] = match_scales_fn(0)(self.raw_input_images)
+        self.raw_input_images[1] = match_scales_fn(1)(self.raw_input_images)
+
         self._proc_lambdas.append({
             'name': 'match_scales',
             'fn': [match_scales_fn(0), match_scales_fn(1)]
@@ -947,9 +958,11 @@ class SubtleGADJobType(BaseJobType):
         """
         self._logger.info("Applying all preprocessing steps on full brain images...")
         processed_data = np.copy(unmasked_data)
+        print('proc lambdas', self._proc_lambdas)
 
         for proc_lambda in self._proc_lambdas:
             self._logger.info("::APPLY PROC LAMBDAS::%s", proc_lambda['name'])
+            print('applying following proc lambdas', proc_lambda['name'])
 
             for idx, fn in enumerate(proc_lambda['fn']):
                 processed_data[idx] = fn(processed_data)
@@ -1158,6 +1171,8 @@ class SubtleGADJobType(BaseJobType):
             # write preprocess chain here
             ims,mask = self._mask_noise(input_data_full)
 
+            self.raw_input_images = ims
+
             #print(f'1st step mask image {ims.shape} {mask.shape}')
 
             # next apply a BET mask to remove non-brain tissue
@@ -1171,7 +1186,7 @@ class SubtleGADJobType(BaseJobType):
             #brain_mask = (input_data_mask[0,:]) #self._strip_skull
             
             
-            input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask)
+            input_data_mask = self._scale_intensity_with_dicom_tags(input_data_mask, ims)
             #print(f'4th step scale intensity image {input_data_mask.shape}')
 
             input_data_mask = self._register(input_data_mask)
@@ -1186,6 +1201,11 @@ class SubtleGADJobType(BaseJobType):
             #print(f'7th step scale intensity image {input_data_mask.shape}')
 
             input_data_full = self._apply_proc_lambdas(input_data_full)
+
+            self.apply_proc_images = input_data_full
+
+            #np.savez_compressed(f'./input/I101_Id_007//expected_dicom.npz',np=self.raw_input_images)
+            #np.savez_compressed(f'./input/I101_Id_007//true_dicom.npz',np=self.apply_proc_images)
 
             (input_data_full, self._undo_model_compat_reshape) = \
             self._process_model_input_compatibility(input_data_full)
@@ -1371,6 +1391,10 @@ class SubtleGADJobType(BaseJobType):
         # create output directory
 
         # generate a new series UID
+
+        #np.savez_compressed(f'{out_dicom_dir}/2023-06-14_synth/expected_dicom.npz',np=self.raw_input_images)
+        #np.savez_compressed(f'{out_dicom_dir}/2023-06-14_synth/true_dicom.npz',np=self.apply_proc_images)
+
         series_uid = pydicom_utils.generate_uid()
         uid_pool = set()
         uid_pool.add(series_uid)

@@ -23,8 +23,41 @@ jobs:
       num_channel_output: 1
       num_rotations: 3
       inference_mpr: True
-      metadata_comp: {'pixelspacing' : 0.5, 'imagepositionpatient' : 10, 'slicethickness' : 0.5}
+      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
+  - job_name: "gad_siemens"
+    series_required:
+      - "zero_dose_siemens"
+      - "low_dose_siemens"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "20230606105336-unified"
+      slices_per_input: 7
+      num_channel_output: 1
+      num_rotations: 3
+      inference_mpr: True
+      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
+      reshape_for_mpr_rotate: True
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
+  - job_name: "gad_philips"
+    series_required:
+      - "zero_dose_philips"
+      - "low_dose_philips"
+    slice_location_tolerance: "none"
+    fov_tolerance: "inf"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: "SubtleGAD:"
+      series_desc_suffix: ":research_only"
+      model_id: "20230606105336-unified"
+      slices_per_input: 7
+      num_channel_output: 1
+      num_rotations: 3
+      inference_mpr: True
+      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
 
 series:
   - name: "zero_dose_ge"
@@ -44,39 +77,23 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "zero_dose_philips"
-    reg_match: "zerodose"
+    reg_match: "zero_dose"
     reg_exclude: "zerodose_cs"
     manufacturer_match: "philips"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "zero_dose_philips_cs"
-    reg_match: "zerodose_cs"
-    reg_exclude: ""
-    manufacturer_match: "philips"
-    slice_range: [1, 400]
-    frame_range: [1, 1]
-    modality: "MR"
-    equidistance_tolerance: "none"
   - name: "low_dose_philips"
-    reg_match: "lowdose"
+    reg_match: "low_dose"
     reg_exclude: "lowdose_cs"
     manufacturer_match: "philips"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "low_dose_philips_cs"
-    reg_match: "lowdose_cs"
-    reg_exclude: ""
-    manufacturer_match: "philips"
-    slice_range: [1, 400]
-    frame_range: [1, 1]
-    modality: "MR"
-    equidistance_tolerance: "none"
   - name: "zero_dose_siemens"
-    reg_match: "zerodose"
+    reg_match: "zero_dose"
     reg_exclude: ""
     manufacturer_match: "siemens"
     slice_range: [1, 400]
@@ -84,7 +101,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "low_dose_siemens"
-    reg_match: "lowdose"
+    reg_match: "low_dose"
     reg_exclude: ""
     manufacturer_match: "siemens"
     slice_range: [1, 400]
