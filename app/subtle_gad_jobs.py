@@ -497,7 +497,7 @@ class SubtleGADJobType(BaseJobType):
             
             self._itk_data['zero_dose'] = sitk.GetImageFromArray(zero_dose_pixels)
             self._itk_data['low_dose'] = sitk.GetImageFromArray(low_dose_pixels)
-            #print(self._itk_data['zero_dose'].GetSize())
+            print(self._itk_data['zero_dose'])
         
         # num_zd = len(self._raw_input['zero_dose'])
         # num_ld = len(self._raw_input['low_dose'])
@@ -1130,7 +1130,7 @@ class SubtleGADJobType(BaseJobType):
         return mask
 
     #@staticmethod
-    @processify
+    #@processify
     def _brain_mask(self,ims):
         mask = None
 
@@ -1138,6 +1138,7 @@ class SubtleGADJobType(BaseJobType):
             #print('Extracting brain regions using deepbrain...')
             device = int(0)
             ## Temporarily using DL based method for extraction
+
             
             mask_zero = self._mask_npy(ims[0,:, ...], self._itk_data['zero_dose'], device)
 
