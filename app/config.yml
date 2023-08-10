@@ -24,6 +24,28 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
+      model_type: 'gad_preprocess'
+      pipeline_preproc:
+          STEP1:
+            op: "MASK"
+            param: 
+              noise_mask_area: False
+              noise_mask_selem: False 
+          STEP2:
+            op: "SKULLSTRIP"
+          STEP3:
+            op: "REGISTER"
+            param:
+              transform_type: "rigid"
+          STEP4:
+            op: "HIST"
+          STEP5:
+            op: "SCALE"
+            param: 
+              num_scale_context_slices : 20
+              joint_normalize: False 
+              scale_ref_zero_img: False 
+
   - job_name: "gad_siemens"
     series_required:
       - "zero_dose_siemens"
