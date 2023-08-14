@@ -24,27 +24,35 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
-      model_type: 'gad_preprocess'
+      model_type: 'gad_process'
       pipeline_preproc:
-          STEP1:
-            op: "MASK"
-            param: 
-              noise_mask_area: False
-              noise_mask_selem: False 
-          STEP2:
-            op: "SKULLSTRIP"
-          STEP3:
-            op: "REGISTER"
-            param:
-              transform_type: "rigid"
-          STEP4:
-            op: "HIST"
-          STEP5:
-            op: "SCALE"
-            param: 
-              num_scale_context_slices : 20
-              joint_normalize: False 
-              scale_ref_zero_img: False 
+        STEP1:
+          op: "MASK"
+          param: 
+            noise_mask_area: False
+            noise_mask_selem: False 
+        STEP2:
+          op: "SKULLSTRIP"
+        STEP3:
+          op: "REGISTER"
+          param:
+            transform_type: "rigid"
+            use_mask_reg: True
+        STEP4:
+          op: "SCALEGLOBAL"
+          param: 
+            num_scale_context_slices : 20
+            joint_normalize: False 
+            scale_ref_zero_img: False 
+      pipeline_postproc:
+        STEP1:
+          op: "CLIP"
+          param:
+            lb: 0
+        STEP2:
+          op: "RESCALEGLOBAL"
+        
+
 
   - job_name: "gad_siemens"
     series_required:
@@ -61,8 +69,35 @@ jobs:
       num_channel_output: 1
       num_rotations: 3
       inference_mpr: True
+      reshape_for_mpr_rotate: False
       metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
-      reshape_for_mpr_rotate: True
+      pipeline_preproc:
+        STEP1:
+          op: "MASK"
+          param: 
+            noise_mask_area: False
+            noise_mask_selem: False 
+        STEP2:
+          op: "SKULLSTRIP"
+        STEP3:
+          op: "REGISTER"
+          param:
+            transform_type: "rigid"
+            use_mask_reg: False
+        STEP4:
+          op: "SCALEGLOBAL"
+          param: 
+            num_scale_context_slices : 20
+            joint_normalize: True 
+            scale_ref_zero_img: False 
+      pipeline_postproc:
+        STEP1:
+          op: "CLIP"
+          param:
+            lb: 0
+        STEP2:
+          op: "RESCALEGLOBAL"
+      
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
   - job_name: "gad_philips"
     series_required:
@@ -80,6 +115,36 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
+      reshape_for_mpr_rotate: True
+      pipeline_preproc:
+        STEP1:
+          op: "MASK"
+          param: 
+            noise_mask_area: False
+            noise_mask_selem: False 
+        STEP2:
+          op: "SKULLSTRIP"
+        STEP3:
+          op: "REGISTER"
+          param:
+            transform_type: "affine"
+            use_mask_reg: False
+        STEP4:
+          op: 'HIST'
+        STEP5:
+          op: "SCALEGLOBAL"
+          param: 
+            num_scale_context_slices : 20
+            joint_normalize: False
+            scale_ref_zero_img: False 
+      pipeline_postproc:
+        STEP1:
+          op: "CLIP"
+          param:
+            lb: 0
+        STEP2:
+          op: "RESCALEGLOBAL"
+      
 
 series:
   - name: "zero_dose_ge"

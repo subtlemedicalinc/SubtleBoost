@@ -31,6 +31,7 @@ from subtle.dcmutil import pydicom_utils, series_utils
 from subtle.procutil.registration_utils import register_im
 
 from subtle.procutil.segmentation_utils import HDBetInMemory
+from subtle.procutil.image_proc_util import clip
 
 import SimpleITK as sitk
 
@@ -78,36 +79,44 @@ class SubtleGADJobType(BaseJobType):
 
         # preprocessing params:
         #pipeline definition - custom config 
-        "model_type": "gad_preprocess",
+        "model_type": "gad_process",
         "pipeline_preproc": {
-            'gad_preprocess' : {
+            'gad_process' : {
                 'STEP1' : {'op': 'MASK'},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER'},
+                'STEP4' : {'op': 'SCALEGLOBAL'}
             }
             
         },
         "pipeline_postproc": {
+            'gad_preprocess' : {
+                'STEP1' : {'op' : 'CLIP'},
+                'STEP2' : {'op' : 'RESCALEGLOBAL'}
+
+            }
         },
 
         # manufacturer specific - these are the default values
-        "perform_noise_mask": True,
-        "noise_mask_threshold": 0.1,
-        "noise_mask_area": False,
-        "noise_mask_selem": False,
-        "perform_dicom_scaling": False,
-        "transform_type": "affine",
-        "use_mask_reg": True,
-        "histogram_matching": False,
-        "joint_normalize": False,
-        "scale_ref_zero_img": False,
+        # "perform_noise_mask": True,
+        # "noise_mask_threshold": 0.1,
+        # "noise_mask_area": False,
+        # "noise_mask_selem": False,
+        # "perform_dicom_scaling": False,
+        # "transform_type": "affine",
+        # "use_mask_reg": True,
+        # "histogram_matching": False,
+        # "joint_normalize": False,
+        # "scale_ref_zero_img": False,
 
         # not manufacturer specific
-        "perform_registration": True,
+       # "perform_registration": True,
         #"skull_strip": True,
         #"skull_strip_union": False,
         #"skull_strip_prob_threshold": 0.5,
-        "num_scale_context_slices": 20,
-        "blur_lowdose": False,
-        "cs_blur_sigma": [0, 1.5],
+        #"num_scale_context_slices": 20,
+        #"blur_lowdose": False,
+        #"cs_blur_sigma": [0, 1.5],
         "acq_plane": "AX",
         "model_resolution": [0.5, 0.5, 0.5],
 
@@ -130,42 +139,42 @@ class SubtleGADJobType(BaseJobType):
 
     mfr_specific_config = {
         "ge": {
+            # "perform_noise_mask": True,
+            # "noise_mask_area": False,
+            # "noise_mask_selem": False,
+            # "perform_dicom_scaling": False,
+            # "transform_type": "rigid",
+            # "histogram_matching": False,
+            # "joint_normalize": False,
+            # "scale_ref_zero_img": False,
+            # "acq_plane": "AX"
+        },
+        "siemens": {
             #"perform_noise_mask": True,
+            #"noise_mask_threshold": 0.1,
             #"noise_mask_area": False,
             #"noise_mask_selem": False,
             #"perform_dicom_scaling": False,
             #"transform_type": "rigid",
-            "histogram_matching": False,
-            "joint_normalize": False,
-            "scale_ref_zero_img": False,
-            "acq_plane": "AX"
-        },
-        "siemens": {
-            "perform_noise_mask": True,
-            "noise_mask_threshold": 0.1,
-            "noise_mask_area": False,
-            "noise_mask_selem": False,
-            "perform_dicom_scaling": False,
-            "transform_type": "rigid",
-            "use_mask_reg": False,
-            "histogram_matching": False,
-            "joint_normalize": True,
-            "scale_ref_zero_img": False,
-            "skull_strip_union": False,
-            "reshape_for_mpr_rotate": False,
-            "acq_plane": "AX"
+            #"use_mask_reg": False,
+            #"histogram_matching": False,
+            #"joint_normalize": True,
+            #"scale_ref_zero_img": False,
+            #"skull_strip_union": False,
+            #"reshape_for_mpr_rotate": False,
+            #"acq_plane": "AX"
         },
         "philips": {
-            "perform_noise_mask": True,
+            #"perform_noise_mask": True,
             #"noise_mask_threshold": 0.1,
-            "noise_mask_area": False,
-            "noise_mask_selem": False,
-            "perform_dicom_scaling": False,
-            "transform_type": "affine",
-            "histogram_matching": True,
-            "joint_normalize": False,
-            "scale_ref_zero_img": False,
-            "acq_plane": "SAG"
+            #"noise_mask_area": False,
+            #"noise_mask_selem": False,
+            #"perform_dicom_scaling": False,
+            #"transform_type": "affine",
+            #"histogram_matching": True,
+            #"joint_normalize": False,
+            #"scale_ref_zero_img": False,
+            #"acq_plane": "SAG"
         }
     }
 
@@ -191,94 +200,21 @@ class SubtleGADJobType(BaseJobType):
                          "noise_mask_selem": False}, {}),
             'SKULLSTRIP': (self.apply_brain_mask, {}, {}),
             'REGISTER': (self._register, 
-                        {"transform_type" : "rigid"}, {}),
+                        {"transform_type" : "affine",
+                         "use_mask_reg" : True}, {}),
             'HIST': (self._match_histogram,
                         {}, {}),
             'SCALETAG': (self._scale_intensity_with_dicom_tags,
                         {}, {}),
-            'SCALE': (self._scale_intensity,
+            'SCALEGLOBAL': (self._scale_intensity,
                         {"num_scale_context_slices" : 20,
                          "joint_normalize": False, 
                          "scale_ref_zero_img": False}, {}),
-            
-            
-            # 'PAD': (self._padding,
-            #          {}, {}),
-            # 'PADBACK' : (self._PADBACK,
-            #             {}, {}),
-            # 'ZOOM': (self._zoom,
-            #          {"zoom_order": 3,
-            #           "shape_resize": 560,
-            #           "through_zoom_factor": 1, }, {}),
-            # 'NORM': (self._normalize,
-            #          {"norm_method": "mean_norm"}, {}),
-            # 'DENORM': (self._de_normalize,
-            #            {"norm_method": "max_min_norm"}, {}),
-            # 'THR': (self._clip,
-            #         {'lb': 0,
-            #          'hb': 32655}, {}),
-            # 'BWORTH': (self._butterworth_filter,{
-            #             'cutoff_frequency_ratio': 0.0005, 
-            #             'high_pass':True, 
-            #             'order':2.0}, {}),
-            # 'DNITER_M1': (self._apply_dniterative_mode1,
-            #               {'niter': 3,
-            #                'kappa': 50,
-            #                'gamma': 0.05,
-            #                'step': (1., 1., 1.),
-            #                'option': 1,
-            #                'type': None}, {}),
-            # 'DNITER_M2': (self._apply_dniterative_mode2,
-            #               {'weight': 0.1,
-            #                'num_iter_max': 200, }, {}),
-            # 'DNITER_M3': (self._apply_dniterative_mode3,
-            #               {"sigma": 1.3,
-            #                '3D': False}, {}),
-            # 'HIST_ENH': (self._histogram_enhance,
-            #              {"clane_ratio": 0.0,
-            #               "kernel_size": None,
-            #               "clip_limit": 0.005,
-            #               "nbins": 128, },
-            #              {"hist_ratio": "clane_ratio"}),
-            # 'SHARP_M1': (self._sharp_m1,
-            #              {"ratio": 0.0,
-            #               "gval": 1,
-            #               "alpha": 3, }, {}),
-            # 'SHARP_M2': (self._sharp_m2,
-            #              {"ratio": 0.0,
-            #               "enh_ratio": 1.0,
-            #               "smooth_filter": True,
-            #               "smooth_xmin": 2,
-            #               "smooth_xmax": 90, },
-            #              {"edge_ratio": "enh_ratio"}),
-            # 'SHARP_M3': (self._sharp_m3,
-            #              {'ratio': 0.0}, {}),
-            # 'SHARP_M4': (self._sharp_m4,
-            #              {'ratio': 1.0,
-            #               'kernel_size':5,
-            #               'sigma':0.75,
-            #               'amount':0.5,
-            #               'threshold':0.0}, {}),
-            
-            # "HIST_EQ": (self._hist_equal_match,
-            #             {}, {}),
-            
-            # 'REF': (self._reformat,
-            #         {"ratio": 0,
-            #          "3D": False,
-            #          "sigma": 3}, {}),
-            # 'TEXTURE_M1': (self._apply_texture_mode1,
-            #                {"ratio": 0.0,
-            #                 "noise_single_copy": False,
-            #                 "noise_threshold": 0.1,
-            #                 "noise_ratio": 1.0,
-            #                 "sre_rate_thruplane": 1,
-            #                 "sre_rate_inplane": 2,
-            #                 "noise_repeat": 3,
-            #                 "noise_mode_filter_level": 3,
-            #                 'default_noise_sigma': 10,
-            #                 "3D": True,
-            #                 }, {}),
+            'CLIP': (clip, {'lb' : 0}, {}),
+            'RESCALEDICOM':(self._rescale_slope_intercept, 
+                            {}, {}),
+            'RESCALEGLOBAL': (self._undo_global_scale_fn, 
+                                {}, {}),
         }
         return function_keys
 
@@ -394,9 +330,9 @@ class SubtleGADJobType(BaseJobType):
         # step specific validations
         # zoom must be in both pre- and post-processig or not at all
         # and it must have the same parameters in pre- and post-processing
-        for op_name in ['ZOOM']:
+        for op_name in ['SCALEGLOBAL']:
             op_in_preproc, step_num_pre, step_pre = self._is_step_in_pipeline(op_name, proc_config["pipeline_preproc"])
-            op_in_postproc, step_num_post, step_post = self._is_step_in_pipeline(op_name, proc_config["pipeline_postproc"])
+            op_in_postproc, step_num_post, step_post = self._is_step_in_pipeline('RE'+op_name, proc_config["pipeline_postproc"])
 
             # Make sure operation is present in both pre- and post-processing OR absent from both
             assert op_in_preproc == op_in_postproc, \
@@ -460,7 +396,6 @@ class SubtleGADJobType(BaseJobType):
                     input_data, mask = func(input_data, step_dict['param'])
                     raw_input_images = np.copy(input_data)
                     self.mask = np.copy(mask)
-                #if step_dict['op'] == 'SKULLSTRIP':
                 else:
                     input_data, raw_input_images = func(input_data, raw_input_images, step_dict['param'])
 
@@ -468,7 +403,6 @@ class SubtleGADJobType(BaseJobType):
             (raw_input_images, self._undo_model_compat_reshape) = \
             self._process_model_input_compatibility(raw_input_images)
             dict_input_data[frame_seq_name] = raw_input_images
-
 
         return dict_input_data
 
@@ -768,35 +702,6 @@ class SubtleGADJobType(BaseJobType):
             self._itk_data['zero_dose'] = sitk.GetImageFromArray(zero_dose_pixels)
             self._itk_data['low_dose'] = sitk.GetImageFromArray(low_dose_pixels)
             #print(self._itk_data['zero_dose'])
-        
-        # num_zd = len(self._raw_input['zero_dose'])
-        # num_ld = len(self._raw_input['low_dose'])
-
-        # if num_zd != 1:
-        #     raise ValueError("More than one zero_dose input")
-        # if num_ld != 1:
-        #     raise ValueError("More than one low_dose input")
-        
-        # for series_key in self.task.dict_required_series.keys():
-        #     if 'zero_dose' in series_key or 'zd' in series_key:
-        #         zero_dose_series = self.task.dict_required_series[series_key]
-        #     if 'low_dose' in series_key or 'ld' in series_key:
-        #         low_dose_series = self.task.dict_required_series[series_key]
-
-        # if zero_dose_series is None or low_dose_series is None:
-        #     raise TypeError("Cannot find one or more required series")
-
-        # if not isinstance(zero_dose_series, series_utils.DicomSeries) or not \
-        # isinstance(low_dose_series, series_utils.DicomSeries):
-        #     raise TypeError("Input series should be a DicomSeries object")
-        # # get dictionary of sorted datasets by frame
-
-        # self._input_series = (zero_dose_series, low_dose_series)
-
-        # self._input_datasets = (
-        #     zero_dose_series.get_dict_sorted_datasets(),
-        #     low_dose_series.get_dict_sorted_datasets()
-        # )
 
     def _set_mfr_specific_config(self):
         """
@@ -915,8 +820,8 @@ class SubtleGADJobType(BaseJobType):
 
         return images, np.array(mask)
 
-    @processify
-    def apply_brain_mask(self, ims, raw_input_images, param: dict):
+    #@processify
+    def apply_brain_mask(self, ims, raw_input_images , param: dict):
 
         brain_mask = self._brain_mask(ims)
 
@@ -1003,8 +908,7 @@ class SubtleGADJobType(BaseJobType):
 
     @staticmethod
     def _rescale_slope_intercept(
-        img: np.ndarray, rescale_slope: float, rescale_intercept: float, scale_slope: float
-    ) -> np.ndarray:
+        img: np.ndarray) -> np.ndarray:
         """
         Static method to undo the dicom scaling
 
@@ -1016,6 +920,10 @@ class SubtleGADJobType(BaseJobType):
         :param scale_slope: Private philips tag for scale slope information
         :return: Rescaled image as numpy array
         """
+        if self._dicom_scale_coeff:
+            rescale_slope = self._dicom_scale_coeff[0]['rescale_slope']
+            scale_slope = self._dicom_scale_coeff[0]['scale_slope']
+            rescale_intercept = self._dicom_scale_coeff[0]['rescale_intercept']
 
         return (img * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
 
@@ -1054,6 +962,7 @@ class SubtleGADJobType(BaseJobType):
         **self._dicom_scale_coeff[0])
 
         return scaled_images, raw_scaled_images
+
 
     def _get_pixel_spacing(self):
         """
@@ -1102,7 +1011,7 @@ class SubtleGADJobType(BaseJobType):
 
         idty_fn = lambda ims: ims[0]
 
-        if self._proc_config.use_mask_reg:
+        if param["use_mask_reg"]:
             apply_reg = lambda ims: preprocess_single_series.apply_registration(ims[1], \
             self._pixel_spacing[1], reg_params)
         else:
@@ -1129,29 +1038,26 @@ class SubtleGADJobType(BaseJobType):
         :param images: Input zero dose and low dose images as numpy array
         :return: Histogram matched images as numpy array
         """
-        if self._proc_config.histogram_matching:
-            self._logger.info("Matching histogram of low dose with respect to zero dose...")
-            hist_images = np.copy(images)
-            raw_hist_images = np.copy(raw_input_images)
+        self._logger.info("Matching histogram of low dose with respect to zero dose...")
+        hist_images = np.copy(images)
+        raw_hist_images = np.copy(raw_input_images)
 
-            hist_images[1] = preprocess_single_series.match_histogram(
-                img=hist_images[1], ref_img=hist_images[0]
-            )
+        hist_images[1] = preprocess_single_series.match_histogram(
+            img=hist_images[1], ref_img=hist_images[0]
+        )
 
-            idty_fn = lambda ims: ims[0]
-            hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
+        idty_fn = lambda ims: ims[0]
+        hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
 
-            raw_hist_images[1] = hist_match_fn(raw_hist_images)
+        raw_hist_images[1] = hist_match_fn(raw_hist_images)
 
-            self._proc_lambdas.append({
-                'name': 'histogram_matching',
-                'fn': [idty_fn, hist_match_fn]
-            })
+        self._proc_lambdas.append({
+            'name': 'histogram_matching',
+            'fn': [idty_fn, hist_match_fn]
+        })
 
-            #np.save(f'./input/IM001//expected_histogram_matching.npy',self.raw_input_images)
-            return hist_images, raw_hist_images
-
-        return images, raw_input_images
+        #np.save(f'./input/IM001//expected_histogram_matching.npy',self.raw_input_images)
+        return hist_images, raw_hist_images
 
     def _scale_intensity(self, images: np.ndarray, raw_input_images: np.ndarray, param: dict) -> np.ndarray:
         """
@@ -1230,13 +1136,13 @@ class SubtleGADJobType(BaseJobType):
         elif global_scale.ndim == 2 and global_scale.shape[1] == 1:
             global_scale = np.repeat(global_scale, repeats=scale_images.shape[1], axis=1)
 
-        global_scale = global_scale[:, :, None, None]
+        self.global_scale = global_scale[:, :, None, None]
         self._logger.info("Computed global scale %s with shape %s", global_scale, \
         global_scale.shape)
 
-        scale_images /= global_scale
+        scale_images /= self.global_scale
         global_scale_fn = lambda idx: (
-            lambda ims: (ims[idx] / global_scale[:, idx])
+            lambda ims: (ims[idx] / self.global_scale[:, idx])
         )
 
         raw_scale_images[0] = global_scale_fn(0)(raw_scale_images)
@@ -1244,13 +1150,17 @@ class SubtleGADJobType(BaseJobType):
 
         #np.save(f'./input/IM001//expected_global_scale.npy',raw_scale_images)
 
-        self._undo_global_scale_fn = lambda img: img * global_scale[:, 0]
-        self._proc_lambdas.append({
-            'name': 'global_scale',
-            'fn': [global_scale_fn(0), global_scale_fn(1)]
-        })
+        #self._undo_global_scale_fn = lambda img: img * global_scale[:, 0]
+        # self._proc_lambdas.append({
+        #     'name': 'global_scale',
+        #     'fn': [global_scale_fn(0), global_scale_fn(1)]
+        # })
 
         return scale_images.transpose(1, 0, 2, 3), raw_scale_images
+
+    def _undo_global_scale_fn(self,img, param):
+
+        return img*self.global_scale[:,0]
 
     def _apply_proc_lambdas(self, unmasked_data: np.ndarray) -> np.ndarray:
         """
@@ -1457,23 +1367,24 @@ class SubtleGADJobType(BaseJobType):
         print('size mask npy',data_sitk.GetSize())
         
         data_sitk.CopyInformation(sitk_ref)
-        
         hdbet = HDBetInMemory()
+        
         mask = hdbet.run_hd_bet_inmem(data_sitk, mode='fast', device=device, do_tta=False)
 
         return mask
 
     #@staticmethod
-    @processify
+    #@processify
     def _brain_mask(self,ims):
         ims_proc = np.copy(ims)
         mask = None
+        #self.hdbet = HDBetInMemory()
 
         if True:
             #print('Extracting brain regions using deepbrain...')
             device = int(0)
             ## Temporarily using DL based method for extraction
-            
+
             mask_zero = self._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], device)
 
             if True:
@@ -1518,10 +1429,10 @@ class SubtleGADJobType(BaseJobType):
             #print(f'1st step mask image {ims.shape} {mask.shape}')
 
             # next apply a BET mask to remove non-brain tissue
-            #brain_mask = self._brain_mask(ims)
+            brain_mask = self._brain_mask(ims)
             #print(f'2nd step apply brain mask image {brain_mask.shape} {ims.shape}')
             
-            input_data_mask = self.apply_brain_mask(ims, raw_input_images)
+            input_data_mask = self.apply_brain_mask(ims,brain_mask, raw_input_images)
 
             #print(f'3rd step brain mask image {input_data_mask.shape}')
 
@@ -1563,28 +1474,46 @@ class SubtleGADJobType(BaseJobType):
 
         return dict_input_data
 
+
     def _postprocess_data(self, dict_pixel_data: Dict):
         """
         Post process the pixel data by undoing certain scaling operations
         :param dict_pixel_data: dict of data to post process by frame
         """
+        for frame_seq_name, data_array in dict_pixel_data.items():
+            # check the shape, if it is not square, pad to square
+            # because the saved model need a fixed receptive field
+            input_data= data_array.copy()  # better to be deep.copy()
+            #assert len(input_data.shape) == 3, "ERROR: data is not 3D"
+            if len(input_data.shape) == 4:
+                input_data = input_data[..., 0]
 
-        for frame_seq_name, pixel_data in dict_pixel_data.items():
-            # get 3D volume
-            if len(pixel_data.shape) == 4:
-                pixel_data = pixel_data[..., 0]
+            for i in range(1, len(self._proc_config.pipeline_postproc)+1):
+                # get the step info
+                step_dict = self._proc_config.pipeline_postproc['STEP{}'.format(i)]
+                # get the function to run for this step
+                func = self.function_keys[step_dict['op']][0]
+                # run function
+                input_data= func(input_data, step_dict['param'])
 
-            pixel_data = np.clip(pixel_data, 0, pixel_data.max())
-            pixel_data = self._undo_global_scale_fn(pixel_data)
+            self._output_data[frame_seq_name] = input_data
 
-            if self._proc_config.perform_dicom_scaling:
-                pixel_data = self._undo_dicom_scale_fn(pixel_data)
+        # for frame_seq_name, pixel_data in dict_pixel_data.items():
+        #     # get 3D volume
+        #     if len(pixel_data.shape) == 4:
+        #         pixel_data = pixel_data[..., 0]
 
-            self._logger.info("Pixel range after undoing global scale %s %s %s", pixel_data.min(),\
-            pixel_data.max(), pixel_data.mean())
+        #     #pixel_data = np.clip(pixel_data, 0, pixel_data.max())
+        #     #pixel_data = self._undo_global_scale_fn(pixel_data)
+
+        #     if self._proc_config.perform_dicom_scaling:
+        #         pixel_data = self._undo_dicom_scale_fn(pixel_data)
+
+        #     self._logger.info("Pixel range after undoing global scale %s %s %s", pixel_data.min(),\
+        #     pixel_data.max(), pixel_data.mean())
 
             # write post processing here
-            self._output_data[frame_seq_name] = pixel_data
+            
 
     def _undo_reshape(self, pixel_data: np.ndarray) -> np.ndarray:
         """
@@ -1672,22 +1601,6 @@ class SubtleGADJobType(BaseJobType):
             num_batches = inf_loader.__len__()
             #print(num_batches)
             Y_pred = []
-            # import importlib
-
-            # file_path = '/home/SubtleGad/app/models/20200817105336-unified/unet2d.py'
-            # module_name = 'model' 
-            # spec = importlib.util.spec_from_file_location(module_name, file_path)
-            # module = importlib.util.module_from_spec(spec)
-            # spec.loader.exec_module(module)
-
-            # net = module.Model(num_channel_input=14,
-            #             num_channel_output=1)
-
-            # checkpoint = '/home/SubtleGad/ckp/unified_mpr_05092023.pth'
-            # #print('model', checkpoint)
-            # state_dict = torch.load(checkpoint, map_location='cpu')
-            # net.load_state_dict(state_dict['G'])
-            # net.eval()
 
             for idx in (np.arange(num_batches)):
                 X = inf_loader.__getitem__(idx)
