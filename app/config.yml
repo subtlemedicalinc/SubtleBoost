@@ -36,7 +36,7 @@ jobs:
         STEP3:
           op: "REGISTER"
           param:
-            transform_type: "rigid"
+            transform_type: "affine"
             use_mask_reg: True
         STEP4:
           op: "SCALEGLOBAL"
@@ -51,8 +51,6 @@ jobs:
             lb: 0
         STEP2:
           op: "RESCALEGLOBAL"
-        
-
 
   - job_name: "gad_siemens"
     series_required:
@@ -144,7 +142,7 @@ jobs:
             lb: 0
         STEP2:
           op: "RESCALEGLOBAL"
-      
+
 
 series:
   - name: "zero_dose_ge"

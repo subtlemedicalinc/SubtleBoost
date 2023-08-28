@@ -19,9 +19,10 @@ import pydicom
 from subtle.util.data_loader import dicomscan
 # pylint: disable=import-error
 import subtle_gad_jobs
+import mock
 
 @pytest.mark.processing
-class InferenceTest(unittest.TestCase):
+class ProcessingTest(unittest.TestCase):
     """
     A unittest framework to test the preprocessing functions
     """
@@ -36,19 +37,6 @@ class InferenceTest(unittest.TestCase):
             "app_version": "unittest",
             "model_id": "20230517105336-unified",
             "not_for_clinical_use": False,
-            "perform_noise_mask": True,
-            "noise_mask_threshold": 0.1,
-            "noise_mask_area": False,
-            "noise_mask_selem": False,
-            "perform_dicom_scaling": False,
-            "transform_type": "rigid",
-            "histogram_matching": False,
-            "joint_normalize": False,
-            "scale_ref_zero_img": False,
-            "skull_strip": True,
-            "skull_strip_union": True,
-            "skull_strip_prob_threshold": 0.5,
-            "num_scale_context_slices": 20,
             "inference_mpr": False,
             "num_rotations": 1,
             "skip_mpr": False,
@@ -60,14 +48,26 @@ class InferenceTest(unittest.TestCase):
             "series_desc_prefix": "SubtleGAD:",
             "series_desc_suffix": "",
             "series_number_offset": 100,
-            "use_mask_reg": False,
-            "acq_plane": "AX",
-            "blur_lowdose": False,
             "model_resolution": [0.5, 0.5, 0.5],
-            "perform_registration": True,
             "min_gpu_mem_mb": 9800.0,
-            "cs_blur_sigma": [0, 1.5],
-            "allocate_available_gpus": False
+            "allocate_available_gpus": True,
+            "model_type": "gad_process",
+            "pipeline_preproc": {
+            'gad_process' : {
+                'STEP1' : {'op': 'MASK'},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER'},
+                'STEP4' : {'op': 'SCALEGLOBAL'}
+            }
+            
+            },
+            "pipeline_postproc": {
+                'gad_process' : {
+                    'STEP1' : {'op' : 'CLIP'},
+                    'STEP2' : {'op' : 'RESCALEGLOBAL'}
+
+                }
+            },
         }
 
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
@@ -79,7 +79,7 @@ class InferenceTest(unittest.TestCase):
         self.mock_task.job_name = 'test'
         exec_config_keys = [
             'app_name', 'app_id', 'app_version', 'model_id', 'not_for_clinical_use',
-            'series_desc_prefix', 'series_desc_suffix', 'series_number_offset', 'num_rotations', 'inference_mpr'
+            'series_desc_prefix', 'series_desc_suffix', 'series_number_offset', 'num_rotations', 'inference_mpr', 'model_type', 'pipeline_preproc', 'pipeline_postproc'
         ]
         self.mock_task.job_definition.exec_config = {
             k: v for k, v in processing_config.items() if k in exec_config_keys
@@ -95,6 +95,17 @@ class InferenceTest(unittest.TestCase):
         self.low_path_dicom = os.path.join(self.path_data, "IM001", "OSag_3D_T1BRAVO_low_dose_8")
         self.low_series_in = list(dicomscan(self.low_path_dicom).values())[0]
 
+        self.list_filename_in_zero = [os.path.join(self.zero_path_dicom, f)
+                                 for f in os.listdir(self.zero_path_dicom)
+                                 if f.endswith('.dcm')]
+
+        self.list_filename_in_low = [os.path.join(self.low_path_dicom, f)
+                                    for f in os.listdir(self.low_path_dicom)
+                                    if f.endswith('.dcm')]
+
+        self.nslices_zero = len(self.list_filename_in_zero)
+        self.nslices_low = len(self.list_filename_in_low)
+
         self.sequence_name = self.zero_series_in.get_frame_names()[0]
 
         self.job_obj.task.dict_required_series = {
@@ -102,180 +113,339 @@ class InferenceTest(unittest.TestCase):
             'low_dose_ge': self.low_series_in
         }
 
-        self.dict_pixel_data = self.job_obj._preprocess()
-        #self.job_obj._set_mfr_specific_config()
-        #self.job_obj._get_pixel_spacing()
-        #self.job_obj._get_dicom_scale_coeff()
-        #self.job_obj._get_raw_pixel_data()
+        
 
-    def test_inference(self):
-        self.job_obj._process(self.dict_pixel_data)
+        #self.dict_pixel_data = self.job_obj._preprocess()
+        self.job_obj._get_input_series()
+        self.job_obj._get_pixel_spacing()
+        self.job_obj._get_dicom_scale_coeff()
+        self.job_obj._get_raw_pixel_data()
 
-    # def test_process_mpr(self):
-    #     """
-    #     Test that one single instance of MPR inference is executed properly by testing the
-    #     sample test model's prediction against the expected prediction
-    #     """
 
-    #     GPU_ID = "0"
-    #     mock_pool = MagicMock()
-    #     mock_pool.get.return_value = GPU_ID
-    #     subtle_gad_jobs._init_gpu_pool(mock_pool)
 
-    #     mpr_params = {
-    #         'model_dir': self.model_dir,
-    #         'decrypt_key_hex': None,
-    #         'exec_config': self.processing_config,
-    #         'slices_per_input': self.job_obj._proc_config.slices_per_input,
-    #         'reshape_for_mpr_rotate': self.job_obj._proc_config.reshape_for_mpr_rotate,
-    #         'data': self.job_obj._raw_input[self.sequence_name],
-    #         'angle': 45.0,
-    #         'slice_axis': 1
-    #     }
+    
+    @pytest.mark.ver3
+    @pytest.mark.req16
+    def _validate_dicom_datasets(self):
+        '''
+        Comparing if zero & low dose input series have the same number of slices and have the same slice locations.
+        '''
 
-    #     expected_pred = np.load(os.path.join(self.path_data, "expected_pred.npy"))
-    #     result = subtle_gad_jobs.SubtleGADJobType._process_mpr(mpr_params)
+        #Assume constant frame name
+        dict_template_ds_zero = list(self.job_obj._input_series[0].get_dict_sorted_datasets()[self.sequence_name])
+        dict_template_ds_low = list(self.job_obj._input_series[1].get_dict_sorted_datasets()[self.sequence_name])
 
-    #     self.assertTrue(np.allclose(result, expected_pred, atol=1.0))
-    #     mock_pool.get.assert_called_once_with(block=True)
-    #     mock_pool.put.assert_called_once_with(GPU_ID)
+        # check number of slices
+        self.assertEqual(
+            len(dict_template_ds_zero),
+            self.nslices_low,
+            "Wrong number of slices for zero dose series",
+        )
 
-    # def test_compat_reshape(self):
-    #     """
-    #     Test the _process_model_input_compatibility method
-    #     """
+        self.assertEqual(
+            len(dict_template_ds_zero),
+            self.nslices_low,
+            "Wrong number of slices for low dose series",
+        )
+        # Check T1 list is sorted
+        list_slice_loc_zero = [
+            dcm.SliceLocation for dcm in dict_template_ds_zero
+        ]
 
-    #     with mock.patch('subtle_gad_jobs.GenericInferenceModel') as mock_model:
-    #         with mock.patch('subtle_gad_jobs.SubtleGADJobType._zero_pad') as mock_pad:
-    #             with mock.patch('subtle_gad_jobs.zoom_interp') as mock_interp:
-    #                 mock_inf_model = MagicMock()
-    #                 mock_inf_model._model_obj.inputs = [np.zeros((14, 512, 512))]
-    #                 mock_model.return_value = mock_inf_model
-    #                 self.job_obj._pixel_spacing = [[0.75, 0.75, 1.0]]
-    #                 mock_pad.return_value = np.zeros((2, 7, 256, 256))
-    #                 mock_interp.return_value = np.zeros((7, 384, 384))
+        expected_list_slice_loc = sorted(
+            pydicom.read_file(f, stop_before_pixels=True).SliceLocation
+            for f in self.list_filename_in_zero
+        )
+        #
+        self.assertEqual(
+            list_slice_loc_zero,
+            expected_list_slice_loc,
+            "zero dose Dataset list is not sorted",
+        )
 
-    #                 _, undo_methods = self.job_obj._process_model_input_compatibility(
-    #                     np.zeros((2, 7, 232, 256))
-    #                 )
+        list_slice_loc_low = [
+            dcm.SliceLocation for dcm in dict_template_ds_low
+        ]
 
-    #                 self.assertTrue(mock_pad.call_count == 2)
-    #                 self.assertTrue(mock_interp.call_count == 2)
+        # Check T2 list is sorted
+        expected_list_slice_loc = sorted(
+            pydicom.read_file(f, stop_before_pixels=True).SliceLocation
+            for f in self.list_filename_in_low
+        )
+        #
+        self.assertEqual(
+            list_slice_loc_low,
+            expected_list_slice_loc,
+            "Low dose Dataset list is not sorted",
+        )
 
-    #                 undo_fn_names = [m['fn'] for m in undo_methods]
-    #                 self.assertTrue(len(undo_methods) == 3)
-    #                 self.assertTrue(
-    #                     np.array_equal(
-    #                         undo_fn_names, ['undo_zero_pad', 'undo_resample', 'undo_zero_pad']
-    #                     )
-    #                 )
+    def test_get_dicom_data_from_series(self):
+        self.job_obj.task.dict_required_series = {self.zero_series_in.seriesinstanceUID: self.zero_series_in,
+                                                  self.low_series_in.seriesinstanceUID: self.low_series_in}
+        self.job_obj._get_input_series()
+        self._validate_dicom_datasets()
 
-    # def test_gpu_allocation(self):
-    #     """
-    #     Test the _get_available_gpus method
-    #     """
+    def test_missing_dicom_data(self):
+        '''
+        Testing if error is raised on passing a null dicom series.
+        '''
+        self.job_obj.task.dict_required_series = {'series_found': None}
+        with self.assertRaises(Exception):
+            self.job_obj._get_input_series()
+    
+    def test_config_pipeline(self):
+        error_config = {"model_type": "gad_process",
+        "pipeline_preproc": {
+            'gad_process' : {
+                'STEP1' : {'op': 'MASK'},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER'},
+            }
+            
+            },
+            "pipeline_postproc": {
+                'gad_process' : {
+                    'STEP1' : {'op' : 'CLIP'},
+                    'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
-    #     with mock.patch('subtle_gad_jobs.GPUtil') as mock_stats:
-    #         gpu_obj = namedtuple('gpu_obj', 'id memoryTotal memoryUsed')
-    #         mock_stats.getGPUs.return_value = [
-    #             gpu_obj(id=0, memoryTotal=10989, memoryUsed=4500),
-    #             gpu_obj(id=1, memoryTotal=10989, memoryUsed=989),
-    #             gpu_obj(id=2, memoryTotal=10989, memoryUsed=0),
-    #             gpu_obj(id=3, memoryTotal=10989, memoryUsed=1189)
-    #         ]
+                }
+            }}
+        with self.assertRaises(Exception):
+            self.job_obj._parse_pipeline_definition(error_config)
 
-    #         gpus = self.job_obj._get_available_gpus()
-    #         self.assertTrue(gpus == '1,2,3')
+    def test_metadata_compatibility(self):
+        '''
+        Asserting the Failure of the metadata compatibility when the tolerance for the floating point metadata is set to be zero. 
+        '''
+        #setting the pixelspacing metadata tolerance to be zero
+        self.job_obj._proc_config.metadata_comp.update(pixelspacing = 0)
 
-    # def test_center_crop_even(self):
-    #     """
-    #     Test that center crop result matches the ref image when the input image shape is even
-    #     """
+        self.job_obj._inputs['zd'].pixelspacing = [1,1]
+        #self.job_obj._inputs['ld'] = 
 
-    #     img = np.ones((7, 256, 256))
-    #     ref_img = np.ones((7, 240, 240))
+        #asserting the pixelspacing comparison of zero dose & low dose failed
+        self.assertRaises(ValueError, self.job_obj._metadata_compatibility)
 
-    #     crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
-    #     self.assertTrue(crop_img.shape == ref_img.shape)
+        self.job_obj._proc_config.metadata_comp.clear()
 
-    # def test_center_crop_odd(self):
-    #     """
-    #     Test that center crop result matches the ref image when the input image shape is odd
-    #     """
+        #setting the imagepositionpatient metadata tolerance to be zero
+        self.job_obj._proc_config.metadata_comp.update(imagepositionpatient = 0)
 
-    #     img = np.ones((12, 255, 255))
-    #     ref_img = np.ones((7, 240, 240))
+        #asserting the imagepositionpatient comparison of T1 & T2 failed
+        
+    
+    def test_default_preprocess(self):
 
-    #     crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
-    #     self.assertTrue(crop_img.shape == ref_img.shape)
+        frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-    # def test_zero_pad(self):
-    #     """
-    #     Test that center crop result matches the ref image when the input image shape is odd
-    #     """
+        self.dict_pixel_data = self.job_obj._preprocess_pixel_data()
 
-    #     img = np.ones((7, 232, 248))
-    #     ref_img = np.ones((7, 256, 256))
+        self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npy"))
 
-    #     pad_img = subtle_gad_jobs.SubtleGADJobType._zero_pad(img, ref_img)
-    #     self.assertTrue(pad_img.shape == ref_img.shape)
+        self.assertTrue(np.allclose(self.dict_pixel_data[frame_seq_name],self.default_preprocess_data), 'Default Preprocessing is not matching with the expected output')
 
-    # def test_postprocess(self):
-    #     """
-    #     Test that postprocess is executed correctly by checking that the undo lambda functions are
-    #     called with appropriate arguments
-    #     """
+    
+    def test_ge_preprocess(self):
+        processing_config = {"model_type": "gad_process",
+        "pipeline_preproc": {'gad_process' : {
+                'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "rigid", 'use_mask_reg': True}},
+                'STEP4' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': False, 'scale_ref_zero_img': False}}
+            }},
+            "pipeline_postproc": {
+                'gad_process' : {
+                    'STEP1' : {'op' : 'CLIP'},
+                    'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
-    #     with mock.patch('subtle_gad_jobs.np') as mock_np:
-    #         self.processing_config['perform_dicom_scaling'] = True
-    #         self.job_obj._proc_config = \
-    #         self.job_obj.SubtleGADProcConfig(**self.processing_config)
+                }}}
 
-    #         dummy_data = np.ones((2, 7, 240, 240))
-    #         self.job_obj._undo_global_scale_fn = MagicMock()
-    #         self.job_obj._undo_global_scale_fn.return_value = dummy_data
+        update_exec_config_keys = ['model_type', 'pipeline_preproc', 'pipeline_postproc'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in update_exec_config_keys
+        }
 
-    #         self.job_obj._undo_dicom_scale_fn = MagicMock()
-    #         self.job_obj._undo_dicom_scale_fn.return_value = dummy_data
-    #         mock_np.clip.return_value = dummy_data
+        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+            task=self.mock_task, model_dir=self.model_dir
+        )
 
-    #         self.job_obj._postprocess_data({self.sequence_name: dummy_data})
-    #         self.job_obj._undo_global_scale_fn.assert_called_once_with(dummy_data)
-    #         self.job_obj._undo_dicom_scale_fn.assert_called_once_with(dummy_data)
-    #         self.assertTrue(
-    #             np.array_equal(self.job_obj._output_data[self.sequence_name], dummy_data)
-    #         )
+        print(self.job_obj._proc_config.pipeline_preproc)
 
-    # def test_undo_reshape(self):
-    #     """
-    #     Test that undo_reshape function executes correct with the given undo_methods
-    #     """
+        self.ge_pixel_data = self.job_obj._preprocess()
 
-    #     undo_methods = [{
-    #         'fn': 'undo_zero_pad',
-    #         'arg': np.zeros((7, 256, 232))
-    #     }, {
-    #         'fn': 'undo_resample',
-    #         'arg': [1.0, 0.5, 0.5]
-    #     }]
+        frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-    #     pixel_data = np.zeros((7, 512, 512, 1))
+        self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npy"))
 
-    #     with mock.patch('subtle_gad_jobs.zoom_interp') as mock_zoom:
-    #         with mock.patch('subtle_gad_jobs.SubtleGADJobType._center_crop') as mock_crop:
-    #             mock_zoom_ret = np.zeros((7, 256, 256))
-    #             mock_zoom.return_value = mock_zoom_ret
+        self.assertTrue(np.allclose(self.ge_pixel_data[frame_seq_name],self.ge_preprocess_data), 'GE Preprocessing is not matching with the expected output')
 
-    #             self.job_obj._undo_model_compat_reshape = undo_methods
-    #             self.job_obj._undo_reshape(pixel_data)
 
-    #             self.assertTrue(mock_zoom.call_count == 1)
-    #             self.assertTrue(np.array_equal(mock_zoom.call_args[0][0], pixel_data[..., 0]))
-    #             self.assertTrue(np.array_equal(mock_zoom.call_args[0][1], undo_methods[1]['arg']))
+    def test_siemens_preprocess(self):
+        processing_config = {"model_type": "gad_process",
+        "pipeline_preproc": {'gad_process' : {
+                'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "rigid", 'use_mask_reg': False}},
+                'STEP4' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': True, 'scale_ref_zero_img': False}}
+            }},
+            "pipeline_postproc": {
+                'gad_process' : {
+                    'STEP1' : {'op' : 'CLIP'},
+                    'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
-    #             self.assertTrue(mock_crop.call_count == 1)
-    #             self.assertTrue(np.array_equal(mock_crop.call_args[0][0], mock_zoom_ret))
-    #             self.assertTrue(np.array_equal(mock_crop.call_args[0][1], undo_methods[0]['arg']))
+                }}}
+
+        update_exec_config_keys = ['model_type', 'pipeline_preproc', 'pipeline_postproc'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in update_exec_config_keys
+        }
+
+        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+            task=self.mock_task, model_dir=self.model_dir
+        )
+
+        self.siemens_pixel_data = self.job_obj._preprocess()
+
+        frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
+
+        self.siemens_preprocess_data = np.load(os.path.join(self.path_data, "siemens_preprocess.npy"))
+
+        self.assertTrue(np.allclose(self.siemens_pixel_data[frame_seq_name],self.siemens_preprocess_data), 'Siemens Preprocessing is not matching with the expected output')
+
+    def test_philips_preprocess(self):
+        processing_config = {"model_type": "gad_process",
+        "pipeline_preproc": {'gad_process' : {
+                'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
+                'STEP2' : {'op': 'SKULLSTRIP'},
+                'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "affine", 'use_mask_reg': False}},
+                'STEP4' : {'op' : 'HIST'},
+                'STEP5' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': False, 'scale_ref_zero_img': False}}
+            }},
+            "pipeline_postproc": {
+                'gad_process' : {
+                    'STEP1' : {'op' : 'CLIP'},
+                    'STEP2' : {'op' : 'RESCALEGLOBAL'}
+
+                }}}
+
+        update_exec_config_keys = ['model_type', 'pipeline_preproc', 'pipeline_postproc'
+        ]
+        self.mock_task.job_definition.exec_config = {
+            k: v for k, v in processing_config.items() if k in update_exec_config_keys
+        }
+
+        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+            task=self.mock_task, model_dir=self.model_dir
+        )
+
+        print(self.job_obj._proc_config.pipeline_preproc)
+
+        self.philips_pixel_data = self.job_obj._preprocess()
+
+        frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
+
+        self.philips_preprocess_data = np.load(os.path.join(self.path_data, "philips_preprocess.npy"))
+
+        self.assertTrue(np.allclose(self.philips_pixel_data[frame_seq_name],self.philips_preprocess_data), 'Philips Preprocessing is not matching with the expected output')
+    
+    def test_compat_reshape(self):
+        """
+        Test the _process_model_input_compatibility method
+        """
+
+        with mock.patch('subtle_gad_jobs.GenericInferenceModel') as mock_model:
+            with mock.patch('subtle_gad_jobs.SubtleGADJobType._zero_pad') as mock_pad:
+                with mock.patch('subtle_gad_jobs.zoom_interp') as mock_interp:
+                    mock_inf_model = MagicMock()
+                    mock_inf_model._model_obj.inputs = [np.zeros((14, 512, 512))]
+                    mock_model.return_value = mock_inf_model
+                    self.job_obj._pixel_spacing = [[0.75, 0.75, 1.0]]
+                    mock_pad.return_value = np.zeros((2, 7, 256, 256))
+                    mock_interp.return_value = np.zeros((7, 384, 384))
+
+                    _, undo_methods = self.job_obj._process_model_input_compatibility(
+                        np.zeros((2, 7, 232, 256))
+                    )
+
+                    self.assertTrue(mock_pad.call_count == 2)
+                    self.assertTrue(mock_interp.call_count == 2)
+
+                    undo_fn_names = [m['fn'] for m in undo_methods]
+                    self.assertTrue(len(undo_methods) == 3)
+                    self.assertTrue(
+                        np.array_equal(
+                            undo_fn_names, ['undo_zero_pad', 'undo_resample', 'undo_zero_pad']
+                        )
+                    )
+
+    def test_center_crop_even(self):
+        """
+        Test that center crop result matches the ref image when the input image shape is even
+        """
+
+        img = np.ones((7, 256, 256))
+        ref_img = np.ones((7, 240, 240))
+
+        crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
+        self.assertTrue(crop_img.shape == ref_img.shape)
+
+    def test_center_crop_odd(self):
+        """
+        Test that center crop result matches the ref image when the input image shape is odd
+        """
+
+        img = np.ones((12, 255, 255))
+        ref_img = np.ones((7, 240, 240))
+
+        crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
+        self.assertTrue(crop_img.shape == ref_img.shape)
+
+    def test_zero_pad(self):
+        """
+        Test that center crop result matches the ref image when the input image shape is odd
+        """
+
+        img = np.ones((7, 232, 248))
+        ref_img = np.ones((7, 256, 256))
+
+        pad_img = subtle_gad_jobs.SubtleGADJobType._zero_pad(img, ref_img)
+        self.assertTrue(pad_img.shape == ref_img.shape)
+
+    def test_undo_reshape(self):
+        """
+        Test that undo_reshape function executes correct with the given undo_methods
+        """
+
+        undo_methods = [{
+            'fn': 'undo_zero_pad',
+            'arg': np.zeros((7, 256, 232))
+        }, {
+            'fn': 'undo_resample',
+            'arg': [1.0, 0.5, 0.5]
+        }]
+
+        pixel_data = np.zeros((7, 512, 512, 1))
+
+        with mock.patch('subtle_gad_jobs.zoom_interp') as mock_zoom:
+            with mock.patch('subtle_gad_jobs.SubtleGADJobType._center_crop') as mock_crop:
+                mock_zoom_ret = np.zeros((7, 256, 256))
+                mock_zoom.return_value = mock_zoom_ret
+
+                self.job_obj._undo_model_compat_reshape = undo_methods
+                self.job_obj._undo_reshape(pixel_data)
+
+                self.assertTrue(mock_zoom.call_count == 1)
+                self.assertTrue(np.array_equal(mock_zoom.call_args[0][0], pixel_data[..., 0]))
+                self.assertTrue(np.array_equal(mock_zoom.call_args[0][1], undo_methods[1]['arg']))
+
+                self.assertTrue(mock_crop.call_count == 1)
+                self.assertTrue(np.array_equal(mock_crop.call_args[0][0], mock_zoom_ret))
+                self.assertTrue(np.array_equal(mock_crop.call_args[0][1], undo_methods[0]['arg']))
+
+    #def test_inference(self):
+    #    self.job_obj._process(self.dict_pixel_data)
 
     # def test_save_data(self):
     #     """
@@ -299,6 +469,8 @@ class InferenceTest(unittest.TestCase):
     #     self.assertTrue(np.array_equal(dcm_pixel_array, np.ones((240, 240))))
 
     #     shutil.rmtree(out_dir)
+
+    
 
 if __name__ == "__main__":
     unittest.main()
