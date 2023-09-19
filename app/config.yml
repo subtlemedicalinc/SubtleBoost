@@ -23,6 +23,7 @@ jobs:
       num_channel_output: 1
       num_rotations: 3
       inference_mpr: True
+      reshape_for_mpr_rotate: True
       metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
       model_type: 'gad_process'
       pipeline_preproc:
@@ -34,11 +35,13 @@ jobs:
         STEP2:
           op: "SKULLSTRIP"
         STEP3:
+          op: "SCALETAG"
+        STEP4:
           op: "REGISTER"
           param:
             transform_type: "affine"
             use_mask_reg: True
-        STEP4:
+        STEP5:
           op: "SCALEGLOBAL"
           param: 
             num_scale_context_slices : 20
@@ -51,6 +54,8 @@ jobs:
             lb: 0
         STEP2:
           op: "RESCALEGLOBAL"
+        STEP3:
+          op: "RESCALEDICOM"
 
   - job_name: "gad_siemens"
     series_required:

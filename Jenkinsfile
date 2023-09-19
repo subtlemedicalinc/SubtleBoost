@@ -50,7 +50,7 @@ node {
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
     // TODO: determine which test data to use
-    def TEST_DATA_TIMESTAMP = "20230530" // 1.0.1 Synth branch
+    def TEST_DATA_TIMESTAMP = "20230530" // 1.0.1 Gad branch
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -143,7 +143,7 @@ node {
 
 
     stage("Pre-Build Tests") {
-        def data_date = "20220519"
+        def data_date = "20230804"
         def file_name = "subtle_python_packages_tests_data.tar.gz"
         def download_path = "/tmp/${file_name}"
         echo 'fetching test data...'
