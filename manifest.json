@@ -1,7 +1,7 @@
 {
     "version": "0.0.7",
     "schema": "1.0.0",
-    "app_utilities_version": "gad_feature",
+    "app_utilities_version": "feature/gad_segment",
     "description": "Subtle App Manifest File",
     "appName": "SubtleGAD",
     "appDescription": "SubtleGAD app to process MRI data with dose reduction models on the Subtle Platform",
