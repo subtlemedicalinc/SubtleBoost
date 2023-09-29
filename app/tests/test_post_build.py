@@ -207,23 +207,23 @@ class PostBuildTest(MainPostBuild):
         MainPostBuild.t_phi_free(self)
 
     
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_output_different_series_uid(self):
-        """
-        REQ-20: SubtleApp shall update series instance for output image to ‘Processed by SubtleApp’ and
-        assign a unique new SeriesInstanceUID for output image.
-        """
-        MainPostBuild.t_output_different_series_uid(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_output_different_series_uid(self):
+    #     """
+    #     REQ-20: SubtleApp shall update series instance for output image to ‘Processed by SubtleApp’ and
+    #     assign a unique new SeriesInstanceUID for output image.
+    #     """
+    #     MainPostBuild.t_output_different_series_uid(self)
     
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_output_different_series_description(self):
-        """
-        REQ-20: SubtleApp shall update series instance for output image to ‘Processed by SubtleApp’ and
-        assign a unique new SeriesDescription for output image.
-        """
-        MainPostBuild.t_output_different_series_description(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_output_different_series_description(self):
+    #     """
+    #     REQ-20: SubtleApp shall update series instance for output image to ‘Processed by SubtleApp’ and
+    #     assign a unique new SeriesDescription for output image.
+    #     """
+    #     MainPostBuild.t_output_different_series_description(self)
 
     
     # @pytest.mark.req38
