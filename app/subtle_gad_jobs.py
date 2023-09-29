@@ -19,6 +19,9 @@ from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from scipy.ndimage import gaussian_filter
 import GPUtil
 import tempfile
+import multiprocessing
+from multiprocessing import Pool, Queue
+from functools import partial
 
 from subtle.util.inference_job_utils import (
     BaseJobType, GenericInferenceModel#, DataLoader2pt5D,# set_keras_memory
@@ -30,10 +33,14 @@ from subtle.dcmutil import pydicom_utils, series_utils
 
 from subtle.procutil.registration_utils import register_im
 
+import SimpleITK as sitk
+import pydicom
+
+print(sitk.GetDefaultParameterMap('translation'))
+
 from subtle.procutil.segmentation_utils import HDBetInMemory
 from subtle.procutil.image_proc_util import clip
 
-import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -45,9 +52,8 @@ import torch
 import HD_BET
 import warnings
 import time
-from global_variables import total_time
 warnings.filterwarnings("ignore")
-
+torch.manual_seed(0)
 #torch.multiprocessing.set_start_method('spawn')
 
 # os.environ['TF2_BEHAVIOR'] = '0'
@@ -84,6 +90,8 @@ class SubtleGADJobType(BaseJobType):
         # general params
         "not_for_clinical_use": False,
         "metadata_comp": {},
+        "duplicate_series": False,
+        "make_derived":True,
 
         # preprocessing params:
         #pipeline definition - custom config 
@@ -105,26 +113,6 @@ class SubtleGADJobType(BaseJobType):
             }
         },
 
-        # manufacturer specific - these are the default values
-        # "perform_noise_mask": True,
-        # "noise_mask_threshold": 0.1,
-        # "noise_mask_area": False,
-        # "noise_mask_selem": False,
-        # "perform_dicom_scaling": False,
-        # "transform_type": "affine",
-        # "use_mask_reg": True,
-        # "histogram_matching": False,
-        # "joint_normalize": False,
-        # "scale_ref_zero_img": False,
-
-        # not manufacturer specific
-       # "perform_registration": True,
-        #"skull_strip": True,
-        #"skull_strip_union": False,
-        #"skull_strip_prob_threshold": 0.5,
-        #"num_scale_context_slices": 20,
-        #"blur_lowdose": False,
-        #"cs_blur_sigma": [0, 1.5],
         "acq_plane": "AX",
         "model_resolution": [0.5, 0.5, 0.5],
 
@@ -142,7 +130,12 @@ class SubtleGADJobType(BaseJobType):
         # post processing params
         "series_desc_prefix": "SubtleGAD:",
         "series_desc_suffix": "",
-        "series_number_offset": 100
+        "series_number_offset": 100,
+        "series_description":"",
+        "uid_prefix":"",
+        "acquisition_matrix" : [],
+        "study_description_suffix" : "",
+        "protocol_name_suffix" : "",
     }
 
     #def SubtleGADProcConfig(self):
@@ -163,7 +156,7 @@ class SubtleGADJobType(BaseJobType):
         function_keys = {
             'MASK' : (self._mask_noise_process,
                         {"noise_mask_area" : False,
-                         "noise_mask_threshold": 0.1,
+                         "noise_mask_threshold": 0.08,
                          "noise_mask_selem": False}, {}),
             'SKULLSTRIP': (self.apply_brain_mask, {}, {}),
             'REGISTER': (self._register, 
@@ -178,7 +171,7 @@ class SubtleGADJobType(BaseJobType):
                          "joint_normalize": False, 
                          "scale_ref_zero_img": False}, {}),
             'CLIP': (clip, {'lb' : 0}, {}),
-            'RESCALEDICOM':(self._rescale_slope_intercept, 
+            'RESCALEDICOM':(self._undo_dicom_scale_fn, 
                             {}, {}),
             'RESCALEGLOBAL': (self._undo_global_scale_fn, 
                                 {}, {}),
@@ -226,7 +219,6 @@ class SubtleGADJobType(BaseJobType):
 
         # list of lambda functions constructed during preprocess
         self._proc_lambdas = []
-        self.total_time = []
 
         self._output_data = {}
         self._undo_model_compat_reshape = None
@@ -338,7 +330,7 @@ class SubtleGADJobType(BaseJobType):
                                                         self._proc_config.pipeline_postproc)
 
         return step_dict
-
+    
     def _preprocess_pixel_data(self):
         """
         get pixel data from dicom datasets
@@ -354,6 +346,7 @@ class SubtleGADJobType(BaseJobType):
             # because the saved model need a fixed receptive field
             input_data= data_array.copy()  # better to be deep.copy()
             #assert len(input_data.shape) == 3, "ERROR: data is not 3D"
+            #np.save('/home/SubtleGad/data/IM001/rawimage.npy', input_data)
 
             for i in range(1, len(self._proc_config.pipeline_preproc)+1):
                 # get the step info
@@ -361,6 +354,7 @@ class SubtleGADJobType(BaseJobType):
                 # get the function to run for this step
                 func = self.function_keys[step_dict['op']][0]
                 # run function
+                
                 if step_dict['op'] == "MASK":
                     input_data, mask = func(input_data, step_dict['param'])
                     raw_input_images = np.copy(input_data)
@@ -369,15 +363,14 @@ class SubtleGADJobType(BaseJobType):
                     input_data, raw_input_images = func(input_data, raw_input_images, step_dict['param'])
 
             # assign value per frame
-            (raw_input_images, self._undo_model_compat_reshape) = \
-            self._process_model_input_compatibility(raw_input_images)
+
             dict_input_data[frame_seq_name] = raw_input_images
 
         #np.save('/home/SubtleGad/app/tests/data/philips_preprocess.npy', raw_input_images)
-        
 
         return dict_input_data
 
+    
     def _preprocess(self) -> Dict:
         """
         Preprocess function called by the __call__ method of BaseJobType. Before calling the actual
@@ -386,26 +379,16 @@ class SubtleGADJobType(BaseJobType):
         information and finally get the raw pixel data
 
         """
-        t1 = time.time()
         self._get_input_series()
 
         self._get_pixel_spacing()
-        self._get_dicom_scale_coeff()
 
-        # get original pixel data and meta data info
-        self._get_raw_pixel_data()
+        self._get_dicom_scale_coeff()
 
         dict_pixel_data = self._preprocess_pixel_data()
 
-        t2 = time.time()
-        total_time['preprocessing'] = t2 -t1
+        #print(self._inputs.keys())
 
-        print('preprocessing_time', total_time['preprocessing'])
-
-        total_time['preprocess_end_time'] = t2
-
-        # dictionary of the data to process by frame
-        #dict_pixel_data = self._preprocess_raw_pixel_data()
         return dict_pixel_data
 
     def _metadata_compatibility(self):
@@ -501,7 +484,8 @@ class SubtleGADJobType(BaseJobType):
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
-    @processify
+    #@processify
+    
     def _process(self, dict_pixel_data: Dict) -> Dict:
         """
         Take the pixel data and launch a Pool of processes to do MPR processing in parallel. Once
@@ -515,7 +499,10 @@ class SubtleGADJobType(BaseJobType):
         :param dict_pixel_data: dictionary of the input pixel data (numpy arrays) by frame
         :return: the processed output data
         """
-        t1 = time.time()
+        del self._itk_data
+        del self._raw_input
+        del self.mask
+        
         dict_output_array = {}
 
         self._logger.info("starting inference (job type: %s)", self.name)
@@ -547,13 +534,17 @@ class SubtleGADJobType(BaseJobType):
                 1, dict_pixel_data['single_frame'].shape[2], dict_pixel_data['single_frame'].shape[3], 2 * self._proc_config.slices_per_input
             )
 
-        model = GenericInferenceModel(
+        self.model = GenericInferenceModel(
                 model_dir=self.model_dir, decrypt_key_hex=self.decrypt_key_hex,
                 input_shape=model_input_shape
             )
             #model._model_obj().eval()
+        #del self._itk_data
+        self.model.update_config(self.task.job_definition.exec_config)
 
-        model.update_config(self.task.job_definition.exec_config)
+        print("Model input compatibility check")
+        (dict_pixel_data['single_frame'], self._undo_model_compat_reshape) = self._process_model_input_compatibility(dict_pixel_data['single_frame'])
+        
 
         for frame_seq_name, pixel_data in dict_pixel_data.items():
             # perform inference with default input format (NHWC)
@@ -575,7 +566,7 @@ class SubtleGADJobType(BaseJobType):
                 'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
                 #'inference_mpr': self._proc_config.inference_mpr,
                 'num_rotations': self.task.job_definition.exec_config['num_rotations'],
-                'data': (pixel_data[:,:,:,:])
+                #'data': (pixel_data[:,:,:,:])
             }
 
             #print('pob datas', pixel_data.shape)
@@ -592,47 +583,114 @@ class SubtleGADJobType(BaseJobType):
 
             #slice_axes = np.arange(1, 4) if not self._proc_config.skip_mpr else np.array([1])
             predictions = []
-            for angle in angles:#np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
+            data= {}
+            
+            print('reshape for mpr rotate',self._proc_config.reshape_for_mpr_rotate)
+            # def rot_new(angle, data):
+            #     if angle> 0.0:
+            #         return rotate(data, angle, reshape = True, axes=(1,2))
+            #     else:
+            #         return data
+            from collections import deque
+            def rot_new(pixel_data, new_angle, q):
+                q.put(rotate(pixel_data, new_angle, (1,2),True))
+
+
+            next_data = np.copy(pixel_data)
+            curr_angle = 0
+            queue = deque([30,60])
+            p1 = None
+            mpq = multiprocessing.Queue()
+            slice_results = None
+            Y_run_sum = None
+            multiprocess_q = [None]
+            mpqs = [None]
+            while next_data is not None:
+                if len(queue) > 0:
+                    new_angle = queue.popleft()
+                    p1 = multiprocessing.Process(target = rot_new, args=(pixel_data, new_angle, mpq))
+                    p1.start()
+
+                angle = curr_angle
+            #for angle in (angles):#np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
+                param_obj['size'] = [0] + list(next_data.shape[1:]) #data[angle]
+                print('param size',param_obj['size'] )
+                param_obj['all_axes'] = slice_axes
+                mpr_params = []
+                Y_pred = []
+                idx =1
                 for slice_axis in slice_axes:
                     pobj = copy.deepcopy(param_obj)
                     pobj['angle'] = angle
                     pobj['slice_axis'] = slice_axis
+                    pobj['reshape'] = [pixel_data.shape[1], pixel_data.shape[2], pixel_data.shape[3]]
                     mpr_params.append(pobj)
-                    predictions.append(SubtleGADJobType._process_mpr(pobj, model))
+                    pobj['data'] =  next_data #data[angle]
+                    Y_pred = np.array(SubtleGADJobType._process_mpr(pobj, self.model))
+                    
+                    mpqs.append(multiprocessing.Queue())
+                    multiprocess_q.append(multiprocessing.Process(target = SubtleGADJobType.pool_model, args=(idx, Y_pred,mpr_params,mpqs[-2],multiprocess_q[-1], mpqs[-1])))
+                    multiprocess_q[-1].start()
+                    idx += 1
+                if p1 is not None:
+                    print('came in')
+                    next_data = mpq.get()
+                    print('got new data', next_data.shape)
+                    p1.join()
+                    p1.close()
+                    #mpq = multiprocessing.Queue()
+                    curr_angle = new_angle 
+                    p1 = None
+                else:
+                    next_data = None 
+                    curr_angle = None
+                
+            slice_results , Y_run_sum = mpqs[-1].get()
+            multiprocess_q[-1].join()
+            # for angle in angles:#np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
+            #     angle_data = rot_new(angle, pixel_data)
+            #     for slice_axis in slice_axes:
+            #         pobj = copy.deepcopy(param_obj)
+            #         pobj['data'] = angle_data
+            #         pobj['angle'] = angle
+            #         pobj['slice_axis'] = slice_axis
+            #         pobj['reshape'] = [pixel_data.shape[1], pixel_data.shape[2], pixel_data.shape[3]]
+            #         #mpr_params.append(pobj)
+            #         Y_pred = np.array(SubtleGADJobType._process_mpr(pobj, model))
+            #         #Y_pred = proc_results.reshape((1, 1, n_slices, height, width))
+            #         Y_pred = np.clip(Y_pred, 0, Y_pred.max())
+            #         Y_masks_sum = np.sum(np.array(Y_pred > 0, dtype=np.int), axis=(0, 1), keepdims=False)
+            #         if Y_run_sum is not None:
+            #             Y_masks_sum = np.add(Y_masks_sum, Y_run_sum)
+            #         if slice_results is not None:
+            #             Y_pred = np.add(Y_pred , slice_results)
+            #         slice_results = (Y_pred)
+            #         Y_run_sum = Y_masks_sum
 
-            #predictions = SubtleGADJobType._process_mpr(mpr_params)
-            # Convert the array to a shape of (n_slices, height, width, 3, num_rotations)
-            _reshape_tuple = (len(slice_axes), num_rotations, n_slices, height, width, 1)
-            predictions = np.array(predictions).reshape(_reshape_tuple)
-            #print('predictions shape', predictions.shape)
-            tx_order = (2, 3, 4, 1, 0)
-            predictions = np.array(predictions)[..., 0].transpose(tx_order)
-            #print(predictions)
-
-            # compute a volume of shape (n_slices, height, width) which has 1 for all the pixels
-            # with pixel value > 0 and 0 otherwise - across all mpr predictions
-            mask_sum = np.sum(
-                np.array(predictions > 0, dtype=np.float), axis=(-1, -2), keepdims=False
-            )
-
-            # now average the mpr inferences using the non-zero mask sum
-            output_array = np.divide(
-                np.sum(predictions, axis=(-1, -2), keepdims=False),
-                mask_sum, where=(mask_sum > 0)
-            )[..., None]
+            slice_results = np.divide(
+                        np.sum(slice_results, axis=(0, 1), keepdims=False),
+                        Y_run_sum,
+                        where=Y_run_sum > 0
+                    )
+            del self.model 
+            del next_data
+            del Y_pred
+            del Y_run_sum 
+            #del Y_masks_sum
+            
+            
             #print(output_array)
             #print(output_array.shape)
+            slice_results = slice_results.reshape(n_slices,height,width,1)
+            print('outi', slice_results.shape)
             # undo zero padding and isotropic resampling
-            output_array = self._undo_reshape(output_array)
+            slice_results = self._undo_reshape(slice_results)
 
-            dict_output_array[frame_seq_name] = output_array
+            dict_output_array[frame_seq_name] = slice_results
 
         self._logger.info("inference finished")
 
-        t2 = time.time()
-
-        total_time['model_inference'] = t2 - t1
-
+        
         return dict_output_array
 
     # pylint: disable=arguments-differ
@@ -645,11 +703,6 @@ class SubtleGADJobType(BaseJobType):
         :param out_dicom_dir: the directory or tarball of output DICOM files
         """
 
-        t1 = time.time()
-
-        total_time['model_inference'] =  t1 - total_time['preprocess_end_time'] 
-
-        total_time.pop('preprocess_end_time')
         # check input size
         for frame_seq_name in self._input_datasets[0]:
             self._logger.info("postprocess shape %s", dict_pixel_data[frame_seq_name].shape)
@@ -665,15 +718,8 @@ class SubtleGADJobType(BaseJobType):
         # data post processing
         self._postprocess_data(dict_pixel_data)
         # data saving
-        t2 = time.time()
-
-        total_time['post_process'] = t2 - t1
 
         self._save_data(self._output_data, self._input_datasets[0], out_dicom_dir)
-
-        t3 = time.time()
-
-        total_time['save_data'] = t3 - t2
 
     def _get_input_series(self):
         """
@@ -696,15 +742,28 @@ class SubtleGADJobType(BaseJobType):
 
         self._inputs = {'zd' : zero_dose_series, 'ld': low_dose_series}
 
+        #self._metadata_compatibility()
+
         #Check for one zero dose, low dose
-        zero_dose_pixels =[list(zero_dose_series.get_pixel_data(rescale=False).values())][0][0]
+        zero_dose_pixels = [list(zero_dose_series.get_pixel_data(rescale=False).values())][0][0]
         low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())][0][0]
-        #print('low_dose_pixels', low_dose_pixels.shape)
+        #print('low_dose_pixels', low_dose_pixels.shape)       
+
+        #np.save('/home/SubtleGad/data/IM001/zerorawimage.npy', zero_dose_pixels)
+        #np.save('/home/SubtleGad/data/IM001/lowrawimage.npy', low_dose_pixels)
+
 
         self._input_datasets = (zero_dose_series.get_dict_sorted_datasets(),
                                 low_dose_series.get_dict_sorted_datasets()
         )
-        
+
+        #for frame_seq_name in self._input_datasets[0].keys():
+        self._raw_input['single_frame'] = np.array([zero_dose_pixels, low_dose_pixels])
+        self._logger.info("the shape of array %s", self._raw_input['single_frame'].shape)
+
+
+        self._metadata_compatibility()
+
         try:
             
             self._itk_data['zero_dose'] = zero_dose_series._list_itks[0]
@@ -722,8 +781,8 @@ class SubtleGADJobType(BaseJobType):
         self._metadata_compatibility()
 
         for frame_seq_name in self._input_datasets[0].keys():
-            zero_data_np = self._input_series[0].get_pixel_data()[frame_seq_name]
-            low_data_np = self._input_series[1].get_pixel_data()[frame_seq_name]
+            zero_data_np = self._input_series[0].get_pixel_data(rescale=False)[frame_seq_name]
+            low_data_np = self._input_series[1].get_pixel_data(rescale=False)[frame_seq_name]
 
             self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
             self._logger.info("the shape of array %s", self._raw_input[frame_seq_name].shape)
@@ -750,47 +809,9 @@ class SubtleGADJobType(BaseJobType):
                 img=images[idx], threshold=threshold, noise_mask_area=mask_area,
                 use_selem=use_selem
             )
+
             images[idx, ...] *= noise_mask
             mask.append(noise_mask)
-
-        self._proc_lambdas.append({
-            'name': 'noise_mask',
-            'fn': [mask_fn(0), mask_fn(1)]
-        })
-
-        return images, np.array(mask)
-
-    def _mask_noise(self, images: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Perform noise masking which removes noise around the brain caused due to interference,
-        eye blinking etc.
-        :param images: Input zero and low dose images as a numpy array
-        :return: A tuple of the masked image and the binary mask computed
-        """
-        mask = []
-
-        if self._proc_config.perform_noise_mask:
-            self._logger.info("Performing noise masking...")
-
-            threshold = self._proc_config.noise_mask_threshold
-            mask_area = self._proc_config.noise_mask_area
-            use_selem = self._proc_config.noise_mask_selem
-
-            mask_fn = lambda idx: (lambda ims: ims[idx] * \
-            preprocess_single_series.mask_bg_noise(ims[idx], threshold, mask_area, use_selem))
-
-            for idx in range(images.shape[0]):
-                noise_mask = preprocess_single_series.mask_bg_noise(
-                    img=images[idx], threshold=threshold, noise_mask_area=mask_area,
-                    use_selem=use_selem
-                )
-                images[idx, ...] *= noise_mask
-                mask.append(noise_mask)
-
-            self._proc_lambdas.append({
-                'name': 'noise_mask',
-                'fn': [mask_fn(0), mask_fn(1)]
-            })
 
         return images, np.array(mask)
 
@@ -799,7 +820,7 @@ class SubtleGADJobType(BaseJobType):
 
         brain_mask = self._brain_mask(ims)
 
-        ims_mask = np.copy(ims)
+        #ims_mask = np.copy(ims)
 
         if True:
             #print('Applying computed brain masks on images. Mask shape -', brain_mask.shape)
@@ -881,8 +902,8 @@ class SubtleGADJobType(BaseJobType):
         return (img * rescale_slope + rescale_intercept) / (rescale_slope * scale_slope)
 
     @staticmethod
-    def _rescale_slope_intercept(
-        img: np.ndarray) -> np.ndarray:
+    def _rescale_slope_intercept(input_data,rescale_slope: float, rescale_intercept: float, scale_slope: float
+    ) -> np.ndarray:
         """
         Static method to undo the dicom scaling
 
@@ -894,14 +915,10 @@ class SubtleGADJobType(BaseJobType):
         :param scale_slope: Private philips tag for scale slope information
         :return: Rescaled image as numpy array
         """
-        if self._dicom_scale_coeff:
-            rescale_slope = self._dicom_scale_coeff[0]['rescale_slope']
-            scale_slope = self._dicom_scale_coeff[0]['scale_slope']
-            rescale_intercept = self._dicom_scale_coeff[0]['rescale_intercept']
+        
+        return (input_data * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
 
-        return (img * rescale_slope * scale_slope - rescale_intercept) / rescale_slope
-
-    def _scale_intensity_with_dicom_tags(self, images: np.ndarray, raw_input_images: np.ndarray, param:dict) -> np.ndarray:
+    def _scale_intensity_with_dicom_tags(self, scaled_images: np.ndarray, raw_scaled_images: np.ndarray, param:dict) -> np.ndarray:
         """
         Helper function to scale the image intensity using DICOM header information
 
@@ -911,8 +928,8 @@ class SubtleGADJobType(BaseJobType):
         #if self._proc_config.perform_dicom_scaling and self._has_dicom_scaling_info():
         self._logger.info("Performing intensity scaling using DICOM tags...")
 
-        scaled_images = np.copy(images)
-        raw_scaled_images = np.copy(raw_input_images)
+        #scaled_images = np.copy(images)
+        #raw_scaled_images = np.copy(raw_input_images)
 
         scale_fn = lambda idx: (
             lambda ims: SubtleGADJobType._scale_slope_intercept(ims[idx],
@@ -925,17 +942,20 @@ class SubtleGADJobType(BaseJobType):
         raw_scaled_images[0] = scale_fn(0)(raw_scaled_images)
         raw_scaled_images[1] = scale_fn(1)(raw_scaled_images)
 
-        self._proc_lambdas.append({
-            'name': 'dicom_scaling',
-            'fn': [scale_fn(0), scale_fn(1)]
-        })
+        # self._proc_lambdas.append({
+        #     'name': 'dicom_scaling',
+        #     'fn': [scale_fn(0), scale_fn(1)]
+        # })
 
         #np.save(f'./input/IM001//expected_dicom_scaling.npy', raw_scaled_images)
 
-        self._undo_dicom_scale_fn = lambda img: SubtleGADJobType._rescale_slope_intercept(img,
-        **self._dicom_scale_coeff[0])
+        #self._undo_dicom_scale_fn = lambda img: SubtleGADJobType._rescale_slope_intercept(img,
+        #**self._dicom_scale_coeff[0])
 
         return scaled_images, raw_scaled_images
+
+    def _undo_dicom_scale_fn(self, img, param):
+        return SubtleGADJobType._rescale_slope_intercept(img,**self._dicom_scale_coeff[0])
 
 
     def _get_pixel_spacing(self):
@@ -953,7 +973,7 @@ class SubtleGADJobType(BaseJobType):
 
         self._pixel_spacing = [(x_zero, y_zero, z_zero), (x_low, y_low, z_low)]
 
-    def _register(self, images: np.ndarray, raw_input_images: np.ndarray, param: dict) -> np.ndarray:
+    def _register(self, reg_images: np.ndarray, raw_reg_images: np.ndarray, param: dict) -> np.ndarray:
         """
         Performs image registration of low dose image by having the zero dose as the reference
         :param images: Input zero dose and low dose images as numpy array
@@ -964,8 +984,8 @@ class SubtleGADJobType(BaseJobType):
         :param images: Input zero dose and low dose images as numpy array
         :return: Registered images as numpy array
         """
-        reg_images = np.copy(images)
-        raw_reg_images = np.copy(raw_input_images)
+        #reg_images = np.copy(images)
+        #raw_reg_images = np.copy(raw_input_images)
 
         # if not self._proc_config.perform_registration:
         #     self._logger.info("Skipping image registration...")
@@ -996,25 +1016,27 @@ class SubtleGADJobType(BaseJobType):
         
         raw_reg_images[1] = apply_reg(raw_reg_images)
 
-        self._proc_lambdas.append({
-            'name': 'register',
-            'fn': [idty_fn, apply_reg]
-        })
+
+
+        # self._proc_lambdas.append({
+        #     'name': 'register',
+        #     'fn': [idty_fn, apply_reg]
+        # })
 
         #np.save(f'./input/IM001//expected_register.npy', raw_reg_images)
 
         return reg_images, raw_reg_images
     
 
-    def _match_histogram(self, images: np.ndarray, raw_input_images: np.ndarray, param: dict) -> np.ndarray:
+    def _match_histogram(self, hist_images: np.ndarray, raw_hist_images: np.ndarray, param: dict) -> np.ndarray:
         """
         Performs histogram matching of low dose by having zero dose as reference
         :param images: Input zero dose and low dose images as numpy array
         :return: Histogram matched images as numpy array
         """
         self._logger.info("Matching histogram of low dose with respect to zero dose...")
-        hist_images = np.copy(images)
-        raw_hist_images = np.copy(raw_input_images)
+        #hist_images = np.copy(images)
+        #raw_hist_images = np.copy(raw_input_images)
 
         hist_images[1] = preprocess_single_series.match_histogram(
             img=hist_images[1], ref_img=hist_images[0]
@@ -1025,15 +1047,15 @@ class SubtleGADJobType(BaseJobType):
 
         raw_hist_images[1] = hist_match_fn(raw_hist_images)
 
-        self._proc_lambdas.append({
-            'name': 'histogram_matching',
-            'fn': [idty_fn, hist_match_fn]
-        })
+        # self._proc_lambdas.append({
+        #     'name': 'histogram_matching',
+        #     'fn': [idty_fn, hist_match_fn]
+        # })
 
         #np.save(f'./input/IM001//expected_histogram_matching.npy',self.raw_input_images)
         return hist_images, raw_hist_images
 
-    def _scale_intensity(self, images: np.ndarray, raw_input_images: np.ndarray, param: dict) -> np.ndarray:
+    def _scale_intensity(self, scale_images: np.ndarray, raw_scale_images: np.ndarray, param: dict) -> np.ndarray:
         """
         Performs relative and global scaling of images by using the pixel values inside the
         noise mask previously computed
@@ -1042,8 +1064,8 @@ class SubtleGADJobType(BaseJobType):
         :param noise_mask: Binary noise mask computed in an earlier step of pre-processing
         :return: Scaled images as numpy array
         """
-        scale_images = np.copy(images)
-        raw_scale_images = np.copy(raw_input_images)
+        #scale_images = np.copy(images)
+        #raw_scale_images = np.copy(raw_input_images)
 
         self._logger.info("Performing intensity scaling...")
         num_slices = scale_images.shape[1]
@@ -1079,10 +1101,10 @@ class SubtleGADJobType(BaseJobType):
         raw_scale_images[0] = match_scales_fn(0)(raw_scale_images)
         raw_scale_images[1] = match_scales_fn(1)(raw_scale_images)
 
-        self._proc_lambdas.append({
-            'name': 'match_scales',
-            'fn': [match_scales_fn(0), match_scales_fn(1)]
-        })
+        # self._proc_lambdas.append({
+        #     'name': 'match_scales',
+        #     'fn': [match_scales_fn(0), match_scales_fn(1)]
+        # })
 
         #np.save(f'./input/IM001//expected_match_scales.npy',raw_scale_images)
 
@@ -1148,71 +1170,69 @@ class SubtleGADJobType(BaseJobType):
         # Model is initialized here only to get the default input shape
         undo_methods = []
         orig_shape = input_data.shape
-        #print('what is model_dir', self.model_dir)
-        #model = GenericInferenceModel(
-        #    model_dir=self.model_dir, decrypt_key_hex=self.decrypt_key_hex
-        #)
-        #print(model._model_obj)
-        #model.update_config(self.task.job_definition.exec_config)
-        model_input = [14,512,512]#model._model_obj.inputs[0]
+        model_input = self.model._model_config['input_shape']#model._model_obj.inputs[0]
         #print('shape',model._model_obj.inputs[0])
         model_shape = (int(model_input[1]), int(model_input[2]))
         input_shape = (input_data.shape[-2], input_data.shape[-1])
 
-        if input_shape != model_shape:
-            if input_shape[0] != input_shape[1]:
-                max_shape = np.max([input_shape[0], input_shape[1]])
-                self._logger.info('Zero padding to %s %s', max_shape, max_shape)
-                input_data = SubtleGADJobType._zero_pad(
-                    img=input_data,
-                    ref_img=np.zeros(
-                        (input_data.shape[0], input_data.shape[1], max_shape, max_shape)
-                    )
+        #if input_shape != model_shape:
+        if input_shape[0] != input_shape[1]:
+            max_shape = np.max([input_shape[0], input_shape[1]])
+            self._logger.info('Zero padding to %s %s', max_shape, max_shape)
+            input_data = SubtleGADJobType._zero_pad(
+                img=input_data,
+                ref_img=np.zeros(
+                    (input_data.shape[0], input_data.shape[1], max_shape, max_shape)
                 )
+            )
 
-                undo_methods.append({
-                    'fn': 'undo_zero_pad',
-                    'arg': np.zeros(orig_shape[1:])
-                })
+            undo_methods.append({
+                'fn': 'undo_zero_pad',
+                'arg': np.zeros(orig_shape[1:])
+            })
 
-            pixel_spacing = np.round(np.array(self._pixel_spacing[0])[::-1], decimals=2)
+        pixel_spacing = np.round(np.array(self._pixel_spacing[0])[::-1], decimals=2)
+        print('pixel sp', pixel_spacing)
 
-            if not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
-                self._logger.info('Resampling to isotropic resolution...')
+        if not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
+            self._logger.info('Resampling to isotropic resolution...')
 
-                resize_factor = (pixel_spacing / self._proc_config.model_resolution)
-                new_shape = np.round(input_data[0].shape * resize_factor)
-                real_resize_factor = new_shape / input_data[0].shape
-                #print('resizing factor', resize_factor)
-                zero_resample = zoom_interp(input_data[0], resize_factor)
-                low_resample = zoom_interp(input_data[1], resize_factor)
+            resize_factor = (pixel_spacing / self._proc_config.model_resolution)
+            new_shape = np.round(input_data[0].shape * resize_factor)
+            real_resize_factor = new_shape / input_data[0].shape
+            #print('resizing factor', resize_factor)
+            from contextlib import closing
+            with closing(multiprocessing.Pool(maxtasksperchild=1)) as pool:
+                results = pool.map(partial(zoom_interp, zoom =resize_factor), [input_data[0], input_data[1]])
+            #zero_resample = zoom_interp(input_data[0], real_resize_factor)
+            #low_resample = zoom_interp(input_data[1], real_resize_factor)
 
-                input_data = np.array([zero_resample, low_resample])
+            input_data = np.array(results)#np.array([zero_resample, low_resample])
+            #pool.terminate()
+            undo_factor = 1.0 / resize_factor
+            undo_methods.append({
+                'fn': 'undo_resample',
+                'arg': undo_factor
+            })
 
-                undo_factor = 1.0 / resize_factor
-                undo_methods.append({
-                    'fn': 'undo_resample',
-                    'arg': undo_factor
-                })
+            self._logger.info('Input data shape after resampling %s', input_data.shape)
 
-                self._logger.info('Input data shape after resampling %s', input_data.shape)
-
-            if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
-                self._logger.info('Zero padding to fit model shape...')
-                curr_shape = input_data.shape
-                input_data = SubtleGADJobType._zero_pad(
-                    img=input_data,
-                    ref_img=np.zeros(
-                        (input_data.shape[0], input_data.shape[1], model_shape[0], model_shape[1])
-                    )
+        if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
+            self._logger.info('Zero padding to fit model shape...')
+            curr_shape = input_data.shape
+            input_data = SubtleGADJobType._zero_pad(
+                img=input_data,
+                ref_img=np.zeros(
+                    (input_data.shape[0], input_data.shape[1], model_shape[0], model_shape[1])
                 )
+            )
 
-                undo_methods.append({
-                    'fn': 'undo_zero_pad',
-                    'arg': np.zeros(curr_shape[1:])
-                })
+            undo_methods.append({
+                'fn': 'undo_zero_pad',
+                'arg': np.zeros(curr_shape[1:])
+            })
 
-                self._logger.info('Input data shape after zero padding %s', input_data.shape)
+            self._logger.info('Input data shape after zero padding %s', input_data.shape)
 
         return input_data, undo_methods
 
@@ -1275,14 +1295,18 @@ class SubtleGADJobType(BaseJobType):
             if img.shape[i] >= sh:
                 npad.append((0, 0))
             else:
-                diff = (sh - img.shape[i]) // 2
-                npad.append((diff, diff))
+                if (sh - img.shape[i]) % 2 == 0:
+                    diff = (sh - img.shape[i]) // 2 
+                    npad.append((diff, diff))
+                else:
+                    diff = ((sh - img.shape[i]) // 2 )
+                    npad.append((diff+1, diff))
 
         return np.pad(img, pad_width=npad, mode='constant', constant_values=const_val)
     
     #@staticmethod
     #@processify
-    def _mask_npy(self,img_npy, dcm_ref, hdbet):
+    def _mask_npy(img_npy, dcm_ref, hdbet):
         mask = None
         
         data_sitk = sitk.GetImageFromArray(img_npy)
@@ -1297,30 +1321,22 @@ class SubtleGADJobType(BaseJobType):
 
     #@staticmethod
     @processify
-    def _brain_mask(self,ims):
-        ims_proc = np.copy(ims)
+    def _brain_mask(self,ims_proc):
+        #ims_proc = np.copy(ims)
         mask = None
         #self.hdbet = HDBetInMemory()
 
-        if True:
-            #print('Extracting brain regions using deepbrain...')
-            device = int(0)
-            ## Temporarily using DL based method for extraction
-            hdbet = HDBetInMemory(mode = 'fast', model_path = self.model_dir, device =device, do_tta = False)
+        #print('Extracting brain regions using deepbrain...')
+        device = int(0)
+        ## Temporarily using DL based method for extraction
+        hdbet = HDBetInMemory(mode = 'fast', model_path = self.model_dir, device =device, do_tta = False)
 
-            mask_zero = self._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], hdbet)
+        mask_zero = (SubtleGADJobType._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], hdbet))
 
-            if True:
-                mask_low = self._mask_npy(ims_proc[1,:,  ...], self._itk_data['low_dose'], hdbet)
-                #mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
+        mask_low = (SubtleGADJobType._mask_npy(ims_proc[1,:,  ...], self._itk_data['low_dose'], hdbet))
+        #mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
 
-                if False:
-                    # union of all masks
-                    mask = ((mask_zero > 0 ) | (mask_low > 0) | (mask_full > 0))
-                else:
-                    mask = np.array([mask_zero, mask_low]).transpose(0,1, 2, 3)
-            else:
-                mask = mask_zero
+        mask = np.array([mask_zero, mask_low]).transpose(0,1, 2, 3)
 
         return mask
 
@@ -1387,6 +1403,44 @@ class SubtleGADJobType(BaseJobType):
         self._logger.info('Final pixel_data shape %s', data.shape)
         pixel_data = data[..., None]
         return pixel_data
+    
+    @staticmethod
+    def pool_model(i, Y_pred,mpr_params,prevmpq,prevmultipq, mpq):
+        params = mpr_params[i-1]
+        print(params['size'],i, len(Y_pred))
+        #Y_red = np.copy(np.array(Y_pred))
+        slice_results, Y_run_sum = None, None
+        if prevmpq is not None:
+            val = prevmpq.get()
+            slice_results, Y_run_sum = val[0] , val[1]
+            prevmultipq.terminate()
+
+        Y_pred = Y_pred.reshape(-1, 1,params['reshape'][1], params['reshape'][2])
+
+        if params['all_axes'][i-1] == 0 :
+            Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
+        elif params['all_axes'][i-1] == 2:
+            Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
+        elif params['all_axes'][i-1] == 3:
+            Y_pred = np.transpose(Y_pred, (1, 2, 3, 0))
+
+        if params['num_rotations'] > 1 and params['angle'] > 0:
+            Y_pred = rotate(
+                Y_pred, -params['angle'], reshape=False, axes=(1, 2)
+            )
+        Y_pred = sp.util.resize(Y_pred, (1,1, params['reshape'][0], params['reshape'][1], params['reshape'][2]))
+
+        Y_pred = np.clip(Y_pred, 0, Y_pred.max())
+        Y_masks_sum = np.sum(np.array(Y_pred > 0, dtype=np.int), axis=(0, 1), keepdims=False)
+        if Y_run_sum is not None:
+            Y_masks_sum = np.add(Y_masks_sum, Y_run_sum)
+        if slice_results is not None:
+            Y_pred = np.add(Y_pred , slice_results)
+
+        slice_results = (Y_pred)
+        Y_run_sum = Y_masks_sum
+
+        mpq.put([slice_results, Y_run_sum])
 
     @staticmethod
     #@processify
@@ -1417,105 +1471,151 @@ class SubtleGADJobType(BaseJobType):
 
             reshape = params['reshape_for_mpr_rotate']
 
-            s1 = time.time()
-            input_data = np.copy(params['data'])
+            #input_data = np.copy(params['data'])
             zero_padded = False
 
             model_input_shape = (
-                1, input_data.shape[2], input_data.shape[3], 2 * params['slices_per_input']
+                1, params['data'].shape[2], params['data'].shape[3], 2 * params['slices_per_input']
             )
             
-
-            if params['angle'] > 0.0 and params['num_rotations'] > 1:
-                data_rot = rotate(input_data, params['angle'], reshape=reshape, axes=(1, 2))
-            else:
-                data_rot = np.copy(input_data)
-
-            #j,k,l,m = data_rot.shape
-            #data_rot = np.concatenate([data_rot[1,:,:,:]]*12, axis=0)
             
-            #d1 = np.reshape(d1, ())
-            #print('d1', d1.shape)
-            #data_rot = data_rot.reshape((1,k*12,l,m))
+            # if params['angle'] > 0.0 and params['num_rotations'] > 1:
+            #     data_rot = rotate(input_data, params['angle'], reshape=params['reshape_for_mpr_rotate'], axes=(1, 2))
+            # else:
+            #     data_rot = np.copy(input_data)
 
-            #data_rot=np.concatenate((data_rot,data_rot), axis=0)
-            print('data_rot', data_rot.shape)
+            #data_rot = np.copy(input_data)
+
+            print('data rot expected shape',params['data'].shape)
 
 
-            #data_rot =  np.concatenate((data_rot, data_rot, data_rot),axis = 0)
-            #print(data_rot.shape,params['slices_per_input'],model._model_config['batch_size'],  params['slice_axis'], input_data.shape[2], input_data.shape[3])
-            #print('data_rot',data_rot.shape)
             inf_loader = InferenceLoader(
-                input_data=data_rot, slices_per_input=params['slices_per_input'],
+                input_data=params['data'], slices_per_input=params['slices_per_input'],
                 batch_size=1, slice_axis=params['slice_axis'],
                 data_order='stack',
-                resize=( input_data.shape[2], input_data.shape[3]))
+                resize=( params['reshape'][1], params['reshape'][2]))
                 
             #model._model_config['batch_size']
             #pdb.set_trace()
-            #in_load = DataLoader(inf_loader,batch_size = 16,shuffle=False,num_workers=4)
+            in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=4,prefetch_factor=8)
             num_batches = inf_loader.__len__()
-            print('num_batches',num_batches)
-            Y_pred = []
+            del params['data']
 
-            for idx in (np.arange(0, num_batches)):
-                s1 = time.time()
-                X = inf_loader.__getitem__(idx)
-                #print('dataloading', time.time() - s1)
-                #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
-                #print(model._model_obj)
-                #print('required input shape', X.shape)
-                #print('new input shape', X.shape)
-                s2 = time.time()
-                Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
-                #print('data predicting ', time.time() - s2)
-                #print('required output shape', Y.shape)
-                Y_pred.append(Y[:])
-            
-            # for i_batch, sample_batched in enumerate(in_load):
-            #     print(i_batch, sample_batched.size())
-            #     sample_batched = sample_batched.to('cuda')
-            #     Y = model._model_obj(sample_batched)
-            #     Y = Y.data.float().cpu().numpy()
-            #     #if len(Y.shape) > 3:
-            #     Y = Y.reshape(-1, input_data.shape[2], input_data.shape[3])
+            #print('num_batches',num_batches)
+            #X = inf_loader.__getitem__(0)
+            #print('inf_loader_shape', X.shape)
+
+            Y_pred = []#np.zeros((num_batches,params['reshape'][1], params['reshape'][2]))
+
+            # for idx in (np.arange(0, num_batches)):
+            #     X = inf_loader.__getitem__(idx)
+            #     #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
+            #     #print(model._model_obj)
+            #     print('required input shape', X.shape)
+            #     #print('new input shape', X.shape)
+            #     Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
             #     #print('required output shape', Y.shape)
-            #     Y_pred.append(Y)
+            #     Y_pred.append(Y[:])
+            
+            for i_batch, sample_batched in enumerate(in_load):
+                #print(i_batch, sample_batched.size())
+                sample_batched = sample_batched.to('cuda')
+                Y = model._model_obj(sample_batched)
+                Y = Y.data.float().cpu().numpy()
+                #if len(Y.shape) > 3:
+                Y = Y.reshape(-1, params['reshape'][1], params['reshape'][2])
+                #print('required output shape', Y.shape)
+                Y_pred.extend(Y[:,:,:])
+                #Y_pred[i_batch*1:(i_batch+1)*1, :,:] = Y
 
 
-
-            Y_pred = np.array(Y_pred).reshape((1,num_batches,input_data.shape[2], input_data.shape[3]))
+            #Y_pred = np.array(Y_pred).reshape(-1, input_data.shape[2], input_data.shape[3])
+            Y_pred = np.array(Y_pred).reshape((num_batches,1,params['reshape'][1], params['reshape'][2]))
             #print('Y_pred shape ', Y_pred.shape)
             #print('num slices', inf_loader.num_slices)
             Y_pred = Y_pred[:inf_loader.num_slices, ...] # get rid of slice excess
 
-            if params['slice_axis'] == 0:
-                #pass
-            #elif params['slice_axis'] == 2:
-                Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
-            elif params['slice_axis'] == 2:
-                Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
-            elif params['slice_axis'] == 3:
-                Y_pred = np.transpose(Y_pred, (1, 2, 3, 0))
+            # if params['slice_axis'] == 0:
+            #     #pass
+            # #elif params['slice_axis'] == 2:
+            #     Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
+            # elif params['slice_axis'] == 2:
+            #     Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
+            # elif params['slice_axis'] == 3:
+            #     Y_pred = np.transpose(Y_pred, (1, 2, 3, 0))
 
-            if params['num_rotations'] > 1 and params['angle'] > 0:
-                Y_pred = rotate(
-                    Y_pred, -params['angle'], reshape=False, axes=(1, 2)
-                )
+            # if params['num_rotations'] > 1 and params['angle'] > 0:
+            #     Y_pred = rotate(
+            #         Y_pred, -params['angle'], reshape=False, axes=(1, 2)
+            #     )
 
-            Y_pred = sp.util.resize(Y_pred, (1, input_data.shape[1], input_data.shape[2], input_data.shape[3]))
+            # Y_pred = sp.util.resize(Y_pred, (1,1, params['reshape'][0], params['reshape'][1], params['reshape'][2]))
 
-            print('Model inference', time.time()- s1)
-            # np.save(
-            #     '/home/srivathsa/projects/studies/gad/all/inference/test/pred_{}_{}.npy'.format(
-            #         int(angle), slice_axis
-            #     ), Y_pred
-            # )
+            
             return Y_pred
         except Exception as e:
             raise Exception('Error in process_mpr', e)
         #finally:
         #    gpu_pool.put(gpu_id)
+
+    def _update_common_metadata(self, ds: pydicom.Dataset, series_uid: str,
+                                nrow: int = None, ncol: int = None, uid_pool: set = None):
+        """
+        Set series wide metadata to a dataset. Can be either a regular DICOM dataset
+        (needs to be called for each slice) or a single enhanced DICOM dataset.
+        :param ds: pydicom dataset to update
+        :param series_uid: new SeriesInstanceUID
+        :param nrow: Number of rows
+        :param ncol: umber of columns
+        :return:
+        """
+        # add model and app info to output dicom file
+        for tag in self.private_tag:
+            ds.add_new(*tag)
+
+        # set series-wide metadata, SeriesDescription Update
+        if not self._proc_config.series_description:
+            ds.SeriesDescription = "{}{}".format(
+                    self._proc_config.series_desc_prefix,
+                    self._proc_config.series_desc_suffix,
+            )
+        else:
+            ds.SeriesDescription = self._proc_config.series_description
+
+        #SOPInstanceUID update
+        sop_uid_in = ds.SOPInstanceUID if ds.SOPInstanceUID else str(i+1)
+        sop_uid = pydicom_utils.generate_uid(random_uid=self._proc_config.duplicate_series,
+                                                        input_uid=sop_uid_in,
+                                                        manufacturer=self._input_series[0].manufacturer,
+                                                        custom_prefix=self._proc_config.uid_prefix)
+
+        while sop_uid in uid_pool:
+            sop_uid = pydicom_utils.generate_uid(random_uid=self._proc_config.duplicate_series,
+                                                            input_uid=sop_uid,
+                                                            manufacturer=self._input_series[0].manufacturer,
+                                                            custom_prefix=self._proc_config.uid_prefix)
+        uid_pool.add(sop_uid)
+
+        #AcquisitionMatrix Update
+        if 'AcquisitionMatrix' in ds:
+            # Update phase encoding value in acquisition matrix
+            original_acq_matrix = ds.AcquisitionMatrix #pydicom_utils.get_tag(out_dataset, "AcquisitionMatrix", None, islice=i)
+                
+            # update acquisition matrix
+            if self._proc_config.acquisition_matrix:
+                acq_matrix = self._proc_config.acquisition_matrix
+            else:
+                acq_matrix = original_acq_matrix
+
+        ds.SeriesInstanceUID = series_uid
+        ds.SeriesNumber += self._proc_config.series_number_offset
+        ds.Rows = nrow if nrow else ds.Rows
+        ds.Columns = ncol if ncol else ds.Columns
+        if self._proc_config.make_derived and 'ImageType' in ds and len(ds.ImageType) > 0:
+            ds.ImageType[0] = 'DERIVED'
+
+        ds.SOPInstanceUID = sop_uid
+        ds.AcquisitionMatrix = acq_matrix
 
     def _save_data(self, dict_pixel_data: Dict, dict_template_ds: Dict, out_dicom_dir: str):
         """
@@ -1526,15 +1626,19 @@ class SubtleGADJobType(BaseJobType):
         :param out_dicom_dir: path to output directory
         """
         # save data frame by frame but with the same series UID and a shared UID pool
-        # create output directory
-
-        # generate a new series UID
-
-        #np.save(f'{out_dicom_dir}/expected_dicom.npy',self.raw_input_images)
-        #np.save(f'{out_dicom_dir}/true_dicom.npy',self.apply_proc_images)
-
-        series_uid = pydicom_utils.generate_uid()
+        self._logger.info("Saving data...")
+        
         uid_pool = set()
+        if not self._input_series[0].seriesinstanceUID and not self._proc_config.duplicate_series:
+            self._logger.warning("The input SeriesUID was empty, the output SeriesUID will not be unique. "
+                                 "This series can be overridden by any other series processed with these conditions. "
+                                 "Consider using `duplicate_series: True` in the app config.")
+        
+        #SeriesInstanceUID update
+        series_uid = pydicom_utils.generate_uid(random_uid=self._proc_config.duplicate_series,
+                                                input_uid=self._input_series[0].seriesinstanceUID,
+                                                custom_prefix=self._proc_config.uid_prefix)
+
         uid_pool.add(series_uid)
 
         out_dicom_dir = os.path.join(out_dicom_dir, series_uid)
@@ -1563,46 +1667,11 @@ class SubtleGADJobType(BaseJobType):
             for i_slice in range(nslices):
                 out_dataset = dict_template_ds[frame_seq_name][i_slice]
 
-                if self._input_series[0].isenhanced:
-                    out_dataset = enhanced_ds_out
-                # save new pixel data to dataset
-                else:
-                    slice_pixel_data = pixel_data[i_slice]
-                    slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
-                    slice_pixel_data[slice_pixel_data < 0] = 0
-
-                # add model and app info to output dicom file
-                for tag in self.private_tag:
-                    out_dataset.add_new(*tag)
-
-                template_desc = out_dataset.get("SeriesDescription", "")
-                # remove reg matches from the series description
-                for reg_match in [
-                    series.reg_match for series in self.task.job_definition.series_required
-                ]:
-                    template_desc = template_desc.replace('_{}'.format(reg_match), '')
-                    template_desc = template_desc.replace(reg_match, '')
-
-                # set series-wide metadata
-                out_dataset.SeriesDescription = "{}{}{}".format(
-                    self._proc_config.series_desc_prefix, template_desc,
-                    self._proc_config.series_desc_suffix,
-                )
-                out_dataset.SeriesInstanceUID = series_uid
-                out_dataset.SeriesNumber += self._proc_config.series_number_offset
-                out_dataset.Rows = nrow
-                out_dataset.Columns = ncol
-
-                # Set Instance UID
-                sop_uid = pydicom_utils.generate_uid()
-                while sop_uid in uid_pool:
-                    sop_uid = pydicom_utils.generate_uid()
-                uid_pool.add(sop_uid)
-
-                out_dataset.SOPInstanceUID = sop_uid
-
+                #check for enhanced_dataset
                 if self._input_series[0].isenhanced and enhanced_ds_out:
-                    # save 3D pixel data to enhanced DCM
+                    out_dataset = enhanced_ds_out
+                    self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
+
                     pydicom_utils.save_float_to_enhanced_dataset(
                             enhanced_ds_out,
                             pixel_data,
@@ -1616,9 +1685,18 @@ class SubtleGADJobType(BaseJobType):
                     
                     enhanced_ds_out.save_as(out_path)
 
+                # save new pixel data to dataset
                 else:
+                    slice_pixel_data = pixel_data[i_slice]
+                    slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
+                    slice_pixel_data[slice_pixel_data < 0] = 0
+                    self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
 
                     out_dataset.PixelData = slice_pixel_data.tostring()
+
+                    # if dicom is compressed, decompress it to be able modify pixel data and write output
+                    if out_dataset.file_meta.TransferSyntaxUID.is_compressed:
+                        out_dataset.decompress()
 
                     # save in output folder
                     out_path = os.path.join(

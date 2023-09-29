@@ -1,9 +1,9 @@
 pytest==7.1.3
 pytest-html>=1.20,<1.21
 pylint
-opencv-python
 pyyaml
 h5py==3.8.0
 packaging
 pydicom>=2.0.0
 MarkupSafe==2.0.1
+opencv-python-headless>4.8.0

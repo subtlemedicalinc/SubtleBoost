@@ -1,10 +1,8 @@
 subtle_python_packages
-numpy==1.21.6
+numpy==1.23
 pydicom==2.3.1
-scipy==1.7.3
-git+https://github.com/subtlemedicalinc/HD-BET
-opencv-python-headless<4.3.0
-scikit-image==0.19.3
+scipy>1.7.3
+scikit-image==0.19.2
 astor==0.7.1
 numba==0.56.4
 packaging
@@ -21,3 +19,5 @@ nibabel==5.1.0
 tensorflow==2.8.0
 MarkupSafe==2.0.1
 regex
+opencv-python-headless>4.8.0
+git+https://github.com/subtlemedicalinc/HD-BET

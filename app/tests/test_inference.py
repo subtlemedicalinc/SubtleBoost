@@ -16,10 +16,12 @@ from unittest.mock import MagicMock
 import pytest
 import numpy as np
 import pydicom
-from subtle.util.data_loader import dicomscan
+from subtle.dcmutil.series_io import dicomscan
+from subtle.util.inference_job_utils import GenericInferenceModel
 # pylint: disable=import-error
 import subtle_gad_jobs
 import mock
+import logging
 
 @pytest.mark.processing
 class ProcessingTest(unittest.TestCase):
@@ -71,7 +73,7 @@ class ProcessingTest(unittest.TestCase):
         }
 
         self.path_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
-        self.model_dir = os.path.join(self.path_data, "model", "20230606105336-unified")
+        self.model_dir = os.path.join(self.path_data, "model", "20230921105336-unified")
 
         self.processing_config = processing_config
 
@@ -236,13 +238,21 @@ class ProcessingTest(unittest.TestCase):
     
     def test_default_preprocess(self):
 
+        """
+        Testing if the default config steps produce the expected default output
+        """
+
+        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+            task=self.mock_task, model_dir=self.model_dir
+        )
+
+        self.default_pixel_data = self.job_obj._preprocess()
+
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-        self.dict_pixel_data = self.job_obj._preprocess_pixel_data()
+        self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npz"))['np']
 
-        self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npy"))
-
-        self.assertTrue(np.allclose(self.dict_pixel_data[frame_seq_name],self.default_preprocess_data), 'Default Preprocessing is not matching with the expected output')
+        self.assertTrue(np.allclose(self.default_pixel_data[frame_seq_name],self.default_preprocess_data), 'Default Preprocessing is not matching with the expected output')
 
     
     def test_ge_preprocess(self):
@@ -276,7 +286,7 @@ class ProcessingTest(unittest.TestCase):
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-        self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npy"))
+        self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npz"))['np']
 
         self.assertTrue(np.allclose(self.ge_pixel_data[frame_seq_name],self.ge_preprocess_data), 'GE Preprocessing is not matching with the expected output')
 
@@ -310,7 +320,7 @@ class ProcessingTest(unittest.TestCase):
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-        self.siemens_preprocess_data = np.load(os.path.join(self.path_data, "siemens_preprocess.npy"))
+        self.siemens_preprocess_data = np.load(os.path.join(self.path_data, "siemens_preprocess.npz"))['np']
 
         self.assertTrue(np.allclose(self.siemens_pixel_data[frame_seq_name],self.siemens_preprocess_data), 'Siemens Preprocessing is not matching with the expected output')
 
@@ -346,39 +356,9 @@ class ProcessingTest(unittest.TestCase):
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
 
-        self.philips_preprocess_data = np.load(os.path.join(self.path_data, "philips_preprocess.npy"))
+        self.philips_preprocess_data = np.load(os.path.join(self.path_data, "philips_preprocess.npz"))['np']
 
         self.assertTrue(np.allclose(self.philips_pixel_data[frame_seq_name],self.philips_preprocess_data), 'Philips Preprocessing is not matching with the expected output')
-    
-    def test_compat_reshape(self):
-        """
-        Test the _process_model_input_compatibility method
-        """
-
-        with mock.patch('subtle_gad_jobs.GenericInferenceModel') as mock_model:
-            with mock.patch('subtle_gad_jobs.SubtleGADJobType._zero_pad') as mock_pad:
-                with mock.patch('subtle_gad_jobs.zoom_interp') as mock_interp:
-                    mock_inf_model = MagicMock()
-                    mock_inf_model._model_obj.inputs = [np.zeros((14, 512, 512))]
-                    mock_model.return_value = mock_inf_model
-                    self.job_obj._pixel_spacing = [[0.75, 0.75, 1.0]]
-                    mock_pad.return_value = np.zeros((2, 7, 256, 256))
-                    mock_interp.return_value = np.zeros((7, 384, 384))
-
-                    _, undo_methods = self.job_obj._process_model_input_compatibility(
-                        np.zeros((2, 7, 232, 256))
-                    )
-
-                    self.assertTrue(mock_pad.call_count == 2)
-                    self.assertTrue(mock_interp.call_count == 2)
-
-                    undo_fn_names = [m['fn'] for m in undo_methods]
-                    self.assertTrue(len(undo_methods) == 3)
-                    self.assertTrue(
-                        np.array_equal(
-                            undo_fn_names, ['undo_zero_pad', 'undo_resample', 'undo_zero_pad']
-                        )
-                    )
 
     def test_center_crop_even(self):
         """

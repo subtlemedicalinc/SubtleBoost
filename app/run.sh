@@ -12,7 +12,7 @@
 #   4 - (optional) Absolute path to license.json
 #
 
-APP="SubtleGAD"
+APP="SubtleGad"
 INPUT_DIR=$1
 OUTPUT_DIR=$2
 CONFIG=$3
@@ -27,10 +27,15 @@ echo "License File: $LICENSE"
 SCRIPT=`realpath $0`
 SCRIPTPATH=`dirname $SCRIPT`
 
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs_trt"
-if [ -z "$(ldconfig -p | grep libcuda.so.1)" ]; then
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs"
-fi
+echo "SCRIPT: $SCRIPT"
+echo "SCRIPTPATH: $SCRIPTPATH"
+
+export LD_LIBRARY_PATH="$SCRIPTPATH/libs"
+#export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs_trt"
+#export LD_LIBRARY_PATH="/home/SubtleGad/dist/libs"
+# if [ -z "$(ldconfig -p | grep libcuda.so.1)" ]; then
+#     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs"
+# fi
 
 SCRIPT_DIR="$(pwd)/data/apps/$APP"
 
@@ -42,8 +47,13 @@ if [ -z ${LICENSE} ]; then
     LICENSE='empty'
 fi
 
-./infer $INPUT_DIR $OUTPUT_DIR --config $CONFIG --license $LICENSE 2>&1
+
+chmod +x ./infer/infer
+./infer/infer $INPUT_DIR $OUTPUT_DIR --config $CONFIG --license $LICENSE 2>&1
 EXIT_CODE=$?
 
+#if [ "$EXIT_CODE" -eq "0" ]; then
+
+#fi
 echo "Done!"
 exit $EXIT_CODE

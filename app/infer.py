@@ -5,9 +5,7 @@
 Copyright (c) Subtle Medical, Inc. (https://subtlemedical.com)
 Created on 2020/02/06
 """
-import time
 
-tn = time.time()
 import os
 from typing import Tuple, Optional
 import hashlib
@@ -19,13 +17,14 @@ import subtle_gad_jobs
 import tensorflow.compat.v1 as tf
 import pdb
 import json
-from global_variables import total_time
-t2 = time.time()
+import torch
+torch.manual_seed(0)
+
 tf.disable_v2_behavior()
 
-SCRIPT_DIR = os.path.dirname(__file__)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-total_time['load_dependencies'] = t2 -tn
+print('SCRIPT DIT', SCRIPT_DIR)
 
 class SubtleGADApp(SubtleApp):
     """The SubtleGAD App class"""
@@ -90,10 +89,7 @@ class SubtleGADApp(SubtleApp):
         output_path_dicom = os.path.join(output_path, self._out_dicom_dir)
         # create list of tasks based on dicom input
         dicom_filter_obj = DicomFilter(self._config, methodname= "itk")
-        t1 = time.time()
         tasks, unmatched_series = dicom_filter_obj.process_incoming(input_path)
-        t2 = time.time()
-        total_time['job_matching'] = t2-t1
 
         # check valid number of tasks are found
         if not tasks:
@@ -164,20 +160,11 @@ class SubtleGADApp(SubtleApp):
                 # continue to next task in the loop
                 continue
 
-        t2 = time.time()
-
-        print('Total Inference done in {:.3f}secs'.format(t2-t1))
-        total_time['total_inference'] = t2 - tn
-
-        with open(f"{output_path}/sample1_modelout.json", "w") as outfile:
-            json.dump(total_time, outfile)
-
         return exit_info
 
 
 if __name__ == "__main__":
     import sys
-    import time
 
     
     APP = SubtleGADApp()

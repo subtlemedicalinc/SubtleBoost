@@ -26,7 +26,7 @@ export PYTHON=python3.10
 export PIP="python3.10 -m pip"
 #fi
 
-export BUILD_DIR=build
+BUILD_DIR=build
 if [ -d ${BUILD_DIR} ]; then
   echo ">>> build dir (${BUILD_DIR}) already exists; deleting"
   rm -rf ${BUILD_DIR}
@@ -38,9 +38,19 @@ if [ ! -d ${BUILD_DIR} ]; then
   exit 1
 fi
 
+echo ">>> installing libraries..."
+if command -v yum &> /dev/null
+then
+    yum install -y libSM libXrender libXext libXtst libXi libXdmcp libbsd
+fi
+if command -v apt-get &> /dev/null
+then
+    apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6
+fi
+
 echo ">>> installing pyinstaller..."
 $PIP install "pyinstaller==5.9.0" > /dev/null
-#$PIP install --upgrade "setuptools>=45.0.0"
+$PIP install --upgrade "setuptools>=45.0.0"
 
 echo ">>> installing dependencies..."
 if [ ! -d "subtle_app_utilities_bdist" ]; then
@@ -53,92 +63,54 @@ fi
 echo ">>> installing libraries..."
 if command -v yum &> /dev/null
 then
-    yum install -y libSM libXrender libXext libXtst libXi libXdmcp libbsd
+    yum install -y libSM libXrender libXext libXtst libXi libXdmcp libbsd mesa-libGL
 fi
 if command -v apt-get &> /dev/null
 then
-    apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6
+    apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6 libgl1
 fi
 
 $PIP install --find-links=subtle_app_utilities_bdist -r app/requirements.txt
 
-echo ">>> installing SimpleElastix"
-
-CUR_DIR=$PWD
-mkdir -p elastix
-cd elastix
-wget -N https://com-subtlemedical-dev-public.s3.amazonaws.com/elastix/elastix-centos.tar.gz
-tar -zxvf elastix-centos.tar.gz
-cd build
-sed -i "s@\/home\/build@$(pwd)@g" SimpleITK-build/Wrapping/Python/Packaging/setup.py
-cd SimpleITK-build/Wrapping/Python
-$PIP uninstall -y SimpleITK > /dev/null
-$PYTHON Packaging/setup.py install
-cd $CUR_DIR
-rm -rf elastix*
-$PYTHON -c "import SimpleITK as sitk; sitk.ElastixImageFilter(); print('SimpleElastix successfully installed');"
-
-# echo ">>> installing tensorflow..."
-# TF_VERSION="1.12.0"
-# # manually remove tensorflow that may have been installed as dependencies
-# $PIP uninstall -y tensorflow > /dev/null
-# if [ ${machine} = "Mac" ]; then
-#   echo ">>> choosing tensorflow for Mac..."
-#   $PIP install -U "tensorflow==$TF_VERSION" > /dev/null
-# elif [ ${machine} = "Linux" ]; then
-#   echo ">>> choosing tensorflow-gpu for Linux..."
-#   $PIP install -U "tensorflow-gpu==$TF_VERSION" > /dev/null
-# else
-#   echo ">>> Unsupported system ${machine}"
-#   exit 1
-# fi
 
 echo ">>> packaging SubtleGAD app..."
 cd app && \
-  $PYTHON -m pyinstaller infer.spec > /dev/null && \
-  cd ..
+  $PYTHON -m PyInstaller infer.spec > /dev/null
+cd ../
 # collect libcuda.so.1 if exists
 # only tested in nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04
 mkdir -p ${BUILD_DIR}/libs
-if [ -f /usr/lib/x86_64-linux-gnu/libcuda.so.1 ]; then
-  cp /usr/lib/x86_64-linux-gnu/libcuda.so.1 ${BUILD_DIR}/libs/libcuda.so.1
-fi
-if [ -f /usr/lib64/libcuda.so.1 ]; then
-  cp /usr/lib64/libcuda.so.1 ${BUILD_DIR}/libs/libcuda.so.1
-fi
-if [ -f /usr/lib/x86_64-linux-gnu/libcublas.so.9.0 ]; then
-  cp /usr/lib/x86_64-linux-gnu/libcublas.so.9.0  ${BUILD_DIR}/libs/libcublas.so.9.0
-fi
-if [ -f /usr/local/cuda/lib64/libcublas.so.9.0 ]; then
-  cp /usr/local/cuda/lib64/libcublas.so.9.0  ${BUILD_DIR}/libs/libcublas.so.9.0
-fi
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcudart.so.11.0 ${BUILD_DIR}/libs
 
-# tested in nvidia/cuda:9.0-cudnn7-runtime-ubuntu16.04 and nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcudart.so.11.0 ${BUILD_DIR}/libs
+cp /usr/local/lib/python3.10/site-packages/torch/lib/libcudnn.so.8 ${BUILD_DIR}/libs/libcudnn.so.8
+cp /usr/local/lib/python3.10/site-packages/torch/lib/libcudnn_cnn_infer.so.8 ${BUILD_DIR}/libs
+cp /usr/local/lib/python3.10/site-packages/torch/lib/libcudnn_ops_infer.so.8 ${BUILD_DIR}/libs
+cp /usr/local/lib/python3.10/site-packages/torch/lib/libcudnn_ops_train.so.8 ${BUILD_DIR}/libs
 
-cp /usr/lib64/libcudnn.so.8 ${BUILD_DIR}/libs/libcudnn.so.8
-cp /usr/lib64/libcudnn_ops_infer.so.8 ${BUILD_DIR}/libs
-cp /usr/lib64/libcudnn_cnn_infer.so.8 ${BUILD_DIR}/libs
-
-cp /usr/local/cuda-11.7/compat/libcuda.so.460.* ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/compat/libnvidia-ptxjitcompiler.so.460.* ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcublas.so.11 ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcublasLt.so.11 ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcufft.so.10 ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcurand.so.10 ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcusolver.so.11 ${BUILD_DIR}/libs
-cp /usr/local/cuda-11.7/targets/x86_64-linux/lib/libcusparse.so.11 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/compat/libcuda.so.460.* ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/compat/libnvidia-ptxjitcompiler.so.460.* ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcublas.so.11 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcublasLt.so.11 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcufft.so.10 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcurand.so.10 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcusolver.so.11 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libcusparse.so.11 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libnvrtc.so.11.2 ${BUILD_DIR}/libs
+cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libnvrtc-builtins.so.11.2 ${BUILD_DIR}/libs
 
 cp /usr/lib64/libGLX_mesa.so.0 ${BUILD_DIR}/libs
 cp /usr/lib64/libxcb.so.1 ${BUILD_DIR}/libs
-# TODO: some of the regex-matched paths on the next line may not be necessary
-cp -f /usr/lib64/libGL* ${BUILD_DIR}/libs
+cp /usr/lib64/libGL.so.1 ${BUILD_DIR}/libs
 
 mkdir -p ${BUILD_DIR}/bin
-cp /usr/local/cuda-11.7/bin/ptxas ${BUILD_DIR}/bin/ptxas
+cp /usr/local/cuda-11.2/bin/ptxas ${BUILD_DIR}/bin/ptxas
 
-# # export LD_LIBRARY_PATH for convert_models_to_trt to be able to use TensorRT
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${BUILD_DIR}/libs"
+
+echo ">>> printing identified dependencies"
+for entry in "${BUILD_DIR}/libs"/*
+do
+  echo "$entry"
+done
 
 # encrypt model files and remove the plain text files
 $PYTHON -m subtle.util.encrypt_models --delete-original manifest.json app/models/

@@ -50,7 +50,7 @@ node {
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
     // TODO: determine which test data to use
-    def TEST_DATA_TIMESTAMP = "20230530" // 1.0.1 Gad branch
+    def TEST_DATA_TIMESTAMP = "20230921" // 1.0.1 Gad branch
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -186,7 +186,7 @@ node {
                 #need to include subtlesynth in some of the subtle app utilities pytest
 
                 include="build subtleapp subtlegad"
-                exclude="not internal and not tf1only"
+                exclude="not internal and not tf1only and not notgad"
                 str_markers=""
 
                 for m in $include; do
@@ -208,7 +208,7 @@ node {
                 python3.10 -m pip install -r app/tests/requirements.txt
 
                 echo "starting app unit tests..."
-                python3.10 -m pytest -m "not post_build" -v app/tests/test_inference.py \
+                python3.10 -m pytest -m "not post_build and not subtlesynth" -v app/tests/test_inference.py \
                     --junitxml xunit-reports/xunit-result-py37-pre-build.xml \
                     --html=html-reports/xunit-result-py37-pre-build.html \
                     --self-contained-html
@@ -258,10 +258,9 @@ node {
         cp -r build/bin dist/bin/
         cp app/config.yml dist/config.yml
         cp app/run.sh dist/run.sh
-        cp app/run-config-validation.sh dist/run-config-validation.sh
         chmod +x dist/run.sh
-        chmod +x dist/run-config-validation.sh
-        cp -r app/models dist/models
+        cp -r app/models dist/infer/models
+        cp manifest.json dist/infer/manifest.json
         cp manifest.json dist/manifest.json
         git rev-parse --verify HEAD > dist/hash.txt
         """
@@ -292,7 +291,7 @@ node {
 //         TODO: run tests in docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
 //         todo: to enable TRT post build test
 //         TODO: if running post build tests in 19.05 --> need to build app and install tensorflow with Cuda 11.1
-        docker.image("python:3.10").inside("--gpus all  --user 0 --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
+        docker.image("subtle/post_test_python3.10:latest").inside("--gpus all  --user 0 --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
             
             sh '''
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$WORKSPACE/dist/infer/torch/lib/
@@ -300,7 +299,7 @@ node {
             
             python3.10 -m pip install -r app/tests/requirements.txt
             export POST_TEST_TAG=GPU
-            python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post_build.py \
+            python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post.py \
                 --log-level=info \
                 --junitxml xunit-reports/xunit-result-py37-post-build-gpu.xml \
                 --html=html-reports/xunit-result-py37-post-build-gpu.html \
