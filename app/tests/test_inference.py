@@ -291,7 +291,7 @@ class ProcessingTest(unittest.TestCase):
         self.assertTrue(np.allclose(self.ge_pixel_data[frame_seq_name],self.ge_preprocess_data), 'GE Preprocessing is not matching with the expected output')
 
 
-    def test_siemens_preprocess(self):
+    def test_esiemens_preprocess(self):
         processing_config = {"model_type": "gad_process",
         "pipeline_preproc": {'gad_process' : {
                 'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
