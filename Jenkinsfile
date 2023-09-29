@@ -186,7 +186,7 @@ node {
                 #need to include subtlesynth in some of the subtle app utilities pytest
 
                 include="build subtleapp subtlegad"
-                exclude="not internal and not tf1only and not notgad"
+                exclude="not internal and not tf1only and not subtlesynth"
                 str_markers=""
 
                 for m in $include; do
@@ -208,7 +208,7 @@ node {
                 python3.10 -m pip install -r app/tests/requirements.txt
 
                 echo "starting app unit tests..."
-                python3.10 -m pytest -m "not post_build and not subtlesynth" -v app/tests/test_inference.py \
+                python3.10 -m pytest -m "not post_build" -v app/tests/test_inference.py \
                     --junitxml xunit-reports/xunit-result-py37-pre-build.xml \
                     --html=html-reports/xunit-result-py37-pre-build.html \
                     --self-contained-html
