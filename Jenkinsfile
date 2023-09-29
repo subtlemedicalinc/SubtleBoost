@@ -236,7 +236,7 @@ node {
         // start building the app
 
         sh 'echo Building executable'
-        docker.image("subtle/gad_py310_torch20:2023-06-01").inside("--runtime=nvidia  --user 0"){
+        docker.image("subtle/post_test_python3.10:latest").inside("--runtime=nvidia  --user 0"){
             sh '''
                 export PYTHON=python3.10
 
