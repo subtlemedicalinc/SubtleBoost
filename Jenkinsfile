@@ -245,7 +245,7 @@ node {
 
                 echo "Building executable file with pyinstaller"
                 ./build_app.sh
-                pip install pip-licenses
+                python3.10 -m pip install pip-licenses
                 pip-licenses            '''
         }
         sh """
