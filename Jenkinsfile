@@ -299,7 +299,7 @@ node {
             
             python3.10 -m pip install -r app/tests/requirements.txt
             export POST_TEST_TAG=GPU
-            python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post.py \
+            python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post_build.py \
                 --log-level=info \
                 --junitxml xunit-reports/xunit-result-py37-post-build-gpu.xml \
                 --html=html-reports/xunit-result-py37-post-build-gpu.html \
