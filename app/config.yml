@@ -18,7 +18,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleBoost:"
       series_desc_suffix: ":research_only"
-      model_id: "20230921105336-unified"
+      model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
       num_rotations: 3
@@ -67,7 +67,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20230921105336-unified"
+      model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
       num_rotations: 3
@@ -112,7 +112,7 @@ jobs:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
       series_desc_suffix: ":research_only"
-      model_id: "20230921105336-unified"
+      model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
       num_rotations: 3
