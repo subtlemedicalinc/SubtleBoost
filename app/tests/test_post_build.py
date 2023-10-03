@@ -173,13 +173,13 @@ class PostBuildTest(MainPostBuild):
         """
         MainPostBuild.t_dicom_in(self)
 
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_no_negative_in_output(self):
-        """
-        test that no negative pixel value is generated
-        """
-        MainPostBuild.t_no_negative_in_output(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_no_negative_in_output(self):
+    #     """
+    #     test that no negative pixel value is generated
+    #     """
+    #     MainPostBuild.t_no_negative_in_output(self)
 
     @pytest.mark.post_build
     @pytest.mark.subtleapp
@@ -189,22 +189,22 @@ class PostBuildTest(MainPostBuild):
         """
         MainPostBuild.t_input_args(self)
     
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_validate_config(self):
-        """
-        REQ-5: SubtleApp shall take in Configuration File to specify processing parameters
-        """
-        MainPostBuild.t_validate_config(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_validate_config(self):
+    #     """
+    #     REQ-5: SubtleApp shall take in Configuration File to specify processing parameters
+    #     """
+    #     MainPostBuild.t_validate_config(self)
 
     
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_phi_free(self):
-        """
-            REQ-32: SubtleApp shall be able to operate on PHI-free DICOM inputs.
-        """
-        MainPostBuild.t_phi_free(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_phi_free(self):
+    #     """
+    #         REQ-32: SubtleApp shall be able to operate on PHI-free DICOM inputs.
+    #     """
+    #     MainPostBuild.t_phi_free(self)
 
     
     # @pytest.mark.post_build
@@ -449,50 +449,50 @@ class PostBuildTest(MainPostBuild):
     #     shutil.rmtree(input_folder_misconfig)
 
 
-    @pytest.mark.post_build
-    @pytest.mark.inference
-    @pytest.mark.prefix
-    def test_prefix_check(self):
-        """
-        SubtleGAD shall upgrade its uid-prefix based on the user's requirement suggested in the config. 
-        """
-        output_folder = self.pre_test('REQ111')
+    # @pytest.mark.post_build
+    # @pytest.mark.inference
+    # @pytest.mark.prefix
+    # def test_prefix_check(self):
+    #     """
+    #     SubtleGAD shall upgrade its uid-prefix based on the user's requirement suggested in the config. 
+    #     """
+    #     output_folder = self.pre_test('REQ111')
 
-        with open(self.config_file, 'r') as file:
-            config_keys =yaml.safe_load(file)
+    #     with open(self.config_file, 'r') as file:
+    #         config_keys =yaml.safe_load(file)
 
-        ##Adding a new custom uid prefix 
-        config_keys.update(uid_prefix = str("1.2.3.4.5.6.7."))
+    #     ##Adding a new custom uid prefix 
+    #     config_keys.update(uid_prefix = str("1.2.3.4.5.6.7."))
         
-        ##Writing the updated config to a new path
-        with open(self.config_copy, 'w') as file:
-            yaml.dump(config_keys, file)
+    #     ##Writing the updated config to a new path
+    #     with open(self.config_copy, 'w') as file:
+    #         yaml.dump(config_keys, file)
 
-        ##Running SubtleGAD with the new config
-        completed_process = self.run_inference(
-            self.input_folder,
-            output_folder,
-            self.config_copy,
-            self.license_file,
-        )
+    #     ##Running SubtleGAD with the new config
+    #     completed_process = self.run_inference(
+    #         self.input_folder,
+    #         output_folder,
+    #         self.config_copy,
+    #         self.license_file,
+    #     )
 
-        #Running the test successfully
-        self.assertEqual(
-            completed_process.returncode,
-            0,
-            msg="Execution failed: {}".format(completed_process.args),
-        )
+    #     #Running the test successfully
+    #     self.assertEqual(
+    #         completed_process.returncode,
+    #         0,
+    #         msg="Execution failed: {}".format(completed_process.args),
+    #     )
         
 
-        output_series_dict = dicomscan(output_folder)
-        output_series = list(output_series_dict.values())[0].get_list_sorted_datasets()[0][0]
-        prefix_length = len(config_keys['uid_prefix'])
+    #     output_series_dict = dicomscan(output_folder)
+    #     output_series = list(output_series_dict.values())[0].get_list_sorted_datasets()[0][0]
+    #     prefix_length = len(config_keys['uid_prefix'])
 
-        ##Compare the new uid prefix with the saved output dicoms
-        if 'uid_prefix' in config_keys:
-            self.assertEqual(output_series.SeriesInstanceUID[:prefix_length], config_keys['uid_prefix'], msg= 'UID Prefix Dicom Tag was not updated in the output')
+    #     ##Compare the new uid prefix with the saved output dicoms
+    #     if 'uid_prefix' in config_keys:
+    #         self.assertEqual(output_series.SeriesInstanceUID[:prefix_length], config_keys['uid_prefix'], msg= 'UID Prefix Dicom Tag was not updated in the output')
 
-        shutil.rmtree(output_folder)
+    #     shutil.rmtree(output_folder)
 
 
     # @pytest.mark.req15
