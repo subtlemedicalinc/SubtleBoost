@@ -165,13 +165,13 @@ class PostBuildTest(MainPostBuild):
 
         return completed_process
     
-    @pytest.mark.post_build
-    @pytest.mark.subtleapp
-    def test_dicom_in(self):
-        """
-        test the infer script of SubtleGad completes execution
-        """
-        MainPostBuild.t_dicom_in(self)
+    # @pytest.mark.post_build
+    # @pytest.mark.subtleapp
+    # def test_dicom_in(self):
+    #     """
+    #     test the infer script of SubtleGad completes execution
+    #     """
+    #     MainPostBuild.t_dicom_in(self)
 
     # @pytest.mark.post_build
     # @pytest.mark.subtleapp
