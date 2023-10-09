@@ -173,13 +173,13 @@ class PostBuildTest(MainPostBuild):
     #     """
     #     MainPostBuild.t_dicom_in(self)
 
-    # @pytest.mark.post_build
-    # @pytest.mark.subtleapp
-    # def test_no_negative_in_output(self):
-    #     """
-    #     test that no negative pixel value is generated
-    #     """
-    #     MainPostBuild.t_no_negative_in_output(self)
+    @pytest.mark.post_build
+    @pytest.mark.subtleapp
+    def test_no_negative_in_output(self):
+        """
+        test that no negative pixel value is generated
+        """
+        MainPostBuild.t_no_negative_in_output(self)
 
     @pytest.mark.post_build
     @pytest.mark.subtleapp
