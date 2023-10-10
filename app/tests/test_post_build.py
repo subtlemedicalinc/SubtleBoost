@@ -165,13 +165,13 @@ class PostBuildTest(MainPostBuild):
 
         return completed_process
     
-    # @pytest.mark.post_build
-    # @pytest.mark.subtleapp
-    # def test_dicom_in(self):
-    #     """
-    #     test the infer script of SubtleGad completes execution
-    #     """
-    #     MainPostBuild.t_dicom_in(self)
+    @pytest.mark.post_build
+    @pytest.mark.subtleapp
+    def test_dicom_in(self):
+        """
+        test the infer script of SubtleGad completes execution
+        """
+        MainPostBuild.t_dicom_in(self)
 
     @pytest.mark.post_build
     @pytest.mark.subtleapp
@@ -189,22 +189,22 @@ class PostBuildTest(MainPostBuild):
         """
         MainPostBuild.t_input_args(self)
     
-    # @pytest.mark.post_build
-    # @pytest.mark.subtleapp
-    # def test_validate_config(self):
-    #     """
-    #     REQ-5: SubtleApp shall take in Configuration File to specify processing parameters
-    #     """
-    #     MainPostBuild.t_validate_config(self)
+    @pytest.mark.post_build
+    @pytest.mark.subtleapp
+    def test_validate_config(self):
+        """
+        REQ-5: SubtleApp shall take in Configuration File to specify processing parameters
+        """
+        MainPostBuild.t_validate_config(self)
 
     
-    # @pytest.mark.post_build
-    # @pytest.mark.subtleapp
-    # def test_phi_free(self):
-    #     """
-    #         REQ-32: SubtleApp shall be able to operate on PHI-free DICOM inputs.
-    #     """
-    #     MainPostBuild.t_phi_free(self)
+    @pytest.mark.post_build
+    @pytest.mark.subtleapp
+    def test_phi_free(self):
+        """
+            REQ-32: SubtleApp shall be able to operate on PHI-free DICOM inputs.
+        """
+        MainPostBuild.t_phi_free(self)
 
     
     # @pytest.mark.post_build
