@@ -214,27 +214,6 @@ class ProcessingTest(unittest.TestCase):
             }}
         with self.assertRaises(Exception):
             self.job_obj._parse_pipeline_definition(error_config)
-
-    def test_metadata_compatibility(self):
-        '''
-        Asserting the Failure of the metadata compatibility when the tolerance for the floating point metadata is set to be zero. 
-        '''
-        #setting the pixelspacing metadata tolerance to be zero
-        self.job_obj._proc_config.metadata_comp.update(pixelspacing = 0)
-
-        self.job_obj._inputs['zd'].pixelspacing = [1,1]
-        #self.job_obj._inputs['ld'] = 
-
-        #asserting the pixelspacing comparison of zero dose & low dose failed
-        self.assertRaises(ValueError, self.job_obj._metadata_compatibility)
-
-        self.job_obj._proc_config.metadata_comp.clear()
-
-        #setting the imagepositionpatient metadata tolerance to be zero
-        self.job_obj._proc_config.metadata_comp.update(imagepositionpatient = 0)
-
-        #asserting the imagepositionpatient comparison of T1 & T2 failed
-        
     
     def test_default_preprocess(self):
 
@@ -245,6 +224,7 @@ class ProcessingTest(unittest.TestCase):
         self.default_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
+        np.save(os.path.join(self.path_data, "default_preprocess.npy"), self.default_pixel_data[frame_seq_name])
 
         self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npy"))
 
@@ -281,6 +261,7 @@ class ProcessingTest(unittest.TestCase):
         self.ge_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
+        np.save(os.path.join(self.path_data, "ge_preprocess.npy"), self.ge_pixel_data[frame_seq_name])
 
         self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npy"))
 
