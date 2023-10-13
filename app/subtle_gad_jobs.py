@@ -55,8 +55,7 @@ import warnings
 import time
 warnings.filterwarnings("ignore")
 torch.manual_seed(0)
-from model_helper import *
-import unet2d
+
 def _init_gpu_pool(local_gpu_q: Queue):
     """
     Local function to initialize a global variable to commonly access the GPU IDs by different
