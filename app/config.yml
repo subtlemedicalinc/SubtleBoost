@@ -13,7 +13,17 @@ jobs:
       - "zero_dose_ge"
       - "low_dose_ge"
     slice_location_tolerance: "none"
-    fov_tolerance: "inf"
+    fov_tolerance: "none"
+    iop_tolerance: "none"
+    magnetic_fieldstrength_tolerance: "none"
+    manufacturer_flag: False
+    manufacturermodelname_flag: False
+    protocolname_flag: False
+    pixelspacing_tol: "none"
+    columns_tol: "none"
+    rows_tol: "none"
+    ipp_tolerance: "none"
+    slice_thickness_tolerance: "none"
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleBoost:"
@@ -24,7 +34,6 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       reshape_for_mpr_rotate: True
-      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
       model_type: 'gad_process'
       pipeline_preproc:
         STEP1:
@@ -34,14 +43,14 @@ jobs:
             noise_mask_selem: False 
         STEP2:
           op: "SKULLSTRIP"
+        #STEP3:
+        #  op: "SCALETAG"
         STEP3:
-          op: "SCALETAG"
-        STEP4:
           op: "REGISTER"
           param:
             transform_type: "affine"
             use_mask_reg: True
-        STEP5:
+        STEP4:
           op: "SCALEGLOBAL"
           param: 
             num_scale_context_slices : 20
@@ -49,20 +58,17 @@ jobs:
             scale_ref_zero_img: False 
       pipeline_postproc:
         STEP1:
-          op: "CLIP"
-          param:
-            lb: 0
-        STEP2:
           op: "RESCALEGLOBAL"
-        STEP3:
-          op: "RESCALEDICOM"
+        #STEP3:
+        #  op: "RESCALEDICOM"
 
   - job_name: "gad_siemens"
     series_required:
       - "zero_dose_siemens"
       - "low_dose_siemens"
-    slice_location_tolerance: "none"
-    fov_tolerance: "inf"
+    slice_location_tolerance: 0.1
+    fov_tolerance: "none"
+    iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
@@ -73,19 +79,19 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       reshape_for_mpr_rotate: False
-      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
       pipeline_preproc:
         STEP1:
           op: "MASK"
           param: 
             noise_mask_area: False
             noise_mask_selem: False 
+            noise_mask_threshold: 0.1
         STEP2:
           op: "SKULLSTRIP"
         STEP3:
           op: "REGISTER"
           param:
-            transform_type: "rigid"
+            transform_type: "affine"
             use_mask_reg: False
         STEP4:
           op: "SCALEGLOBAL"
@@ -95,10 +101,6 @@ jobs:
             scale_ref_zero_img: False 
       pipeline_postproc:
         STEP1:
-          op: "CLIP"
-          param:
-            lb: 0
-        STEP2:
           op: "RESCALEGLOBAL"
       
       #layer_params: {slices_per_input: 14 , num_channel_output: 1}
@@ -106,8 +108,9 @@ jobs:
     series_required:
       - "zero_dose_philips"
       - "low_dose_philips"
-    slice_location_tolerance: "none"
-    fov_tolerance: "inf"
+    slice_location_tolerance: 0.1
+    fov_tolerance: "none"
+    iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
       series_desc_prefix: "SubtleGAD:"
@@ -117,7 +120,6 @@ jobs:
       num_channel_output: 1
       num_rotations: 3
       inference_mpr: True
-      metadata_comp: {'pixelspacing' : 0.5, 'slicethickness' : 0.5}
       reshape_for_mpr_rotate: True
       pipeline_preproc:
         STEP1:
@@ -142,10 +144,6 @@ jobs:
             scale_ref_zero_img: False 
       pipeline_postproc:
         STEP1:
-          op: "CLIP"
-          param:
-            lb: 0
-        STEP2:
           op: "RESCALEGLOBAL"
 
 
