@@ -263,7 +263,7 @@ node {
         cp manifest.json dist/infer/manifest.json
         cp manifest.json dist/manifest.json
         git rev-parse --verify HEAD > dist/hash.txt
-        python3.10 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > dist/licenseMR.json
+        python3 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > dist/licenseMR.json
         '''
     }
 
