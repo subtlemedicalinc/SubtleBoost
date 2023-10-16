@@ -267,6 +267,16 @@ node {
         '''
     }
 
+    stage("Denoising Module") {
+        echo 'fetching denoising module...'
+        def zip_file = "SubtleMR_2.4.0.subtleapp"
+        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
+
+        sh "unzip -o ${zip_file} -d dist/"
+
+        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
+    }
+
     stage("Post build Tests") {
 
         sh '''
@@ -329,16 +339,6 @@ node {
             s3Upload(file: "app/tests/post_build_test_data/processed_data_v{APP_VERSION}.zip", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
         }
 
-    }
-
-    stage("Denoising Module") {
-        echo 'fetching denoising module...'
-        def zip_file = "SubtleMR_2.4.0.subtleapp"
-        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
-
-        sh "unzip -o ${zip_file} -d dist/"
-
-        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
     }
     if(PACKAGE == "false"){
         stage("Platform Package and Deploy") {
