@@ -248,7 +248,7 @@ node {
                 python3.10 -m pip install pip-licenses
                 pip-licenses            '''
         }
-        sh """
+        sh '''
         if [ -d dist ]; then
             rm -rf dist
         fi
@@ -263,7 +263,8 @@ node {
         cp manifest.json dist/infer/manifest.json
         cp manifest.json dist/manifest.json
         git rev-parse --verify HEAD > dist/hash.txt
-        """
+        python3.10 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > dist/licenseMR.json
+        '''
     }
 
     stage("Post build Tests") {
@@ -330,8 +331,16 @@ node {
 
     }
 
+    stage("Denoising Module") {
+        echo 'fetching denoising module...'
+        def zip_file = "SubtleMR_2.4.0.subtleapp"
+        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
 
-    if(PACKAGE == "true"){
+        sh "unzip -o ${zip_file} -d dist/"
+
+        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
+
+    if(PACKAGE == "false"){
         stage("Platform Package and Deploy") {
             // Remove all folders to free up space
             // TODO: allocate more space to Jenkins instance to avoid "no space left on device" error - see ticket AU-161

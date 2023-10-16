@@ -26,8 +26,8 @@ jobs:
     slice_thickness_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: "SubtleBoost:"
-      series_desc_suffix: ":research_only"
+      series_desc_prefix: " BOOST"
+      series_desc_suffix: ""
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
@@ -71,8 +71,8 @@ jobs:
     iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":research_only"
+      series_desc_prefix: " BOOST"
+      series_desc_suffix: ""
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
@@ -113,8 +113,8 @@ jobs:
     iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: "SubtleGAD:"
-      series_desc_suffix: ":research_only"
+      series_desc_prefix: " BOOST"
+      series_desc_suffix: ""
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1

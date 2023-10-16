@@ -31,11 +31,10 @@ echo "SCRIPT: $SCRIPT"
 echo "SCRIPTPATH: $SCRIPTPATH"
 
 export LD_LIBRARY_PATH="$SCRIPTPATH/libs"
-#export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs_trt"
-#export LD_LIBRARY_PATH="/home/SubtleGad/dist/libs"
-# if [ -z "$(ldconfig -p | grep libcuda.so.1)" ]; then
-#     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/libs"
-# fi
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/SubtleMR/libs_trt"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SCRIPTPATH/SubtleMR/libs"
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+
 
 SCRIPT_DIR="$(pwd)/data/apps/$APP"
 
@@ -47,13 +46,63 @@ if [ -z ${LICENSE} ]; then
     LICENSE='empty'
 fi
 
+if [ -d "$INPUT_DIR/input_mr" ]; then
+    rm -rf $INPUT_DIR/input_mr
+fi
+mkdir -p  $INPUT_DIR/input_mr
+cd ./SubtleMR
+##Edit the SubtleMR config file to remove reg_match and series description suffix
+chmod +x config.yml
+PYCMD=$(cat <<EOF
+import yaml
+
+with open('./config.yml', 'r') as file:
+    config_keys =yaml.safe_load(file)
+config_keys['jobs'][0]['exec_config'].update(series_desc_suffix = "")
+config_keys['series'][-1].update(reg_match = "")
+config_keys['series'][-1].update(reg_exclude= "")
+ 
+with open('./config.yml', 'w') as file:
+    yaml.dump(config_keys, file)
+EOF
+)
+
+python3.10 -c  "$PYCMD"
 
 chmod +x ./infer/infer
-./infer/infer $INPUT_DIR $OUTPUT_DIR --config $CONFIG --license $LICENSE 2>&1
+./infer/infer $INPUT_DIR $INPUT_DIR/input_mr --config config.yml --license licenseMR.json 2>&1
 EXIT_CODE=$?
 
-#if [ "$EXIT_CODE" -eq "0" ]; then
+if [ -d "$INPUT_DIR/input_boost" ]; then
+    rm -rf $INPUT_DIR/input_boost
+fi
 
-#fi
+mkdir -p $INPUT_DIR/input_boost
+if [ "$EXIT_CODE" -eq "0" ]; then
+    cd ..
+    chmod +x ./infer/infer
+    ./infer/infer $INPUT_DIR/input_mr $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+    EXIT_CODE=$?
+
+else
+    cd ..
+    chmod +x ./infer/infer
+    ./infer/infer $INPUT_DIR $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+    EXIT_CODE=$?
+
+fi
+
+if [ "$EXIT_CODE" -eq "0" ]; then
+    cd ./SubtleMR
+    chmod +x ./infer/infer
+    ./infer/infer $INPUT_DIR/input_boost $OUTPUT_DIR --config config.yml --license licenseMR.json 2>&1
+    EXIT_CODE=$?
+fi 
+
+if [ "$EXIT_CODE" -ne "0" ]; then
+    mv $INPUT_DIR/input_boost  $OUTPUT_DIR
+    EXIT_CODE=$?
+fi
+
 echo "Done!"
 exit $EXIT_CODE
