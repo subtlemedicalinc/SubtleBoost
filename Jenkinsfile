@@ -339,7 +339,7 @@ node {
         sh "unzip -o ${zip_file} -d dist/"
 
         sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
-
+    }
     if(PACKAGE == "false"){
         stage("Platform Package and Deploy") {
             // Remove all folders to free up space
