@@ -37,7 +37,7 @@ class ProcessingTest(unittest.TestCase):
             "app_name": "SubtleGAD",
             "app_id": 4000,
             "app_version": "unittest",
-            "model_id": "20230517105336-unified",
+            "model_id":"20230921105336-unified",
             "not_for_clinical_use": False,
             "inference_mpr": False,
             "num_rotations": 1,
