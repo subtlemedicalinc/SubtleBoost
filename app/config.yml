@@ -15,7 +15,7 @@ jobs:
     slice_location_tolerance: "none"
     fov_tolerance: "none"
     iop_tolerance: "none"
-    magnetic_fieldstrength_tolerance: "none"
+    magnetic_fieldstrength_tolerance: False
     manufacturer_flag: False
     manufacturermodelname_flag: False
     protocolname_flag: False
@@ -26,8 +26,8 @@ jobs:
     slice_thickness_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: " BOOST"
-      series_desc_suffix: ""
+      series_desc_prefix: ""
+      series_desc_suffix: " BOOST"
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
@@ -43,8 +43,6 @@ jobs:
             noise_mask_selem: False 
         STEP2:
           op: "SKULLSTRIP"
-        #STEP3:
-        #  op: "SCALETAG"
         STEP3:
           op: "REGISTER"
           param:
@@ -71,14 +69,14 @@ jobs:
     iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: " BOOST"
-      series_desc_suffix: ""
+      series_desc_prefix: ""
+      series_desc_suffix: " BOOST"
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
       num_rotations: 3
       inference_mpr: True
-      reshape_for_mpr_rotate: False
+      reshape_for_mpr_rotate: True
       pipeline_preproc:
         STEP1:
           op: "MASK"
@@ -113,8 +111,8 @@ jobs:
     iop_tolerance: "none"
     exec_config:
       series_number_offset: 100
-      series_desc_prefix: " BOOST"
-      series_desc_suffix: ""
+      series_desc_prefix: ""
+      series_desc_suffix: " BOOST"
       model_id: "202310021105336-unified"
       slices_per_input: 7
       num_channel_output: 1
@@ -133,7 +131,7 @@ jobs:
           op: "REGISTER"
           param:
             transform_type: "affine"
-            use_mask_reg: False
+            use_mask_reg: True
         STEP4:
           op: 'HIST'
         STEP5:
@@ -149,7 +147,7 @@ jobs:
 
 series:
   - name: "zero_dose_ge"
-    reg_match: "zero_dose"
+    reg_match: "Bpre"
     reg_exclude: ""
     manufacturer_match: "ge"
     slice_range: [1, 400]
@@ -157,7 +155,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "low_dose_ge"
-    reg_match: "low_dose"
+    reg_match: "Bpost"
     reg_exclude: ""
     manufacturer_match: "ge"
     slice_range: [1, 400]
@@ -165,7 +163,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "zero_dose_philips"
-    reg_match: "zero_dose"
+    reg_match: "Bpre"
     reg_exclude: "zerodose_cs"
     manufacturer_match: "philips"
     slice_range: [1, 400]
@@ -173,7 +171,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "low_dose_philips"
-    reg_match: "low_dose"
+    reg_match: "Bpost"
     reg_exclude: "lowdose_cs"
     manufacturer_match: "philips"
     slice_range: [1, 400]
@@ -181,7 +179,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "zero_dose_siemens"
-    reg_match: "zero_dose"
+    reg_match: "Bpre"
     reg_exclude: ""
     manufacturer_match: "siemens"
     slice_range: [1, 400]
@@ -189,7 +187,7 @@ series:
     modality: "MR"
     equidistance_tolerance: "none"
   - name: "low_dose_siemens"
-    reg_match: "low_dose"
+    reg_match: "Bpost"
     reg_exclude: ""
     manufacturer_match: "siemens"
     slice_range: [1, 400]

@@ -50,9 +50,7 @@ if [ -d "$INPUT_DIR/input_mr" ]; then
     rm -rf $INPUT_DIR/input_mr
 fi
 mkdir -p  $INPUT_DIR/input_mr
-cd ./SubtleMR
-##Edit the SubtleMR config file to remove reg_match and series description suffix
-chmod +x config.yml
+
 PYCMD=$(cat <<EOF
 import yaml
 
@@ -61,48 +59,68 @@ with open('./config.yml', 'r') as file:
 config_keys['jobs'][0]['exec_config'].update(series_desc_suffix = "")
 config_keys['series'][-1].update(reg_match = "")
 config_keys['series'][-1].update(reg_exclude= "")
- 
-with open('./config.yml', 'w') as file:
+    
+with open('./configcopy.yml', 'w') as file:
     yaml.dump(config_keys, file)
 EOF
 )
 
-python3.10 -c  "$PYCMD"
+if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
+    if [ ! -f "$SCRIPTPATH/SubtleMR/configcopy.yml" ]; then
+        cd $SCRIPTPATH/SubtleMR/
+        ##Edit the SubtleMR config file to remove reg_match and series description suffix
+        chmod +x config.yml
+        python3.10 -c  "$PYCMD"
+    fi
 
-chmod +x ./infer/infer
-./infer/infer $INPUT_DIR $INPUT_DIR/input_mr --config config.yml --license licenseMR.json 2>&1
-EXIT_CODE=$?
-
-if [ -d "$INPUT_DIR/input_boost" ]; then
-    rm -rf $INPUT_DIR/input_boost
-fi
-
-mkdir -p $INPUT_DIR/input_boost
-if [ "$EXIT_CODE" -eq "0" ]; then
-    cd ..
+    cd $SCRIPTPATH/SubtleMR/
     chmod +x ./infer/infer
-    ./infer/infer $INPUT_DIR/input_mr $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
-    EXIT_CODE=$?
+    ./infer/infer $INPUT_DIR $INPUT_DIR/input_mr --config config.yml --license licenseMR.json 2>&1
+    EXIT_CODE_MR=$?
+
+    if [ -d "$INPUT_DIR/input_boost" ]; then
+        rm -rf $INPUT_DIR/input_boost
+    fi
+
+    mkdir -p $INPUT_DIR/input_boost
+    if [ "$EXIT_CODE_MR" -eq "0" ] && [ -d "$INPUT_DIR/input_mr" ]; then
+        cd ..
+        chmod +x ./infer/infer
+        ./infer/infer $INPUT_DIR/input_mr $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+        EXIT_CODE=$?
+
+    else
+        cd ..
+        chmod +x ./infer/infer
+        ./infer/infer $INPUT_DIR $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+        EXIT_CODE=$?
+
+    fi
+
+    if [ "$EXIT_CODE" -eq "0" ]; then
+        cd ./SubtleMR
+        chmod +x ./infer/infer
+        ./infer/infer $INPUT_DIR/input_boost $OUTPUT_DIR --config configcopy.yml --license licenseMR.json 2>&1
+        EXIT_CODE_MR2=$?
+    fi 
+
+    if [ "$EXIT_CODE" -eq "0" ] && [ "$EXIT_CODE_MR2" -ne "0" ]; then
+        mv $INPUT_DIR/input_boost  $OUTPUT_DIR
+    fi 
+
+    if [ "$EXIT_CODE" -ne "0" ]; then
+        cp -r $INPUT_DIR/input_boost/dicoms/  $OUTPUT_DIR
+    fi
 
 else
-    cd ..
     chmod +x ./infer/infer
-    ./infer/infer $INPUT_DIR $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+    ./infer/infer $INPUT_DIR $OUTPUT_DIR --config $CONFIG --license $LICENSE 2>&1
     EXIT_CODE=$?
-
 fi
 
-if [ "$EXIT_CODE" -eq "0" ]; then
-    cd ./SubtleMR
-    chmod +x ./infer/infer
-    ./infer/infer $INPUT_DIR/input_boost $OUTPUT_DIR --config config.yml --license licenseMR.json 2>&1
-    EXIT_CODE=$?
-fi 
-
-if [ "$EXIT_CODE" -ne "0" ]; then
-    mv $INPUT_DIR/input_boost  $OUTPUT_DIR
-    EXIT_CODE=$?
-fi
+rm -rf $INPUT_DIR/input_boost
+rm -rf $INPUT_DIR/input_mr
 
 echo "Done!"
+echo $EXIT_CODE
 exit $EXIT_CODE

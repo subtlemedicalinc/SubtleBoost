@@ -50,7 +50,7 @@ node {
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
     // TODO: determine which test data to use
-    def TEST_DATA_TIMESTAMP = "20231013" // 1.0.1 Gad branch
+    def TEST_DATA_TIMESTAMP = "20231022" // 1.0.1 Gad branch
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -267,16 +267,6 @@ node {
         '''
     }
 
-    stage("Denoising Module") {
-        echo 'fetching denoising module...'
-        def zip_file = "SubtleMR_2.4.0.subtleapp"
-        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
-
-        sh "unzip -o ${zip_file} -d dist/"
-
-        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
-    }
-
     stage("Post build Tests") {
 
         sh '''
@@ -340,6 +330,16 @@ node {
         }
 
     }
+    stage("Denoising Module") {
+        echo 'fetching denoising module...'
+        def zip_file = "SubtleMR_2.4.0.subtleapp"
+        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
+
+        sh "unzip -o ${zip_file} -d dist/"
+
+        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
+    }
+    
     if(PACKAGE == "false"){
         stage("Platform Package and Deploy") {
             // Remove all folders to free up space

@@ -19,5 +19,7 @@ nibabel==5.1.0
 tensorflow==2.8.0
 MarkupSafe==2.0.1
 regex
+psutil
 opencv-python-headless>4.8.0
+python-gdcm
 git+https://github.com/subtlemedicalinc/HD-BET
