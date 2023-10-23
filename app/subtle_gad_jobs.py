@@ -313,7 +313,7 @@ class SubtleGADJobType(BaseJobType):
         return found_step, step_num, step_dict
     
     def clip_boost(self,input_data: np.ndarray, param: dict, raw_input_images: np.ndarray = None):
-        if raw_input_images:
+        if raw_input_images is not None:
             return clip(input_data,param), clip(raw_input_images,param)
         else:
             return clip(input_data, param)
@@ -1213,6 +1213,7 @@ class SubtleGADJobType(BaseJobType):
         #print('Extracting brain regions using deepbrain...')
         device = "cuda"#int(0)
         ## Temporarily using DL based method for extraction
+        torch.manual_seed(0)
         hdbet = HDBetInMemory(mode = 'fast', model_path = self.model_dir, do_tta = False)
 
         mask_zero = (SubtleGADJobType._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], hdbet))

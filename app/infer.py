@@ -10,7 +10,6 @@ import os
 from typing import Tuple, Optional
 import hashlib
 import traceback
-
 from subtle.dcmutil.dicom_filter import DicomFilter
 from subtle.util.subtle_app import SubtleApp
 import subtle_gad_jobs
@@ -18,6 +17,7 @@ import tensorflow.compat.v1 as tf
 import pdb
 import json
 import torch
+from subtle.util.inference_job_utils import _get_available_gpus
 torch.manual_seed(0)
 
 tf.disable_v2_behavior()
@@ -113,6 +113,14 @@ class SubtleGADApp(SubtleApp):
             set to {}".format(self._config["enable_multiple_jobs"])
             exit_info.append((12, exit_detail, None))
 
+        check_gpu_avail = self._config["require_GPU"]
+        if check_gpu_avail:
+            # Check for GPU compatability here
+            gpu_available = bool(_get_available_gpus())
+
+            if not gpu_available:
+                exit_detail = "Unable to connect to GPU"
+                return [(33, exit_detail, None)]
         # execute each task
 
         for i_task, task in enumerate(tasks):

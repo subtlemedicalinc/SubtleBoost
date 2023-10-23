@@ -23,6 +23,7 @@ import subtle_gad_jobs
 import mock
 import logging
 
+torch.manual_seed(0)
 @pytest.mark.processing
 class ProcessingTest(unittest.TestCase):
     """
@@ -224,7 +225,7 @@ class ProcessingTest(unittest.TestCase):
         self.default_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
-        np.save(os.path.join(self.path_data, "default_preprocess.npy"), self.default_pixel_data[frame_seq_name])
+        #np.save(os.path.join(self.path_data, "default_preprocess.npy"), self.default_pixel_data[frame_seq_name])
 
         self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npy"))
 
@@ -261,7 +262,7 @@ class ProcessingTest(unittest.TestCase):
         self.ge_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
-        np.save(os.path.join(self.path_data, "ge_preprocess.npy"), self.ge_pixel_data[frame_seq_name])
+        #np.save(os.path.join(self.path_data, "ge_preprocess.npy"), self.ge_pixel_data[frame_seq_name])
 
         self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npy"))
 
