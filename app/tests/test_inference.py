@@ -22,6 +22,7 @@ from subtle.util.inference_job_utils import GenericInferenceModel
 import subtle_gad_jobs
 import mock
 import logging
+import torch
 
 torch.manual_seed(0)
 @pytest.mark.processing
