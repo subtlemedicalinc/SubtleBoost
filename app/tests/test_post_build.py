@@ -601,32 +601,7 @@ class PostBuildTest(MainPostBuild):
         REQ-38 : SubtleGad shall operate on enhanced DICOMs. 
         """
 
-        #run test
-        output_folder = self.pre_test("REQ38")
-        self.expected_enhanced_dicom = os.path.join(self.path_data, "enhanced_data", "expected_output")
-        completed_process = self.run_inference(
-            self.input_enhanced_dicom,
-            self.expected_enhanced_dicom,
-            self.config_file_small,
-            self.license_file,
-        )
-        # check that execution passed
-        self.assertEqual(
-            completed_process.returncode,
-            0,
-            msg="Execution failed: {}".format(completed_process.args),
-        )
-        # get data
-        data_out = self.get_array_from_dir(self.expected_enhanced_dicom)
-        data_exp = self.get_array_from_dir(self.expected_enhanced_dicom)
-
-        self.assertEqual(data_out.shape, data_exp.shape,
-                         "Processed data does not have the expected shape")
-
-        self.assertTrue(np.allclose(data_out, data_exp, atol=1.0),
-                        "Processed data is different than expected data")
-
-        #return MainPostBuild.t_enhanced_dicom(self)
+        return MainPostBuild.t_enhanced_dicom(self)
 
     @pytest.mark.req36
     @pytest.mark.ver25

@@ -226,7 +226,7 @@ class ProcessingTest(unittest.TestCase):
         self.default_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
-        np.save(os.path.join(self.path_data, "default_preprocess.npy"), self.default_pixel_data[frame_seq_name])
+        #np.save(os.path.join(self.path_data, "default_preprocess.npy"), self.default_pixel_data[frame_seq_name])
 
         self.default_preprocess_data = np.load(os.path.join(self.path_data, "default_preprocess.npy"))
 

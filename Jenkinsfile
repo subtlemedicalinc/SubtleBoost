@@ -50,7 +50,7 @@ node {
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
     // TODO: determine which test data to use
-    def TEST_DATA_TIMESTAMP = "20231023" // 1.0.1 Gad branch
+    def TEST_DATA_TIMESTAMP = "20231024" // 1.0.1 Gad branch
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -330,7 +330,7 @@ node {
         }
 
     }
-    stage("Denoising Module") {
+    stage("Download Denoising Module") {
         echo 'fetching denoising module...'
         def zip_file = "SubtleMR_2.4.0.subtleapp"
         s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
