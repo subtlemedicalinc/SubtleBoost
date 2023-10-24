@@ -66,50 +66,43 @@ EOF
 )
 
 if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
-    # if [ ! -f "$SCRIPTPATH/SubtleMR/configcopy.yml" ]; then
-    #     cd $SCRIPTPATH/SubtleMR/
-    #     ##Edit the SubtleMR config file to remove reg_match and series description suffix
-    #     chmod +x config.yml
-    #     python3 -c  "$PYCMD"
-    # fi
 
     cd $SCRIPTPATH/SubtleMR/
     chmod +x ./infer/infer
     bash run.sh $INPUT_DIR $INPUT_DIR/input_mr $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
     EXIT_CODE_MR=$?
 
+    if  [ "$EXIT_CODE_MR" -ne "0" ]; then
+        mv  $INPUT_DIR/input_mr $OUTPUT_DIR
+        echo $EXIT_CODE_MR
+        exit $EXIT_CODE_MR
+    fi
+
     if [ -d "$INPUT_DIR/input_boost" ]; then
         rm -rf $INPUT_DIR/input_boost
     fi
 
     mkdir -p $INPUT_DIR/input_boost
-    if [ "$EXIT_CODE_MR" -eq "0" ] && [ -d "$INPUT_DIR/input_mr" ]; then
-        cd ..
-        chmod +x ./infer/infer
-        ./infer/infer $INPUT_DIR/input_mr $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
-        EXIT_CODE=$?
+    cd ..
+    chmod +x ./infer/infer
+    ./infer/infer $INPUT_DIR/input_mr $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
+    EXIT_CODE_BOOST=$?
 
-    else
-        cd ..
-        chmod +x ./infer/infer
-        ./infer/infer $INPUT_DIR $INPUT_DIR/input_boost --config $CONFIG --license $LICENSE 2>&1
-        EXIT_CODE=$?
-
+    if  [ "$EXIT_CODE_BOOST" -ne "0" ]; then
+        mv  $INPUT_DIR/input_boost $OUTPUT_DIR
+        echo $EXIT_CODE_BOOST
+        exit $EXIT_CODE_BOOST
     fi
 
-    if [ "$EXIT_CODE" -eq "0" ]; then
-        cd ./SubtleMR
-        chmod +x ./infer/infer
-        bash run.sh $INPUT_DIR/input_boost $OUTPUT_DIR $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
-        EXIT_CODE_MR2=$?
-    fi 
 
-    if [ "$EXIT_CODE" -eq "0" ] && [ "$EXIT_CODE_MR2" -ne "0" ]; then
-        mv $INPUT_DIR/input_boost  $OUTPUT_DIR
-    fi 
+    cd ./SubtleMR
+    chmod +x ./infer/infer
+    bash run.sh $INPUT_DIR/input_boost $OUTPUT_DIR $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
+    EXIT_CODE_MR2=$?
 
-    if [ "$EXIT_CODE" -ne "0" ]; then
-        cp -r $INPUT_DIR/input_boost/dicoms/  $OUTPUT_DIR
+    if  [ "$EXIT_CODE_MR2" -ne "0" ]; then
+        echo $EXIT_CODE_MR2
+        exit $EXIT_CODE_MR2
     fi
 
 else
