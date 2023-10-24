@@ -1,5 +1,5 @@
 {
-    "version": "0.0.7",
+    "version": "1.0.0",
     "schema": "1.0.0",
     "app_utilities_version": "feature/gad_segment",
     "description": "Subtle App Manifest File",

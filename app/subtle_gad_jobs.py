@@ -24,7 +24,7 @@ from multiprocessing import Pool, Queue
 from functools import partial
 
 from subtle.util.inference_job_utils import (
-    BaseJobType, GenericInferenceModel#, DataLoader2pt5D,# set_keras_memory
+    BaseJobType, GenericInferenceModel
 )
 from subtle.util.data_loader import InferenceLoader
 from subtle.util.multiprocess_utils import processify
@@ -40,7 +40,6 @@ import pydicom
 print(sitk.GetDefaultParameterMap('translation'))
 
 from subtle.procutil.segmentation_utils import HDBetInMemory
-from subtle.procutil.image_proc_util import clip
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -314,9 +313,10 @@ class SubtleGADJobType(BaseJobType):
     
     def clip_boost(self,input_data: np.ndarray, param: dict, raw_input_images: np.ndarray = None):
         if raw_input_images is not None:
-            return clip(input_data,param), clip(raw_input_images,param)
+
+            return np.clip(input_data,param['lb'], input_data.max()), np.clip(raw_input_images,param['lb'], input_data.max())
         else:
-            return clip(input_data, param)
+            return np.clip(input_data, param['lb'], input_data.max())
 
     def _get_step_by_name(self, step_op_name: str):
         # Try finding step in pre-processing

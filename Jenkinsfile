@@ -353,6 +353,7 @@ node {
             rm -rf post_build_test_data.zip
             rm -rf default_models
             rm -rf opt_models
+            rm -rf licenseMR.json
             docker system prune -a -f
             '''
             CONFIG_S3_PATH = "${APP_NAME}/config_files/config_${APP_VERSION}.yml"
