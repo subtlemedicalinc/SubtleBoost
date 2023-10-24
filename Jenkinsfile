@@ -335,7 +335,7 @@ node {
         def zip_file = "SubtleMR_2.4.0.subtleapp"
         s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
         sh "sudo unzip -o ${zip_file} -d dist/"
-        docker.image("subtle/post_test_python3.10:latest").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
+        docker.image("subtle/post_test_python3.10:latest").inside("--user 0"){
         
         sh '''
         python3 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > $WORKSPACE/dist/licenseMR.json
