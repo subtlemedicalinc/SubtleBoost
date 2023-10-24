@@ -100,7 +100,7 @@ if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
     if [ "$EXIT_CODE" -eq "0" ]; then
         cd ./SubtleMR
         chmod +x ./infer/infer
-        bash $INPUT_DIR/input_boost $OUTPUT_DIR $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
+        bash run.sh $INPUT_DIR/input_boost $OUTPUT_DIR $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
         EXIT_CODE_MR2=$?
     fi 
 
