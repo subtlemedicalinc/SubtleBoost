@@ -41,11 +41,11 @@ fi
 echo ">>> installing libraries..."
 if command -v yum &> /dev/null
 then
-    yum install -y libSM libXrender libXext libXtst libXi libXdmcp libbsd
+    yum install -y libSM libXrender libXext libXtst libXi libXdmcp libbsd libglvnd
 fi
 if command -v apt-get &> /dev/null
 then
-    apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6
+    apt-get install -y libsm6 libxrender1 libfontconfig1 libxtst6 libxi6 libglvnd
 fi
 
 echo ">>> installing pyinstaller..."
@@ -100,7 +100,7 @@ cp /usr/local/cuda-11.2/targets/x86_64-linux/lib/libnvrtc-builtins.so.11.2 ${BUI
 
 cp /usr/lib64/libGLX_mesa.so.0 ${BUILD_DIR}/libs
 cp /usr/lib64/libxcb.so.1 ${BUILD_DIR}/libs
-cp /usr/lib64/libGL.so.1 ${BUILD_DIR}/libs
+#cp /usr/lib64/libGL.so.1 ${BUILD_DIR}/libs
 
 mkdir -p ${BUILD_DIR}/bin
 cp /usr/local/cuda-11.2/bin/ptxas ${BUILD_DIR}/bin/ptxas

@@ -66,16 +66,16 @@ EOF
 )
 
 if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
-    if [ ! -f "$SCRIPTPATH/SubtleMR/configcopy.yml" ]; then
-        cd $SCRIPTPATH/SubtleMR/
-        ##Edit the SubtleMR config file to remove reg_match and series description suffix
-        chmod +x config.yml
-        python3.10 -c  "$PYCMD"
-    fi
+    # if [ ! -f "$SCRIPTPATH/SubtleMR/configcopy.yml" ]; then
+    #     cd $SCRIPTPATH/SubtleMR/
+    #     ##Edit the SubtleMR config file to remove reg_match and series description suffix
+    #     chmod +x config.yml
+    #     python3 -c  "$PYCMD"
+    # fi
 
     cd $SCRIPTPATH/SubtleMR/
     chmod +x ./infer/infer
-    ./infer/infer $INPUT_DIR $INPUT_DIR/input_mr --config config.yml --license licenseMR.json 2>&1
+    bash run.sh $INPUT_DIR $INPUT_DIR/input_mr $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
     EXIT_CODE_MR=$?
 
     if [ -d "$INPUT_DIR/input_boost" ]; then
@@ -100,7 +100,7 @@ if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
     if [ "$EXIT_CODE" -eq "0" ]; then
         cd ./SubtleMR
         chmod +x ./infer/infer
-        ./infer/infer $INPUT_DIR/input_boost $OUTPUT_DIR --config configcopy.yml --license licenseMR.json 2>&1
+        bash $INPUT_DIR/input_boost $OUTPUT_DIR $SCRIPTPATH/SubtleMR/configcopy.yml $SCRIPTPATH/SubtleMR/licenseMR.json 2>&1
         EXIT_CODE_MR2=$?
     fi 
 

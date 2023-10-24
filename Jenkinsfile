@@ -262,8 +262,8 @@ node {
         cp -r app/models dist/infer/models
         cp manifest.json dist/infer/manifest.json
         cp manifest.json dist/manifest.json
+        cp update_config.py dist/update_config.py
         git rev-parse --verify HEAD > dist/hash.txt
-        python3 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > dist/licenseMR.json
         '''
     }
 
@@ -334,10 +334,19 @@ node {
         echo 'fetching denoising module...'
         def zip_file = "SubtleMR_2.4.0.subtleapp"
         s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
+        sh "sudo unzip -o ${zip_file} -d dist/"
+        docker.image("subtle/post_test_python3.10:latest").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
+        
+        sh '''
+        python3 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > $WORKSPACE/dist/licenseMR.json
+        cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/
 
-        sh "unzip -o ${zip_file} -d dist/"
+        python3.10 -m pip install PyYAML>=5.1
 
-        sh 'cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/'
+        python3.10 $WORKSPACE/dist/update_config.py $WORKSPACE/dist/SubtleMR/
+
+        '''
+    }
     }
     
     if(PACKAGE == "false"){
