@@ -1,0 +1,126 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/radnet/preprocess/data",
+  "verbose": 1,
+  "gpu": 0,
+  "model_name": "unet2d",
+  "model_config": "base",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/radnet/train/checkpoints",
+  "preprocess": {
+    "resample_isotropic": 0,
+    "override": true,
+    "dicom_data": "/home/srivathsa/projects/studies/gad/radnet/data",
+    "transform_type": "affine",
+    "register_with_dcm_reference": false,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/radnet/preprocess/plots",
+    "discard_end_percent": 0,
+    "mask_threshold": 0.1,
+    "scale_matching": true,
+    "skip_hist_norm": true,
+    "joint_normalize": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/radnet/preprocess/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": true,
+    "use_fsl_reg": false,
+    "non_rigid_reg": false,
+    "file_ext": "h5",
+    "pad_for_size": 512
+  },
+  "train": {
+    "max_data_sets": 200,
+    "validation_split": 0.25,
+    "learning_rate": 0.001,
+    "log_dir": "/home/srivathsa/projects/studies/gad/radnet/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/radnet/train/history",
+    "l1_lambda": 0.8,
+    "file_ext": "h5",
+    "ssim_lambda": 0.2,
+    "batch_size": 8,
+    "no_save_best_only": true,
+    "queue_size": 4,
+    "save_all_weights": true,
+    "save_best_only": false,
+    "resize": 512,
+    "file_ext": "h5",
+    "train_mpr": false,
+    "slices_per_input": 1,
+    "enh_mask": false,
+    "simple_2d": {
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false
+    },
+    "rad_mask": {
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "brain_only": true,
+      "brain_only_mode": "pure"
+    },
+    "rad_enh_vgg": {
+      "ssim_lambda": 0.4,
+      "l1_lambda": 0.45,
+      "perceptual_lambda": 0.15,
+      "brain_only": true,
+      "brain_only_mode": "pure",
+      "enh_mask": true
+    },
+    "rad_enh_vgg_dlsim_full": {
+      "ssim_lambda": 0.15,
+      "l1_lambda": 0.7,
+      "perceptual_lambda": 0.15,
+      "enh_mask": true
+    }
+  },
+  "inference": {
+    "inference_mpr": false,
+    "learn_residual": false,
+    "slices_per_input": 1,
+    "description": "radnet_enh_vgg_nompr",
+    "num_rotations": 1,
+    "procs_per_gpu": 1,
+    "file_ext": "h5",
+    "checkpoint": "radnet_enh_vgg_nompr.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/radnet/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/radnet/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/radnet/inference",
+    "resize": 512,
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "override": true,
+    "rad_enh_vgg": {
+      "checkpoint": "rad_enh_vgg.checkpoint",
+      "description": "rad_enh_vgg",
+      "brain_only": true,
+      "brain_only_mode": "pure"
+    },
+    "inverse_model": {
+      "checkpoint": "inverse_model.checkpoint",
+      "description": "low_dose_sim",
+      "input_idx": "0,2",
+      "output_idx": "1"
+    },
+    "rad_enh_vgg_dlsim_full": {
+      "checkpoint": "rad_enh_vgg_dlsim_full.checkpoint",
+      "description": "rad_enh_vgg_dlsim_full"
+    },
+    "boost_2d": {
+      "inference_mpr": false,
+      "description": "radnet_2d_boost",
+      "num_rotations": 1,
+      "input_idx": "0,2",
+      "slices_per_input": 7,
+      "file_ext": "h5",
+      "resize": 512,
+      "checkpoint_dir": "/home/srivathsa/projects/studies/gad/stanford/train/checkpoints",
+      "data_dir": "/home/srivathsa/projects/studies/gad/radnet/preprocess/data",
+      "checkpoint": "stanford_enh_vgg.checkpoint"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "train": [
+    "Patient_0101"
+  ],
+  "test": [
+    "Patient_0150"
+  ]
+}

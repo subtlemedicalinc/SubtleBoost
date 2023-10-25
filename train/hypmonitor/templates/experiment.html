@@ -1,0 +1,202 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HypMonitor</title>
+  <meta name="description" content="Hyperparameter experiment monitoring dashboard">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <script
+  src="https://code.jquery.com/jquery-3.4.1.min.js"
+  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+  crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <script src="jquery.tablesort.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script type="text/javascript">
+    var exp_id = '{{ id }}';
+    var port = '{{ port }}';
+    var fetch_progress_timer;
+
+    function fillMainTable() {
+      $("#exp-heading").html("Experiment: " + exp_id)
+
+      $.ajax({
+        "async": true,
+        "url": "http://localhost:" + port + "/logs?experiment="+exp_id,
+        "method": "GET"
+      }).done(function(response) {
+        var tableStr = '<thead class="thead-dark"><tr>';
+        tableStr += '<th scope="col">#</th>'
+        tableStr += '<th scope="col">Trial ID</th>';
+
+        if(response.length == 0) {
+          $("#exp-table").html('<h4>Reload after sometime...</h4>');
+          return;
+        }
+        Object.keys(response[0].params).forEach(function(pkey) {
+          tableStr += '<th scope="col">' + pkey + '</th>';
+        })
+
+        tableStr += '<th scope="col">Best Epoch</th>';
+
+        Object.keys(response[0].metrics.best).forEach(function(mkey) {
+          if(mkey.startsWith('val_')) {
+            tableStr += '<th scope="col">' + mkey + '</th>';
+          }
+        })
+
+        tableStr += '<th scope="col">Current Epoch</th>';
+        tableStr += '</tr></thead>';
+
+        response.forEach(function(trialObj, i) {
+          tableStr += '<tr>';
+          tableStr += '<td>' + (i + 1) + '</td>';
+
+          tableStr += '<td class="trial-url" id="' + trialObj.trial_id + '">' + trialObj.trial_id + '</td>';
+
+          Object.keys(trialObj.params).forEach(function(pkey) {
+            tableStr += '<td>' + trialObj.params[pkey].toFixed(3) + '</td>';
+          })
+
+          tableStr += '<td>' + (trialObj.metrics.best.epoch + 1) + '</td>'
+
+          Object.keys(trialObj.metrics.best).forEach(function(mkey) {
+            if(mkey.startsWith('val_')) {
+              tableStr += '<td>' + trialObj.metrics.best[mkey].toFixed(3) + '</td>';
+            }
+          })
+
+          var curr_epoch = (trialObj.metrics.current_epoch + 1);
+          var progressUrl = ' (<span class="progress-url" id="progress_' + trialObj.trial_id + '">View Logs</span>)';
+          tableStr += '<td>' + curr_epoch + progressUrl + '</td>';
+          tableStr += '</tr>';
+        })
+
+        $("#exp-table").html(tableStr);
+        $("#exp-table").tablesort();
+      })
+    }
+
+    function fetch_progress(trial_id) {
+      $.ajax({
+        "async": true,
+        "url": "http://localhost:" + port + "/progress?experiment="+exp_id+"&id="+trial_id,
+        "method": "GET"
+      }).done(function(response) {
+        var progress = '<ul>';
+        response.train_log.forEach(function(item) {
+          progress += '<li>' + item + '</li>';
+        });
+        progress += '</ul>';
+
+        $('#progress-dialog').html(progress);
+
+        if($('#progress-dialog').dialog('isOpen') == false) {
+          $('.ui-dialog-titlebar-close').html('X');
+          $('.ui-dialog-title').html('Training Logs - ' + trial_id);
+          $("#progress-dialog").dialog("open");
+        }
+
+        if(response.train_complete) {
+          clearInterval(fetch_progress_timer);
+          return;
+        }
+      });
+    }
+
+    $(document).ready(function() {
+      fillMainTable();
+
+      $("#metric-dialog").dialog({
+        autoOpen: false, modal: true, show: "blind", hide: "blind",
+        width: "auto", title: "Epoch Metrics", height: 540
+      });
+
+      $("#exp-table").on('click', '.progress-url', function(evt) {
+        $("#progress-dialog").dialog({
+          autoOpen: false, modal: true, show: "blind", hide: "blind",
+          width: 840, title: "Logs...", height: "auto",
+          close: function() {
+            clearInterval(fetch_progress_timer);
+            $("#progress-dialog").dialog("destroy");
+          }
+        });
+
+        var trial_id = evt.target.id.replace('progress_', '');
+        fetch_progress_timer = setInterval(function() {fetch_progress(trial_id)}, 500);
+      });
+
+
+      $("#exp-table").on('click', '.trial-url', function(evt) {
+        $.ajax({
+          "async": true,
+          "url": "http://localhost:" + port + "/metrics?experiment="+exp_id+"&id="+evt.target.id,
+          "method": "GET"
+        }).done(function(response) {
+          var tableStr = '<table class="table table-striped" border=1>'
+          tableStr += '<thead class="thead-dark"><tr>';
+          tableStr += '<th scope="col">Epoch</th>';
+
+          Object.keys(response[0]).forEach(function(pkey) {
+            if(pkey != 'epoch') {
+              tableStr += '<th scope="col">' + pkey + '</th>';
+            }
+          })
+
+          tableStr += '</tr></thead>';
+
+          response.forEach(function(trialObj) {
+            tableStr += '<tr>';
+
+            Object.keys(trialObj).forEach(function(pkey) {
+              var val = trialObj[pkey].toFixed(3);
+
+              if(pkey == 'epoch') {
+                val = trialObj[pkey] + 1
+              }
+              tableStr += '<td>' + val + '</td>';
+            })
+
+            tableStr += '</tr>';
+          })
+
+          tableStr += '</table>';
+          $("#metric-dialog").html(tableStr);
+          $('.ui-dialog-titlebar-close').html('X');
+          $('.ui-dialog-title').html('Epoch metrics - ' + evt.target.id);
+          $("#metric-dialog").dialog("open");
+          return false;
+        });
+      });
+    })
+  </script>
+</head>
+
+<body>
+  <div class='header'>
+    <div class="row">
+      <div class="col-2">
+        <h2>HypMonitor</h2>
+      </div>
+      <div class="col-8">&nbsp;</div>
+      <div class="col-2 img-col">
+        <img src='https://subtlemedical.com/wp-content/themes/subtlemedical/img/subtle-medical-logo-w.png'>
+      </div>
+    </div>
+  </div>
+  <h3 id='exp-heading'></h3>
+  <h5><a href='#' onclick="location.reload()">Refresh</a></h5>
+  <div class='sort-note'>Click on column name to sort</div>
+  <table class='table table-striped' id='exp-table' border=1>
+  </table>
+
+  <div id='metric-dialog'></div>
+  <div id='progress-dialog' style='display: none'></div>
+</body>
+</html>

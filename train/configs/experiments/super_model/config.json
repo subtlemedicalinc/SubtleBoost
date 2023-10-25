@@ -1,0 +1,124 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/slices",
+  "verbose": 1,
+  "gpu": 0,
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/all/train/checkpoints",
+  "slices_per_input": 7,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/all/data",
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/all/preprocess/plots",
+    "out_dir": "/home/srivathsa/projects/studies/gad/all/preprocess/slices",
+    "fsl_mask": true,
+    "pad_for_size": 512,
+    "resample_isotropic": 0.5,
+    "file_ext": "npy",
+    "tiantan": {
+      "override": true,
+      "transform_type": "rigid",
+      "normalize": true,
+      "normalize_fun": "mean",
+      "scale_matching": true,
+      "acq_plane": "SAG",
+      "blur_for_cs_streaks": true
+    },
+    "gen_siemens": {
+      "transform_type": "rigid",
+      "skip_hist_norm": true,
+      "normalize": true,
+      "normalize_fun": "mean",
+      "joint_normalize": true,
+      "fsl_mask_all_ims": false,
+      "use_fsl_reg": false,
+      "mask_threshold": 0.1,
+      "scale_matching": true,
+      "override": true
+    },
+    "stanford_ge": {
+      "transform_type": "rigid",
+      "normalize": true,
+      "normalize_fun": "mean",
+      "mask_threshold": 0.08,
+      "scale_matching": true,
+      "skip_hist_norm": true,
+      "fsl_mask_all_ims": true
+    }
+  },
+  "train": {
+    "max_data_sets": 100,
+    "validation_split": 0.2,
+    "learning_rate": 0.001,
+    "log_dir": "/home/srivathsa/projects/studies/gad/all/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/all/train/history",
+    "l1_lambda": 0.8,
+    "file_ext": "npy",
+    "ssim_lambda": 0.2,
+    "batch_size": 8,
+    "no_save_best_only": true,
+    "queue_size": 4,
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
+    "ablation_2d": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 1,
+      "checkpoint_name": "ablation_2d"
+    },
+    "ablation_7ch": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_7ch"
+    },
+    "ablation_mpr": {
+      "l1_lambda": 0.6,
+      "ssim_lambda": 0.4,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_mpr",
+      "train_mpr": true,
+      "resize": 512
+    },
+    "ablation_vgg": {
+      "l1_lambda": 0.25,
+      "ssim_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "slices_per_input": 7,
+      "checkpoint_name": "ablation_vgg",
+      "train_mpr": true,
+      "resize": 512
+    },
+    "enh_vgg": {
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "resize": 512,
+      "vgg_resize_shape": 256,
+      "train_mpr": true,
+      "checkpoint_name": "unified_enh_vgg",
+      "num_epochs": 200
+    }
+  },
+  "inference": {
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "all_mpr_5r_fsl",
+    "num_rotations": 5,
+    "checkpoint": "all_mpr_fsl.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/all/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/all/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/all/inference",
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "enh_vgg": {
+      "reshape_for_mpr_rotate": true,
+      "procs_per_gpu": 3,
+      "resample_isotropic": 0.5,
+      "num_rotations": 1,
+      "file_ext": "npy",
+      "checkpoint": "gen_enh_vgg_07232020.checkpoint",
+      "description": "unified_vgg_fix"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/breast/preprocess/slices",
+  "verbose": 1,
+  "gpu": 0,
+  "model_name": "unet2d",
+  "model_config": "base",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/breast/train/checkpoints",
+  "resize": 240,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/breast/data",
+    "transform_type": "affine",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/breast/preprocess/plots",
+    "discard_end_percent": 0,
+    "scale_matching": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/breast/preprocess/data",
+    "fsl_mask": false,
+    "fsl_mask_all_ims": false,
+    "override": true,
+    "blur_for_cs_streaks": false,
+    "skip_mask": false,
+    "mask_threshold": 0.1,
+    "acq_plane": "AX",
+    "file_ext": "npy",
+    "register_with_dcm_reference": true
+  }
+}

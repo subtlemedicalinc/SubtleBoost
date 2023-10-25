@@ -1,0 +1,79 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "upsample_mode": "default",
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "batch_norm": false,
+    "final_step": "conv",
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2],
+      "upsample_size": [2, 2],
+      "kernel_size": [3, 3]
+    },
+    "model_output": {
+      "activation": "linear",
+      "kernel_size": [1, 1]
+    },
+    "num_modalities": 4,
+    "num_branch_op_channels": 1,
+    "enable_uad_branch": false
+  },
+  "enc_dec": {
+    "final_step": "enc_dec"
+  },
+  "weighted_avg": {
+    "final_step": "weighted_avg"
+  },
+  "multi_channel": {
+    "final_step": "multi_channel"
+  },
+  "fusion_boost_mc": {
+    "final_step": "fusion_boost_mc"
+  },
+  "fusion_boost_sum": {
+    "final_step": "fusion_boost_mc"
+  },
+  "fusion_single_ch": {
+    "final_step": "fusion_single_ch",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 1
+  },
+  "fusion_t1pre_final_1ch": {
+    "final_step": "fusion_t1pre_final_1ch",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 1
+  },
+  "fusion_single_ch_wavg": {
+    "final_step": "fusion_single_ch",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 1
+  },
+  "fusion_t1pre_final_1ch_wavg": {
+    "final_step": "fusion_t1pre_final_1ch",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 1
+  },
+  "fusion_gt7ch_wavg": {
+    "final_step": "fusion_single_ch_gt7ch_wavg",
+    "enable_uad_branch": true,
+    "num_modalities": 5,
+    "num_branch_op_channels": 7
+  },
+  "fusion_gt7ch_wavg_n4": {
+    "final_step": "fusion_single_ch_gt7ch_wavg",
+    "enable_uad_branch": false,
+    "num_modalities": 4,
+    "num_branch_op_channels": 7
+  },
+  "simple_weighted": {
+    "final_step": "simple_weighted",
+    "num_modalities": 5
+  }
+}

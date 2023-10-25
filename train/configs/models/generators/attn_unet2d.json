@@ -1,0 +1,8 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "batch_norm": false
+  }
+}

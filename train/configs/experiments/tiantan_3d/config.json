@@ -1,0 +1,76 @@
+{
+  "data_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data",
+  "verbose": 1,
+  "gpu": 2,
+  "model_name": "unet3d",
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/checkpoints",
+  "slices_per_input": 7,
+  "preprocess": {
+    "dicom_data": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "transform_type": "rigid",
+    "normalize": true,
+    "normalize_fun": "mean",
+    "discard_start_percent": 0,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/plots",
+    "discard_end_percent": 0,
+    "scale_matching": true,
+    "out_dir": "/home/srivathsa/projects/studies/gad/tiantan/preprocess/data"
+  },
+  "train": {
+    "max_data_sets": 100,
+    "validation_split": 0.2,
+    "learning_rate": 0.001,
+    "checkpoint_name": "unet_pool5_mask",
+    "log_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/tb",
+    "num_epochs": 100,
+    "shuffle": true,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/tiantan/train/history",
+    "l1_lambda": 0.8,
+    "file_ext": "h5",
+    "batch_size": 8,
+    "ssim_lambda": 0.2,
+    "no_save_best_only": true,
+    "max_queue_size": 4,
+    "edsr": {
+      "checkpoint_name": "edsr3d",
+      "model_name": "edsr3d"
+    },
+    "vdsr": {
+      "checkpoint_name": "vdsr3d",
+      "model_name": "vdsr3d"
+    },
+    "wdsr": {
+      "checkpoint_name": "wdsr3d",
+      "model_name": "wdsr3d"
+    }
+  },
+  "inference": {
+    "description": "unet3d_pool5",
+    "num_rotations": 5,
+    "data_raw": "/home/srivathsa/projects/studies/gad/tiantan/data",
+    "stats_base": "/home/srivathsa/projects/studies/gad/tiantan/inference",
+    "zoom": 0,
+    "series_num": 1002,
+    "block_size": 128,
+    "block_strides": 128,
+    "unet": {
+      "description": "unet3d_block_inf",
+      "checkpoint": "unet_pool5_mask.checkpoint"
+    },
+    "edsr": {
+      "description": "edsr3d",
+      "checkpoint": "edsr3d.checkpoint",
+      "model_name": "edsr3d"
+    },
+    "vdsr": {
+      "description": "vdsr3d",
+      "model_name": "vdsr3d",
+      "checkpoint": "vdsr3d.checkpoint"
+    },
+    "wdsr": {
+      "description": "wdsr3d",
+      "checkpoint": "wdsr3d.checkpoint",
+      "model_name": "wdsr3d"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "bnorm_momentum": 0.8,
+    "num_convs": 5,
+    "all": {
+      "padding": "same",
+      "lrelu_alpha": 0.2,
+      "strides": 2,
+      "batch_norm": true,
+      "kernel_size": [3, 3]
+    },
+    "final_conv": {
+      "strides": 1
+    },
+    "conv_0_a": {
+      "batch_norm": false
+    },
+    "conv_*_a": {
+      "strides": 1
+    },
+    "conv_3_b": {
+      "strides": 1
+    },
+    "adv_output": {
+      "activation": "sigmoid"
+    }
+  }
+}

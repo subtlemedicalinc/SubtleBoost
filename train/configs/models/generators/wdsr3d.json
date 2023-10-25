@@ -1,0 +1,48 @@
+{
+  "base": {
+    "num_filters_first_conv": 16,
+    "num_residuals": 6,
+    "scale_factor": 0.1,
+    "scale": 2,
+    "res_expansion": 4,
+    "num_res_convs": 2,
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2, 2],
+      "kernel_size": [3, 3, 3]
+    },
+    "conv_*_1": {
+      "activation": "linear"
+    },
+    "conv_a": {
+      "strides": [2, 2, 2]
+    },
+    "conv_trans_a": {
+      "strides": [2, 2, 2]
+    },
+    "conv_b": {
+      "kernel_size": [5, 5, 5]
+    },
+    "conv_trans_b": {
+      "kernel_size": [5, 5, 5],
+      "strides": [2, 2, 2]
+    }
+  },
+  "wdsr_b": {
+    "res_expansion": 6,
+    "num_res_convs": 3,
+    "linear_factor": 0.8,
+    "conv_*_0": {
+      "kernel_size": [1, 1, 1]
+    },
+    "conv_*_1": {
+      "kernel_size": [1, 1, 1],
+      "activation": "linear"
+    },
+    "conv_*_2": {
+      "kernel_size": [3, 3, 3],
+      "activation": "linear"
+    }
+  }
+}

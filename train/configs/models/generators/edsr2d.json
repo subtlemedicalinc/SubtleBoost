@@ -1,0 +1,14 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "init_seed": 1337,
+    "num_residuals": 32,
+    "scale_factor": 0.1,
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "kernel_size": [3, 3],
+      "kernel_initializer": "he_normal"
+    }
+  }
+}

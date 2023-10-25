@@ -1,0 +1,39 @@
+#!/bin/bash
+
+function show_usage() {
+	echo "Usage: $0 [start|stop]"
+}
+
+function show_help() {
+	echo ""
+	echo "Hypmonitor server script"
+	echo ""
+}
+
+function start() {
+  echo "Starting HypMonitor..."
+  ts=$(date +%s)
+  access_log_dir=${HYPMONITOR_LOGDIR}
+  access_log_file=${access_log_dir}/access-${ts}.log
+  python ${HYPMONITOR_BASE}/hypmonitor/api.py --hypsearch_path ${HYPMONITOR_SRC_PATH} --port ${HYPMONITOR_PORT} >${access_log_file} 2>${access_log_file} &
+  echo "HypMonitor started. UI can be accessed from http://localhost:${HYPMONITOR_PORT}"
+}
+
+function stop() {
+  echo "Stopping HypMonitor..."
+  pid=$(ps -ef | awk '/[h]ypmonitor/{print $2}')
+  kill -9 ${pid}
+  echo "HypMonitor stopped..."
+}
+
+cmd=$1
+
+if [[ $cmd == 'start' ]]; then
+  start >&1
+elif [[ $cmd == 'stop' ]]; then
+  stop >&1
+elif [[ $cmd == 'restart' ]]; then
+  restart >&1
+else
+  echo "Invalid command - should one of start,stop,restart"
+fi

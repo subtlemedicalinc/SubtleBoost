@@ -1,0 +1,131 @@
+{
+  "verbose": 1,
+  "gpu": 0,
+  "checkpoint_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/checkpoints",
+  "slices_per_input": 7,
+  "file_ext": "h5",
+  "preprocess": {
+    "transform_type": "affine",
+    "skip_hist_norm": true,
+    "normalize": true,
+    "normalize_fun": "mean",
+    "joint_normalize": true,
+    "out_dir_plots": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/plots",
+    "discard_start_percent": 0,
+    "discard_end_percent": 0,
+    "dicom_data": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "fsl_mask": true,
+    "fsl_mask_all_ims": false,
+    "use_fsl_reg": false,
+    "mask_threshold": 0.1,
+    "scale_matching": true,
+    "pad_for_size": 512,
+    "out_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/data",
+    "batch1": {
+      "data_batch": "0,5"
+    },
+    "batch2": {
+      "data_batch": "5,10"
+    },
+    "batch3": {
+      "data_batch": "10,15"
+    },
+    "batch4": {
+      "data_batch": "15,21"
+    },
+    "batch5": {
+      "data_batch": "40,52"
+    },
+    "old_preproc": {
+      "skip_hist_norm": true,
+      "joint_normalize": true,
+      "scale_dicom_tags": true,
+      "global_scale_ref_im0": true,
+      "fsl_mask": false
+    }
+  },
+  "train": {
+    "log_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/tb",
+    "train_mpr": true,
+    "max_data_sets": 100,
+    "num_epochs": 100,
+    "shuffle": true,
+    "resize": 512,
+    "hist_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/train/history",
+    "l1_lambda": 0.8,
+    "file_ext": "h5",
+    "batch_size": 8,
+    "queue_size": 4,
+    "ssim_lambda": 0.2,
+    "validation_split": 0.2,
+    "no_save_best_only": true,
+    "learning_rate": 0.001,
+    "checkpoint_name": "mres_vgg_loss",
+    "data_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/preprocess/slices",
+    "vgg19_ckp": "/home/srivathsa/projects/vgg19_imagenet_from_tf.pth",
+    "simple_2d": {
+      "resize": 256,
+      "train_mpr": false,
+      "slices_per_input": 1,
+      "ssim_lambda": 0.6,
+      "l1_lambda": 0.4,
+      "perceptual_lambda": 0,
+      "enh_mask": false,
+      "checkpoint_name": "siemens_simple_2d"
+    },
+    "vgg_no_enh": {
+      "resize": 256,
+      "train_mpr": true,
+      "slices_per_input": 7,
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": false,
+      "checkpoint_name": "siemens_vgg_no_enh"
+    },
+    "enh_vgg": {
+      "file_ext": "npy",
+      "ssim_lambda": 0.25,
+      "l1_lambda": 0.25,
+      "perceptual_lambda": 0.5,
+      "enh_mask": true,
+      "resize": 256,
+      "slices_per_input": 7,
+      "train_mpr": true,
+      "num_epochs": 300,
+      "checkpoint_name": "siemens_enh_vgg"
+    }
+  },
+  "inference": {
+    "procs_per_gpu": 2,
+    "inference_mpr": true,
+    "learn_residual": false,
+    "description": "gen_siemens_halfmm",
+    "num_rotations": 5,
+    "checkpoint": "gen_siemens_halfmm.checkpoint",
+    "predict_dir": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "data_raw": "/home/srivathsa/projects/studies/gad/gen_siemens/data",
+    "reshape_for_mpr_rotate": false,
+    "stats_base": "/home/srivathsa/projects/studies/gad/gen_siemens/inference",
+    "inference_mpr_avg": "mean",
+    "zoom": 0,
+    "series_num": 1002,
+    "simple_2d": {
+      "resize": 256,
+      "resample_isotropic": 1,
+      "inference_mpr": true,
+      "slices_per_input": 7,
+      "num_rotations": 3,
+      "checkpoint": "siemens_vgg_no_enh.checkpoint",
+      "description": "siemens_simple_vgg"
+    },
+    "enh_vgg": {
+      "resize": 512,
+      "resample_isotropic": 1,
+      "num_rotations": 3,
+      "file_ext": "h5",
+      "checkpoint": "siemens_enh_vgg.checkpoint",
+      "description": "siemens_enh_vgg_r3"
+    }
+  }
+}

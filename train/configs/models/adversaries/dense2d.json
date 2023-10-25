@@ -1,0 +1,20 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "num_convs": 4,
+    "dense_filters": 1024,
+    "all": {
+      "padding": "same",
+      "lrelu_alpha": 0.2,
+      "strides": 2,
+      "batch_norm": true,
+      "kernel_size": [3, 3]
+    },
+    "final_dense": {
+      "activation": "leaky_relu"
+    },
+    "adv_output": {
+      "activation": "sigmoid"
+    }
+  }
+}

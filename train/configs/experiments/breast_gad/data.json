@@ -1,0 +1,10 @@
+{
+  "train": [
+    "TCIA_0006_L",
+    "TCIA_0030_L",
+    "TCIA_0007_R",
+    "TCIA_0024_R"
+  ],
+  "validation": [],
+  "test": []
+}

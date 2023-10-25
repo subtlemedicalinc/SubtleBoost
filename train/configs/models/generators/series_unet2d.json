@@ -1,0 +1,45 @@
+{
+  "base": {
+    "num_filters_first_conv": 32,
+    "upsample_mode": "default",
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "num_channel_output": 7,
+    "batch_norm": false,
+    "final_step": "conv",
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2],
+      "upsample_size": [2, 2],
+      "kernel_size": [3, 3]
+    },
+    "model_output": {
+      "activation": "linear",
+      "kernel_size": [1, 1]
+    },
+    "num_branch_op_channels": 7
+  },
+  "single": {
+    "num_filters_first_conv": 32,
+    "upsample_mode": "default",
+    "num_poolings": 3,
+    "num_conv_per_pooling": 3,
+    "num_channel_output": 7,
+    "batch_norm": false,
+    "final_step": "conv",
+    "all": {
+      "padding": "same",
+      "activation": "relu",
+      "pool_size": [2, 2],
+      "upsample_size": [2, 2],
+      "kernel_size": [3, 3]
+    },
+    "model_output": {
+      "activation": "linear",
+      "kernel_size": [1, 1]
+    },
+    "num_branch_op_channels": 7,
+    "output_channels": 1
+  }
+}
