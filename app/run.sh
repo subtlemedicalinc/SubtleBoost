@@ -78,6 +78,8 @@ if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
         exit $EXIT_CODE_MR
     fi
 
+    rm -rf $OUTPUT_DIR/model_ver.json
+
     if [ -d "$INPUT_DIR/input_boost" ]; then
         rm -rf $INPUT_DIR/input_boost
     fi
@@ -94,6 +96,7 @@ if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
         exit $EXIT_CODE_BOOST
     fi
 
+    rm -rf $OUTPUT_DIR/model_ver.json
 
     cd ./SubtleMR
     chmod +x ./infer/infer
@@ -104,7 +107,6 @@ if [ -d "$SCRIPTPATH/SubtleMR/" ]; then
         echo $EXIT_CODE_MR2
         exit $EXIT_CODE_MR2
     fi
-
 else
     chmod +x ./infer/infer
     ./infer/infer $INPUT_DIR $OUTPUT_DIR --config $CONFIG --license $LICENSE 2>&1

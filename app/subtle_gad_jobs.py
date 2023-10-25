@@ -709,6 +709,7 @@ class SubtleGADJobType(BaseJobType):
 
     #@processify
     def apply_brain_mask(self, ims: np.ndarray, param: dict, raw_input_images:np.ndarray=None):
+        self._logger.info("Performing skull stripping...")
 
         brain_mask = self._brain_mask(ims)
 
@@ -1214,6 +1215,7 @@ class SubtleGADJobType(BaseJobType):
         device = "cuda"#int(0)
         ## Temporarily using DL based method for extraction
         torch.manual_seed(0)
+        print('hd bet path', self.model_dir)
         hdbet = HDBetInMemory(mode = 'fast', model_path = self.model_dir, do_tta = False)
 
         mask_zero = (SubtleGADJobType._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], hdbet))

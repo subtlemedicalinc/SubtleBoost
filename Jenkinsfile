@@ -337,12 +337,10 @@ node {
         docker.image("subtle/post_test_python3.10:latest").inside("--user 0"){
         
             sh '''
-            python3.10 $WORKSPACE/subtle-app-utilities/subtle_python_packages/subtle/util/licensing.py 3000 SubtleMR 7989A8C0-A8E6-11E9-B934-238695B323F8 100 > $WORKSPACE/dist/licenseMR.json
-            cp -r $WORKSPACE/dist/licenseMR.json $WORKSPACE/dist/SubtleMR/
 
             python3.10 -m pip install PyYAML>=5.1
 
-            python3.10 $WORKSPACE/dist/update_config.py $WORKSPACE/dist/SubtleMR/
+            python3.10 $WORKSPACE/dist/update_config.py $WORKSPACE/
 
             '''
     }
