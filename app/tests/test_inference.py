@@ -1,5 +1,5 @@
 """
-Unit test for inference and postprocess in SubtleGad jobs
+Unit test for inference and postprocess in SubtleBoost jobs
 
 @author: Srivathsa Pasumarthi <srivathsa@subtlemedical.com>
 Copyright Subtle Medical, Inc. (https://subtlemedical.com)
@@ -19,7 +19,7 @@ import pydicom
 from subtle.dcmutil.series_io import dicomscan
 from subtle.util.inference_job_utils import GenericInferenceModel
 # pylint: disable=import-error
-import subtle_gad_jobs
+import subtle_boost_jobs
 import mock
 import logging
 import torch
@@ -36,7 +36,7 @@ class ProcessingTest(unittest.TestCase):
         Setup proc config and init params for job class
         """
         processing_config = {
-            "app_name": "SubtleGAD",
+            "app_name": "SubtleBoost",
             "app_id": 4000,
             "app_version": "unittest",
             "model_id":"20230921105336-unified",
@@ -49,15 +49,15 @@ class ProcessingTest(unittest.TestCase):
             "mpr_angle_end": 90,
             "reshape_for_mpr_rotate": True,
             "num_procs_per_gpu": 2,
-            "series_desc_prefix": "SubtleGAD:",
+            "series_desc_prefix": "",
             "series_desc_suffix": "",
             "series_number_offset": 100,
             "model_resolution": [0.5, 0.5, 0.5],
             "min_gpu_mem_mb": 9800.0,
             "allocate_available_gpus": True,
-            "model_type": "gad_process",
+            "model_type": "boost_process",
             "pipeline_preproc": {
-            'gad_process' : {
+            'boost_process' : {
                 'STEP1' : {'op': 'MASK'},
                 'STEP2' : {'op': 'SKULLSTRIP'},
                 'STEP3' : {'op' : 'REGISTER'},
@@ -66,7 +66,7 @@ class ProcessingTest(unittest.TestCase):
             
             },
             "pipeline_postproc": {
-                'gad_process' : {
+                'boost_process' : {
                     'STEP1' : {'op' : 'CLIP'},
                     'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
@@ -89,7 +89,7 @@ class ProcessingTest(unittest.TestCase):
             k: v for k, v in processing_config.items() if k in exec_config_keys
         }
 
-        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+        self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
 
@@ -198,9 +198,9 @@ class ProcessingTest(unittest.TestCase):
             self.job_obj._get_input_series()
     
     def test_config_pipeline(self):
-        error_config = {"model_type": "gad_process",
+        error_config = {"model_type": "boost_process",
         "pipeline_preproc": {
-            'gad_process' : {
+            'boost_process' : {
                 'STEP1' : {'op': 'MASK'},
                 'STEP2' : {'op': 'SKULLSTRIP'},
                 'STEP3' : {'op' : 'REGISTER'},
@@ -208,7 +208,7 @@ class ProcessingTest(unittest.TestCase):
             
             },
             "pipeline_postproc": {
-                'gad_process' : {
+                'boost_process' : {
                     'STEP1' : {'op' : 'CLIP'},
                     'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
@@ -234,15 +234,15 @@ class ProcessingTest(unittest.TestCase):
 
     
     def test_ge_preprocess(self):
-        processing_config = {"model_type": "gad_process",
-        "pipeline_preproc": {'gad_process' : {
+        processing_config = {"model_type": "boost_process",
+        "pipeline_preproc": {'boost_process' : {
                 'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
                 'STEP2' : {'op': 'SKULLSTRIP'},
                 'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "rigid", 'use_mask_reg': True}},
                 'STEP4' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': False, 'scale_ref_zero_img': False}}
             }},
             "pipeline_postproc": {
-                'gad_process' : {
+                'boost_process' : {
                     'STEP1' : {'op' : 'CLIP'},
                     'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
@@ -254,7 +254,7 @@ class ProcessingTest(unittest.TestCase):
             k: v for k, v in processing_config.items() if k in update_exec_config_keys
         }
 
-        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+        self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
 
@@ -271,15 +271,15 @@ class ProcessingTest(unittest.TestCase):
 
 
     def test_siemens_preprocess(self):
-        processing_config = {"model_type": "gad_process",
-        "pipeline_preproc": {'gad_process' : {
+        processing_config = {"model_type": "boost_process",
+        "pipeline_preproc": {'boost_process' : {
                 'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
                 'STEP2' : {'op': 'SKULLSTRIP'},
                 'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "rigid", 'use_mask_reg': False}},
                 'STEP4' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': True, 'scale_ref_zero_img': False}}
             }},
             "pipeline_postproc": {
-                'gad_process' : {
+                'boost_process' : {
                     'STEP1' : {'op' : 'CLIP'},
                     'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
@@ -291,7 +291,7 @@ class ProcessingTest(unittest.TestCase):
             k: v for k, v in processing_config.items() if k in update_exec_config_keys
         }
 
-        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+        self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
 
@@ -304,8 +304,8 @@ class ProcessingTest(unittest.TestCase):
         self.assertTrue(np.allclose(self.siemens_pixel_data[frame_seq_name],self.siemens_preprocess_data, rtol=100), 'Siemens Preprocessing is not matching with the expected output')
 
     def test_philips_preprocess(self):
-        processing_config = {"model_type": "gad_process",
-        "pipeline_preproc": {'gad_process' : {
+        processing_config = {"model_type": "boost_process",
+        "pipeline_preproc": {'boost_process' : {
                 'STEP1' : {'op': 'MASK', 'param': {'noise_mask_area': False, 'noise_mask_selem': False}},
                 'STEP2' : {'op': 'SKULLSTRIP'},
                 'STEP3' : {'op' : 'REGISTER', 'param': {'transform_type': "affine", 'use_mask_reg': False}},
@@ -313,7 +313,7 @@ class ProcessingTest(unittest.TestCase):
                 'STEP5' : {'op': 'SCALEGLOBAL', 'param': {'joint_normalize': False, 'scale_ref_zero_img': False}}
             }},
             "pipeline_postproc": {
-                'gad_process' : {
+                'boost_process' : {
                     'STEP1' : {'op' : 'CLIP'},
                     'STEP2' : {'op' : 'RESCALEGLOBAL'}
 
@@ -325,7 +325,7 @@ class ProcessingTest(unittest.TestCase):
             k: v for k, v in processing_config.items() if k in update_exec_config_keys
         }
 
-        self.job_obj = subtle_gad_jobs.SubtleGADJobType(
+        self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
 
@@ -347,7 +347,7 @@ class ProcessingTest(unittest.TestCase):
         img = np.ones((7, 256, 256))
         ref_img = np.ones((7, 240, 240))
 
-        crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
+        crop_img = subtle_boost_jobs.SubtleBoostJobType._center_crop(img, ref_img)
         self.assertTrue(crop_img.shape == ref_img.shape)
 
     def test_center_crop_odd(self):
@@ -358,7 +358,7 @@ class ProcessingTest(unittest.TestCase):
         img = np.ones((12, 255, 255))
         ref_img = np.ones((7, 240, 240))
 
-        crop_img = subtle_gad_jobs.SubtleGADJobType._center_crop(img, ref_img)
+        crop_img = subtle_boost_jobs.SubtleBoostJobType._center_crop(img, ref_img)
         self.assertTrue(crop_img.shape == ref_img.shape)
 
     def test_zero_pad(self):
@@ -369,7 +369,7 @@ class ProcessingTest(unittest.TestCase):
         img = np.ones((7, 232, 248))
         ref_img = np.ones((7, 256, 256))
 
-        pad_img = subtle_gad_jobs.SubtleGADJobType._zero_pad(img, ref_img)
+        pad_img = subtle_boost_jobs.SubtleBoostJobType._zero_pad(img, ref_img)
         self.assertTrue(pad_img.shape == ref_img.shape)
 
     def test_undo_reshape(self):
@@ -387,8 +387,8 @@ class ProcessingTest(unittest.TestCase):
 
         pixel_data = np.zeros((7, 512, 512, 1))
 
-        with mock.patch('subtle_gad_jobs.zoom_interp') as mock_zoom:
-            with mock.patch('subtle_gad_jobs.SubtleGADJobType._center_crop') as mock_crop:
+        with mock.patch('subtle_boost_jobs.zoom_interp') as mock_zoom:
+            with mock.patch('subtle_boost_jobs.SubtleBoostJobType._center_crop') as mock_crop:
                 mock_zoom_ret = np.zeros((7, 256, 256))
                 mock_zoom.return_value = mock_zoom_ret
 

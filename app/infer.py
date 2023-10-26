@@ -12,7 +12,7 @@ import hashlib
 import traceback
 from subtle.dcmutil.dicom_filter import DicomFilter
 from subtle.util.subtle_app import SubtleApp
-import subtle_gad_jobs
+import subtle_boost_jobs
 import tensorflow.compat.v1 as tf
 import pdb
 import json
@@ -26,12 +26,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 print('SCRIPT DIT', SCRIPT_DIR)
 
-class SubtleGADApp(SubtleApp):
-    """The SubtleGAD App class"""
+class SubtleBoostApp(SubtleApp):
+    """The SubtleBoost App class"""
 
     def __init__(self):
         manifest_info = os.path.join(SCRIPT_DIR, "manifest.json")
-        super().__init__(manifest_info, app_desc="The SubtleGAD App")
+        super().__init__(manifest_info, app_desc="The SubtleBoost App")
 
     def _validate_config(self) -> Tuple[int, str]:
         """
@@ -143,7 +143,7 @@ class SubtleGADApp(SubtleApp):
 
                 #pdb.set_trace()
                 # create the task's job object and execute it
-                job_obj = subtle_gad_jobs.SubtleGADJobType(
+                job_obj = subtle_boost_jobs.SubtleBoostJobType(
                     task=task,
                     model_dir=model_dir,
                     decrypt_key_hex=hashlib.sha256(
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     import sys
 
     
-    APP = SubtleGADApp()
+    APP = SubtleBoostApp()
     EXIT_CODE = APP.start()
 
     sys.exit(EXIT_CODE)

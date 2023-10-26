@@ -50,7 +50,7 @@ node {
     def APP_BUCKET = "com-subtlemedical-${ENV}-app-artifacts"
     def APP_DATA_BUCKET = "com-subtlemedical-dev-build-data"
     // TODO: determine which test data to use
-    def TEST_DATA_TIMESTAMP = "20231024" // 1.0.1 Gad branch
+    def TEST_DATA_TIMESTAMP = "20231024" // 1.0.1 Boost branch
     def TESTS_BUCKET = "com-subtlemedical-${ENV}-build-tests"
     def PUBLIC_BUCKET = "com-subtlemedical-${ENV}-public"
     def APP_ID = ""
@@ -185,7 +185,7 @@ node {
 
                 #need to include subtlesynth in some of the subtle app utilities pytest
 
-                include="build subtleapp subtlegad"
+                include="build subtleapp subtleboost"
                 exclude="not internal and not tf1only and not subtlesynth"
                 str_markers=""
 
@@ -346,7 +346,7 @@ node {
     }
     }
     
-    if(PACKAGE == "false"){
+    if(PACKAGE == "true"){
         stage("Platform Package and Deploy") {
             // Remove all folders to free up space
             // TODO: allocate more space to Jenkins instance to avoid "no space left on device" error - see ticket AU-161

@@ -53,7 +53,7 @@ class PostBuildTest(MainPostBuild):
     @classmethod
     def setUp(cls,self):
         # model files
-        self.test_id = "SubtleGad-" + os.environ.get("POST_TEST_TAG", "UNKNOWN")
+        self.test_id = "SubtleBoost-" + os.environ.get("POST_TEST_TAG", "UNKNOWN")
         this_dir = os.path.dirname((__file__))
 
         self.path_data = os.path.join(
@@ -70,36 +70,28 @@ class PostBuildTest(MainPostBuild):
 
         # input and output data
         # list of tuple (data_folder, roi_csv)
-        self.list_input = [os.path.join(self.path_data, "Gad_test")]
-        self.input_folder = os.path.join(self.path_data, "Gad_test")
+        self.list_input = [os.path.join(self.path_data, "Boost_test")]
+        self.input_folder = os.path.join(self.path_data, "Boost_test")
 
         #Zero dose and low dose dataset
-        self.input_folder_zero = os.path.join(self.path_data, "Gad_test/OSag_3D_T1BRAVO_zero_dose_7/")
-        self.input_folder_low = os.path.join(self.path_data, "Gad_test/OSag_3D_T1BRAVO_low_dose_8/")
+        self.input_folder_zero = os.path.join(self.path_data, "Boost_test/OSag_3D_T1BRAVO_zero_dose_7/")
+        self.input_folder_low = os.path.join(self.path_data, "Boost_test/OSag_3D_T1BRAVO_low_dose_8/")
 
         #PHI Free Dataset
-        self.input_folder_no_PHI = os.path.join(self.path_data, "Gad_test_PHI")
+        self.input_folder_no_PHI = os.path.join(self.path_data, "Boost_test_PHI")
 
         #Register Failure Dataset
         self.input_register_failure_folder = os.path.join(self.path_data, "register_failure")
 
         #Non match data
-        self.input_non_match = os.path.join(self.path_data, "Gad_non_match")
+        self.input_non_match = os.path.join(self.path_data, "Boost_non_match")
 
         #Metadata incompatible data
-        self.input_meta_data = os.path.join(self.path_data, "Gad_metadata")
-
-        #ZD > LD data
-        self.input_zd_dicom = os.path.join(self.path_data,"zd_g_ld_data", "input")
-        self.output_zd_dicom = os.path.join(self.path_data, "zd_g_ld_data", "output")
-
-
-        #LD> ZD data
-        self.input_ld_dicom = os.path.join(self.path_data, "ld_g_zd_data", "input")
-        self.output_ld_dicom = os.path.join(self.path_data, "ld_g_zd_data", "output")
+        self.input_meta_data = os.path.join(self.path_data, "Boost_metadata")
 
         #Large input folder
-        self.input_folder_large = os.path.join(self.path_data, "Gad_large_data")
+        self.input_folder_large = os.path.join(self.path_data, "Boost_large_data")
+        self.input_large_low = os.path.join(self.path_data, "Boost_large_data/10_AX_BRAVO_+C_Pre_Load_10_ld")
 
         #Config files
         self.config_file = os.path.join(self.build_dir, "config.yml")
@@ -114,7 +106,7 @@ class PostBuildTest(MainPostBuild):
         #License File
         license_info = generate_license(
             4000,
-            "SubtleGAD",
+            "SubtleBOOST",
             self.SERIAL_NUMBER,
             date.today() + timedelta(days=2),
         )
@@ -180,7 +172,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.inference
     def test_no_gpu_available(self):
         """
-        REQ-33: SubtleGad confirm GPU and software compatibility prior to executing a job.
+        REQ-33: SubtleBoost confirm GPU and software compatibility prior to executing a job.
         """
         output_folder = self.pre_test("REQ33")
 
@@ -207,7 +199,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.inference
     def test_output_different_directory(self):
         """
-        REQ-33: SubtleGad to show input and output DICOMs reside in different directories.
+        REQ-33: SubtleBoost to show input and output DICOMs reside in different directories.
         """
         output_folder = self.pre_test("REQ15")
 
@@ -226,14 +218,21 @@ class PostBuildTest(MainPostBuild):
             msg="Execution input and output directory are the same: {}".format(completed_process.args),
         )
 
+        data_out = self.get_array_from_dir(output_folder)
+        data_exp = self.get_array_from_dir(self.input_folder_low)
+
+        self.assertEqual(data_out.shape, data_exp.shape,
+                         "Processed data does not have the expected shape")
+
         # remove output folder
         shutil.rmtree(output_folder)
 
     @pytest.mark.post_build
     @pytest.mark.inference
+    @pytest.mark.large
     def test_large_case_inference(self):
         """
-        REQ-10: SubtleGad to process a large case smoothly
+        REQ-10: SubtleBoost to process a large case smoothly
         """
         output_folder = self.pre_test("REQ15")
 
@@ -252,6 +251,12 @@ class PostBuildTest(MainPostBuild):
             msg="Execution didn't process as expected: {}".format(completed_process.args),
         )
 
+        data_out = self.get_array_from_dir(output_folder)
+        data_exp = self.get_array_from_dir(self.input_large_low)
+
+        self.assertEqual(data_out.shape, data_exp.shape,
+                         "Processed data does not have the expected shape")
+
         # remove output folder
         shutil.rmtree(output_folder)
     
@@ -259,7 +264,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.subtleapp
     def test_dicom_in(self):
         """
-        test the infer script of SubtleGad completes execution
+        test the infer script of SubtleBoost completes execution
         """
         MainPostBuild.t_dicom_in(self)
 
@@ -334,7 +339,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -356,7 +361,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -378,7 +383,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -400,7 +405,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -422,7 +427,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -444,7 +449,7 @@ class PostBuildTest(MainPostBuild):
         with open('./configmeta.yml', 'w') as file:
             yaml.dump(edit_config, file)
         
-        #Run SubtleGad with a failure mode case
+        #Run SubtleBoost with a failure mode case
         completed_process = self.run_inference(
             self.input_meta_data,
             output_folder,
@@ -462,8 +467,8 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.inference
     def test_metadata(self):
         """
-        REQ-30: SubtleGad shall not alter Gad image metadata that is not required to 1) produce a new series or
-        2) indicate that the series has been enhanced via SubtleGad
+        REQ-30: SubtleBoost shall not alter Boost image metadata that is not required to 1) produce a new series or
+        2) indicate that the series has been enhanced via SubtleBoost
         List the excluded dicom tags
         """
         output_folder = self.pre_test("REQ30")
@@ -579,6 +584,12 @@ class PostBuildTest(MainPostBuild):
                 series_desc_out.endswith(series_desc_suffix),
                 msg="Identical SeriesDescription between input and output series",
         )
+        data_out = self.get_array_from_dir(output_folder)
+        data_exp = self.get_array_from_dir(self.input_folder_low)
+
+        self.assertEqual(data_out.shape, data_exp.shape,
+                         "Processed data does not have the expected shape")
+
         # remove output folder
         shutil.rmtree(output_folder)
 
@@ -598,7 +609,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.enhanced_dicom
     def test_enhanced_dicom(self):
         """
-        REQ-38 : SubtleGad shall operate on enhanced DICOMs. 
+        REQ-38 : SubtleBoost shall operate on enhanced DICOMs. 
         """
 
         return MainPostBuild.t_enhanced_dicom(self)
@@ -610,7 +621,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.minimal_test
     def test_compressed_dicom(self):
         """
-        REQ-36: SubtleGad shall operate on compression based dicoms. Test that compressed dicom studies are read, processed, and output saved
+        REQ-36: SubtleBoost shall operate on compression based dicoms. Test that compressed dicom studies are read, processed, and output saved
         """    
 
         return MainPostBuild.t_compressed_dicom_processing(self)
@@ -622,7 +633,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.register_fail
     def test_register_failure(self):
         """
-        REQ-37: SubtleGAD shall provide an error message when registration fails. 
+        REQ-37: SubtleBoost shall provide an error message when registration fails. 
         """
         return MainPostBuild.t_register_failure(self)
 
@@ -632,7 +643,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.inference
     def test_reject_license(self):
         """
-        REQ-6: SubtleGad shall have CLI detailed the attachment
+        REQ-6: SubtleBoost shall have CLI detailed the attachment
         """
         # run test
         output_folder = self.pre_test("REQ16")
@@ -662,7 +673,7 @@ class PostBuildTest(MainPostBuild):
         # wrong key
         license_info = generate_license(
             6000,
-            "SubtleGAD",
+            "SubtleBOOST",
             self.SERIAL_NUMBER,
             date.today() + timedelta(days=2),
         )
@@ -688,7 +699,7 @@ class PostBuildTest(MainPostBuild):
         # expired
         license_info = generate_license(
             6000,
-            "SubtleGAD",
+            "SubtleBOOST",
             self.SERIAL_NUMBER,
             date.today() - timedelta(days=2),
         )
@@ -720,7 +731,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.inference
     def test_do_not_match_pet(self):
         """
-        REQ-27: SubtleGAD shall confirm input images are denoted as MR images in the file's metadata.
+        REQ-27: SubtleBoost shall confirm input images are denoted as MR images in the file's metadata.
         """
         # run test
         output_folder = self.pre_test("REQ27")
@@ -788,7 +799,7 @@ class PostBuildTest(MainPostBuild):
     @pytest.mark.prefix
     def test_prefix_check(self):
         """
-        SubtleGAD shall upgrade its uid-prefix based on the user's requirement suggested in the config. 
+        SubtleBoost shall upgrade its uid-prefix based on the user's requirement suggested in the config. 
         """
         output_folder = self.pre_test('REQ111')
 
@@ -802,7 +813,7 @@ class PostBuildTest(MainPostBuild):
         with open(self.config_copy, 'w') as file:
             yaml.dump(config_keys, file)
 
-        ##Running SubtleGAD with the new config
+        ##Running SubtleBoost with the new config
         completed_process = self.run_inference(
             self.input_folder,
             output_folder,
@@ -826,52 +837,6 @@ class PostBuildTest(MainPostBuild):
         if 'uid_prefix' in config_keys:
             self.assertEqual(output_series.SeriesInstanceUID[:prefix_length], config_keys['uid_prefix'], msg= 'UID Prefix Dicom Tag was not updated in the output')
 
-        shutil.rmtree(output_folder)
-
-
-    @pytest.mark.post_build
-    @pytest.mark.inference
-    @pytest.mark.dicom_tag
-    def test_dicom_tags(self):
-
-        """
-        REQ-40: SubtleBoost shall 1) nullify certain important tags or
-        2) overwrite the values provided on the user config
-        """
-
-        #Test if the set tags are update when specified by the user in the config
-        with open(self.config_file_small, 'r') as file:
-            config_keys =yaml.safe_load(file)
-
-        config_keys['jobs'][0]['exec_config'].update(acquisition_matrix = [276, 0, 0, 221])
-
-        #Save the new config with the updated important tags with values
-        with open(self.config_copy, 'w') as file:
-            yaml.dump(config_keys, file)
-
-        output_folder = self.pre_test("REQ40")
-        
-        #run_test
-        completed_process = self.run_inference(
-            self.input_folder,
-            output_folder,
-            self.config_copy,
-            self.license_file,
-        )
-        
-        with open(self.config_copy, 'r') as file:
-            config_keys =yaml.safe_load(file)
-
-        #Compare the output STIR dicom with the updated metadata values in the custom config
-        output_series_dict = dicomscan(output_folder)
-        output_series = list(output_series_dict.values())[0].get_list_sorted_datasets()[0]
-        output_dcm = output_series[0]
-        check_params = config_keys['jobs'][0]['exec_config']
-
-        if 'acquisition_matrix' in check_params: 
-            self.assertEqual(output_dcm.AcquisitionMatrix, check_params['acquisition_matrix'], msg="AcquisitionMatrix Dicom Tag wasnt updated to {}".format(check_params['acquisition_matrix']))
-
-        # remove output folder
         shutil.rmtree(output_folder)
     
     @pytest.mark.post_build

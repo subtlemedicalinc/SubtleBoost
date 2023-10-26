@@ -1,12 +1,12 @@
 {
     "version": "1.0.0",
     "schema": "1.0.0",
-    "app_utilities_version": "feature/gad_segment",
+    "app_utilities_version": "feature/boost_segment",
     "description": "Subtle App Manifest File",
-    "appName": "SubtleGAD",
-    "appDescription": "SubtleGAD app to process MRI data with dose reduction models on the Subtle Platform",
-    "aeTitle": "SubtleGAD",
-    "appId": "4000",
+    "appName": "SubtleBOOST",
+    "appDescription": "SubtleBoost app to process MRI data with dose reduction models on the Subtle Platform",
+    "aeTitle": "SubtleBOOST",
+    "appId": "12000",
     "edge": {
         "GPU": {
             "enabled": true,

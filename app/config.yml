@@ -1,17 +1,15 @@
 version: "1.0.0"
 
-disable_openvino: True
 not_for_clinical_use: False
 enable_multiple_jobs: True
 all_reports: True
 warn_unmatched_series: False
-itk_process: True
 
 jobs:
-  - job_name: "gad_ge"
+  - job_name: "boost_ge"
     series_required:
-      - "zero_dose_ge"
-      - "low_dose_ge"
+      - "Bpre_ge"
+      - "Bpost_ge"
     slice_location_tolerance: "none"
     fov_tolerance: "none"
     iop_tolerance: "none"
@@ -34,7 +32,7 @@ jobs:
       num_rotations: 3
       inference_mpr: True
       reshape_for_mpr_rotate: True
-      model_type: 'gad_process'
+      model_type: 'boost_process'
       pipeline_preproc:
         STEP1:
           op: "MASK"
@@ -57,13 +55,11 @@ jobs:
       pipeline_postproc:
         STEP1:
           op: "RESCALEGLOBAL"
-        #STEP3:
-        #  op: "RESCALEDICOM"
 
-  - job_name: "gad_siemens"
+  - job_name: "boost_siemens"
     series_required:
-      - "zero_dose_siemens"
-      - "low_dose_siemens"
+      - "Bpre_siemens"
+      - "Bpost_siemens"
     slice_location_tolerance: 0.1
     fov_tolerance: "none"
     iop_tolerance: "none"
@@ -100,12 +96,10 @@ jobs:
       pipeline_postproc:
         STEP1:
           op: "RESCALEGLOBAL"
-      
-      #layer_params: {slices_per_input: 14 , num_channel_output: 1}
-  - job_name: "gad_philips"
+  - job_name: "boost_philips"
     series_required:
-      - "zero_dose_philips"
-      - "low_dose_philips"
+      - "Bpre_philips"
+      - "Bpost_philips"
     slice_location_tolerance: 0.1
     fov_tolerance: "none"
     iop_tolerance: "none"
@@ -146,7 +140,7 @@ jobs:
 
 
 series:
-  - name: "zero_dose_ge"
+  - name: "Bpre_ge"
     reg_match: "Bpre"
     reg_exclude: ""
     manufacturer_match: "ge"
@@ -154,7 +148,7 @@ series:
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "low_dose_ge"
+  - name: "Bpost_ge"
     reg_match: "Bpost"
     reg_exclude: ""
     manufacturer_match: "ge"
@@ -162,23 +156,23 @@ series:
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "zero_dose_philips"
+  - name: "Bpre_philips"
     reg_match: "Bpre"
-    reg_exclude: "zerodose_cs"
+    reg_exclude: ""
     manufacturer_match: "philips"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "low_dose_philips"
+  - name: "Bpost_philips"
     reg_match: "Bpost"
-    reg_exclude: "lowdose_cs"
+    reg_exclude: ""
     manufacturer_match: "philips"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "zero_dose_siemens"
+  - name: "Bpre_siemens"
     reg_match: "Bpre"
     reg_exclude: ""
     manufacturer_match: "siemens"
@@ -186,7 +180,7 @@ series:
     frame_range: [1, 1]
     modality: "MR"
     equidistance_tolerance: "none"
-  - name: "low_dose_siemens"
+  - name: "Bpost_siemens"
     reg_match: "Bpost"
     reg_exclude: ""
     manufacturer_match: "siemens"
