@@ -105,7 +105,7 @@ class PostBuildTest(MainPostBuild):
 
         #License File
         license_info = generate_license(
-            4000,
+            12000,
             "SubtleBOOST",
             self.SERIAL_NUMBER,
             date.today() + timedelta(days=2),
@@ -698,7 +698,7 @@ class PostBuildTest(MainPostBuild):
         
         # expired
         license_info = generate_license(
-            6000,
+            12000,
             "SubtleBOOST",
             self.SERIAL_NUMBER,
             date.today() - timedelta(days=2),
