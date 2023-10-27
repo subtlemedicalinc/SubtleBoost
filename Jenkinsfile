@@ -170,7 +170,7 @@ node {
 
         sh 'echo "tests..."'
 
-        docker.image("subtle/gad_ubuntu22.04_py310").inside("--runtime=nvidia  --user 0 --shm-size=16g"){
+        docker.image("subtle/gad_ubuntu22_py310_cud117").inside("--runtime=nvidia  --user 0 --shm-size=16g"){
 
             sh '''
                 cd $WORKSPACE/subtle-app-utilities/subtle_python_packages
