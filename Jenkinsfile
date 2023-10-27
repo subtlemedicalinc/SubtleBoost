@@ -236,7 +236,7 @@ node {
         // start building the app
 
         sh 'echo Building executable'
-        docker.image("subtle/gad_ubuntu22.04_py310").inside("--runtime=nvidia  --user 0"){
+        docker.image("subtle/gad_py310_torch20:2023-06-01").inside("--runtime=nvidia  --user 0"){
             sh '''
                 export PYTHON=python3.10
 
@@ -291,7 +291,7 @@ node {
 //         TODO: run tests in docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
 //         todo: to enable TRT post build test
 //         TODO: if running post build tests in 19.05 --> need to build app and install tensorflow with Cuda 11.1
-        docker.image("subtle/post_test_python3.10:latest").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
+        docker.image("subtle/post_ubuntu_python3.10").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
             
             sh '''
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$WORKSPACE/dist/infer/torch/lib/
