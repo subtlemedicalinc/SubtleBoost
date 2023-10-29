@@ -463,6 +463,11 @@ class SubtleBoostJobType(BaseJobType):
                 #'data': (pixel_data[:,:,:,:])
             }
 
+            if flag_largecase:
+                param_obj['num_workers'] = 1
+            else:
+                param_obj['num_workers'] = 4    
+
             #print('pob datas', pixel_data.shape)
 
             if param_obj['exec_config']['inference_mpr']:
@@ -1376,7 +1381,7 @@ class SubtleBoostJobType(BaseJobType):
                 
             #model._model_config['batch_size']
             #pdb.set_trace()
-            in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=4,prefetch_factor=8)
+            in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=params['num_workers'])
             num_batches = inf_loader.__len__()
             del params['data']
 
