@@ -1376,7 +1376,7 @@ class SubtleBoostJobType(BaseJobType):
                 
             #model._model_config['batch_size']
             #pdb.set_trace()
-            in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=4,prefetch_factor=8)
+            in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=2,prefetch_factor=8)
             num_batches = inf_loader.__len__()
             del params['data']
 
