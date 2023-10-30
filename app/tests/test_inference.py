@@ -257,13 +257,9 @@ class ProcessingTest(unittest.TestCase):
         self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
-
-        print(self.job_obj._proc_config.pipeline_preproc)
-
         self.ge_pixel_data = self.job_obj._preprocess()
 
         frame_seq_name = list(self.job_obj._raw_input.keys())[-1]
-        #np.save(os.path.join(self.path_data, "ge_preprocess.npy"), self.ge_pixel_data[frame_seq_name])
 
         self.ge_preprocess_data = np.load(os.path.join(self.path_data, "ge_preprocess.npy"))
 
@@ -328,8 +324,6 @@ class ProcessingTest(unittest.TestCase):
         self.job_obj = subtle_boost_jobs.SubtleBoostJobType(
             task=self.mock_task, model_dir=self.model_dir
         )
-
-        print(self.job_obj._proc_config.pipeline_preproc)
 
         self.philips_pixel_data = self.job_obj._preprocess()
 
@@ -411,7 +405,6 @@ class ProcessingTest(unittest.TestCase):
             input_dict = self.default_pixel_data
             self.job_obj.mask=[]
             output_array = self.job_obj._process(input_dict)['single_frame']
-            #np.save(os.path.join(self.path_data, "pred_output.npy"), output_array)
             self.expected_output_data = np.array(np.load(os.path.join(self.path_data, "pred_output.npy"), allow_pickle = True)).astype(np.float32)
 
             self.assertTrue(
