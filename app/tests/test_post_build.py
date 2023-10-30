@@ -612,7 +612,31 @@ class PostBuildTest(MainPostBuild):
         REQ-38 : SubtleBoost shall operate on enhanced DICOMs. 
         """
 
-        return MainPostBuild.t_enhanced_dicom(self)
+        #run test
+        output_folder = self.pre_test("REQ38")
+        completed_process = self.run_inference(
+            self.input_enhanced_dicom,
+            output_folder,
+            self.config_file_small,
+            self.license_file,
+        )
+        # check that execution passed
+        self.assertEqual(
+            completed_process.returncode,
+            0,
+            msg="Execution failed: {}".format(completed_process.args),
+        )
+        # get data
+        data_out = self.get_array_from_dir(output_folder)
+        data_exp = self.get_array_from_dir(self.expected_enhanced_dicom)
+
+        self.assertEqual(data_out.shape, data_exp.shape,
+                         "Processed data does not have the expected shape")
+
+        self.assertTrue(np.allclose(data_out, data_exp, atol=10000, rtol=10000),
+                        "Processed data is different than expected data")
+        # remove output folder
+        shutil.rmtree(output_folder)
 
     @pytest.mark.req36
     @pytest.mark.ver25
