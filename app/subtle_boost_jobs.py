@@ -17,7 +17,6 @@ import imp
 import sigpy as sp
 from scipy.ndimage.interpolation import rotate, zoom as zoom_interp
 from scipy.ndimage import gaussian_filter
-import GPUtil
 import tempfile
 import multiprocessing
 from multiprocessing import Pool, Queue
@@ -37,15 +36,12 @@ from subtle.procutil.registration_utils import register_im
 import SimpleITK as sitk
 import pydicom
 
-print(sitk.GetDefaultParameterMap('translation'))
-
 from subtle.procutil.segmentation_utils import HDBetInMemory
 
 import torch
 from torch.utils.data import Dataset, DataLoader
 
 import nibabel as nib
-#import tensorflow.compat.v1 as tf
 import tqdm
 import pdb
 import torch
@@ -338,12 +334,10 @@ class SubtleBoostJobType(BaseJobType):
         # apply preprocessing for each frame of the dictionary
         
         dict_input_data = {}
-        #print(self._proc_config.pipeline_preproc)
         for frame_seq_name, data_array in self._raw_input.items():
             # check the shape, if it is not square, pad to square
             # because the saved model need a fixed receptive field
             input_data= data_array.copy()  # better to be deep.copy()
-            #assert len(input_data.shape) == 3, "ERROR: data is not 3D"
 
             for i in range(1, len(self._proc_config.pipeline_preproc)+1):
                 # get the step info
@@ -381,21 +375,7 @@ class SubtleBoostJobType(BaseJobType):
 
         dict_pixel_data = self._preprocess_pixel_data()
 
-        #print(self._inputs.keys())
-
         return dict_pixel_data
-
-    def _get_available_gpus(self) -> str:
-        """
-        Return GPUs indices that have at least the minimum GPU memory required for processing
-
-        :return: Comma separated values of GPUs available based on the min_gpu_mem_mb configuration
-        """
-        stats = GPUtil.getGPUs()
-        return ','.join([
-            str(gpu.id) for gpu in stats
-            if (gpu.memoryTotal - gpu.memoryUsed) >= self._proc_config.min_gpu_mem_mb
-        ])
 
     # pylint: disable=arguments-differ
     # pylint: disable=too-many-locals
@@ -432,7 +412,6 @@ class SubtleBoostJobType(BaseJobType):
             
         self.model.update_config(self.task.job_definition.exec_config)
 
-        print("Model input compatibility check")
         (dict_pixel_data['single_frame'], self._undo_model_compat_reshape) = self._process_model_input_compatibility(dict_pixel_data['single_frame'])
         
         dict_pixel_data['single_frame'] = np.clip(dict_pixel_data['single_frame'], 0, dict_pixel_data['single_frame'].max())
@@ -448,9 +427,8 @@ class SubtleBoostJobType(BaseJobType):
 
             _, n_slices, height, width = self._resampling_size
             flag_largecase = False
-            if n_slices> 350:
+            if n_slices> 400:
                 flag_largecase = True
-            #print('prev pixel data shape', pixel_data.shape)
 
             param_obj = {
                 'model_dir': self.model_dir,
@@ -458,17 +436,13 @@ class SubtleBoostJobType(BaseJobType):
                 'exec_config': self.task.job_definition.exec_config,
                 'slices_per_input': self._proc_config.slices_per_input,
                 'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
-                #'inference_mpr': self._proc_config.inference_mpr,
                 'num_rotations': self.task.job_definition.exec_config['num_rotations'],
-                #'data': (pixel_data[:,:,:,:])
             }
 
             if flag_largecase:
                 param_obj['num_workers'] = 1
             else:
                 param_obj['num_workers'] = 4    
-
-            #print('pob datas', pixel_data.shape)
 
             if param_obj['exec_config']['inference_mpr']:
                 slice_axes = [0, 2, 3]
@@ -479,19 +453,11 @@ class SubtleBoostJobType(BaseJobType):
                 angles = np.linspace(0, 90, param_obj['exec_config']['num_rotations'], endpoint=False)
             else:
                 angles = [0]
-
-            #slice_axes = np.arange(1, 4) if not self._proc_config.skip_mpr else np.array([1])
             predictions = []
             data= {}
             
-            print('reshape for mpr rotate',self._proc_config.reshape_for_mpr_rotate)
-            # def rot_new(angle, data):
-            #     if angle> 0.0:
-            #         return rotate(data, angle, reshape = True, axes=(1,2))
-            #     else:
-            #         return data
             from collections import deque
-            def rot_new(pixel_data, new_angle, q):
+            def rotate_func(pixel_data, new_angle, q):
                 if q:
                     q.put(rotate(pixel_data, new_angle, (1,2),self._proc_config.reshape_for_mpr_rotate))
                 return rotate(pixel_data, new_angle, (1,2),self._proc_config.reshape_for_mpr_rotate)
@@ -509,13 +475,11 @@ class SubtleBoostJobType(BaseJobType):
             while next_data is not None:
                 if len(queue) > 0 and not flag_largecase:
                     new_angle = queue.popleft()
-                    p1 = multiprocessing.Process(target = rot_new, args=(pixel_data, new_angle, mpq))
+                    p1 = multiprocessing.Process(target = rotate_func, args=(pixel_data, new_angle, mpq))
                     p1.start()
 
                 angle = curr_angle
-            #for angle in (angles):#np.linspace(angle_start, angle_end, num=num_rotations, endpoint=False):
-                param_obj['size'] = [0] + list(next_data.shape[1:]) #data[angle]
-                print('param size',param_obj['size'] )
+                param_obj['size'] = [0] + list(next_data.shape[1:])
                 param_obj['all_axes'] = slice_axes
                 mpr_params = []
                 Y_pred = []
@@ -525,7 +489,7 @@ class SubtleBoostJobType(BaseJobType):
                     pobj['slice_axis'] = slice_axis
                     pobj['reshape'] = [pixel_data.shape[1], pixel_data.shape[2], pixel_data.shape[3]]
                     mpr_params = copy.deepcopy(pobj)
-                    pobj['data'] = copy.deepcopy(next_data) #data[angle]
+                    pobj['data'] = copy.deepcopy(next_data)
                     Y_pred = np.array(SubtleBoostJobType._process_mpr(pobj, self.model))
                     
                     if flag_largecase:
@@ -536,15 +500,12 @@ class SubtleBoostJobType(BaseJobType):
                         multiprocess_q[-1].start()
                 if queue and flag_largecase:
                     new_angle = queue.popleft()
-                    next_data = rot_new(pixel_data, new_angle, None)
+                    next_data = rotate_func(pixel_data, new_angle, None)
                     curr_angle = new_angle
                 elif p1 is not None and not flag_largecase:
-                    print('came in')
                     next_data = mpq.get()
-                    print('got new data', next_data.shape)
                     p1.join()
                     p1.close()
-                    #mpq = multiprocessing.Queue()
                     curr_angle = new_angle 
                     p1 = None
                 else:
@@ -554,7 +515,6 @@ class SubtleBoostJobType(BaseJobType):
             if not flag_largecase:
                 slice_results , Y_run_sum = mpqs[-1].get()
                 multiprocess_q[-1].join()
-                print('getting last step', slice_results.shape)
 
             slice_results = np.divide(
                         np.sum(slice_results, axis=(0, 1), keepdims=False),
@@ -565,12 +525,8 @@ class SubtleBoostJobType(BaseJobType):
             del next_data
             del Y_pred
             del Y_run_sum 
-            #del Y_masks_sum
-            
-            #print(output_array)
-            #print(output_array.shape)
+
             slice_results = sp.util.resize(slice_results[..., None], (n_slices,height,width,1))
-            print('outi', slice_results.shape)
             # undo zero padding and isotropic resampling
             slice_results = self._undo_reshape(slice_results)
             dict_output_array[frame_seq_name] = slice_results
@@ -629,12 +585,9 @@ class SubtleBoostJobType(BaseJobType):
 
         self._inputs = {'zd' : zero_dose_series, 'ld': low_dose_series}
 
-        #self._metadata_compatibility()
-
         #Check for one zero dose, low dose
         zero_dose_pixels = [list(zero_dose_series.get_pixel_data(rescale=False).values())][0][0]
-        low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())][0][0]
-        #print('low_dose_pixels', low_dose_pixels.shape)      
+        low_dose_pixels = [list(low_dose_series.get_pixel_data(rescale=False).values())][0][0]    
 
 
         self._input_datasets = (zero_dose_series.get_dict_sorted_datasets(),
@@ -647,28 +600,12 @@ class SubtleBoostJobType(BaseJobType):
 
 
         try:
-            print('getting from list itks')
             self._itk_data['zero_dose'] = zero_dose_series._list_itks[0]
             self._itk_data['low_dose'] = low_dose_series._list_itks[0]
-            print(self._itk_data['zero_dose'].GetSpacing())
         except:
             
             self._itk_data['zero_dose'] = sitk.GetImageFromArray(zero_dose_pixels)
             self._itk_data['low_dose'] = sitk.GetImageFromArray(low_dose_pixels)
-            #print(self._itk_data['zero_dose'])
-
-    # def _get_raw_pixel_data(self):
-    #     """
-    #     Read the input series and set raw pixel data as a numpy array
-    #     """
-    #     self._metadata_compatibility()
-
-    #     for frame_seq_name in self._input_datasets[0].keys():
-    #         zero_data_np = self._input_series[0].get_pixel_data(rescale=False)[frame_seq_name]
-    #         low_data_np = self._input_series[1].get_pixel_data(rescale=False)[frame_seq_name]
-
-    #         self._raw_input[frame_seq_name] = np.array([zero_data_np, low_data_np])
-    #         self._logger.info("the shape of array %s", self._raw_input[frame_seq_name].shape)
 
     def _mask_noise_process(self, images: np.ndarray, param: dict) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -704,10 +641,7 @@ class SubtleBoostJobType(BaseJobType):
 
         brain_mask = self._brain_mask(ims)
 
-        #ims_mask = np.copy(ims)
-
         if True:
-            #print('Applying computed brain masks on images. Mask shape -', brain_mask.shape)
             ims_mask = np.zeros_like(ims)
 
             if brain_mask.ndim == 4:
@@ -742,7 +676,6 @@ class SubtleBoostJobType(BaseJobType):
         Sets the scale coefficient attribute with the scaling information present in the DICOM
         header. If scaling information is not available, this method returns the default values.
         """
-        #print('does dicom have scaling info ', self._has_dicom_scaling_info())
         if not self._has_dicom_scaling_info():
             self._dicom_scale_coeff = [{
                 'rescale_slope': 1.0,
@@ -812,9 +745,6 @@ class SubtleBoostJobType(BaseJobType):
         #if self._proc_config.perform_dicom_scaling and self._has_dicom_scaling_info():
         self._logger.info("Performing intensity scaling using DICOM tags...")
 
-        #scaled_images = np.copy(images)
-        #raw_scaled_images = np.copy(raw_input_images)
-
         scale_fn = lambda idx: (
             lambda ims: SubtleBoostJobType._scale_slope_intercept(ims[idx],
             **self._dicom_scale_coeff[idx])
@@ -825,14 +755,6 @@ class SubtleBoostJobType(BaseJobType):
 
         raw_scaled_images[0] = scale_fn(0)(raw_scaled_images)
         raw_scaled_images[1] = scale_fn(1)(raw_scaled_images)
-
-        # self._proc_lambdas.append({
-        #     'name': 'dicom_scaling',
-        #     'fn': [scale_fn(0), scale_fn(1)]
-        # })
-
-        #self._undo_dicom_scale_fn = lambda img: SubtleBoostJobType._rescale_slope_intercept(img,
-        #**self._dicom_scale_coeff[0])
 
         return scaled_images, raw_scaled_images
 
@@ -845,7 +767,6 @@ class SubtleBoostJobType(BaseJobType):
         Obtains the pixel spacing information from DICOM header of input dataset and sets it to the
         local pixel spacing attribute
         """
-        #header_zero, header_low = self._get_dicom_header()
 
         x_zero, y_zero = self._inputs['zd'].pixelspacing
         z_zero = self._inputs['zd'].slicethickness
@@ -879,12 +800,6 @@ class SubtleBoostJobType(BaseJobType):
         :param images: Input zero dose and low dose images as numpy array
         :return: Registered images as numpy array
         """
-        #reg_images = np.copy(images)
-        #raw_reg_images = np.copy(raw_input_images)
-
-        # if not self._proc_config.perform_registration:
-        #     self._logger.info("Skipping image registration...")
-        #     return reg_images
 
         self._logger.info("Performing registration of low dose with respect to zero dose...")
         spars = sitk.GetDefaultParameterMap(param["transform_type"], param['reg_n_levels'])
@@ -913,13 +828,6 @@ class SubtleBoostJobType(BaseJobType):
         
         raw_reg_images[1] = apply_reg(raw_reg_images)
 
-
-
-        # self._proc_lambdas.append({
-        #     'name': 'register',
-        #     'fn': [idty_fn, apply_reg]
-        # })
-
         return reg_images, raw_reg_images
     
 
@@ -930,8 +838,6 @@ class SubtleBoostJobType(BaseJobType):
         :return: Histogram matched images as numpy array
         """
         self._logger.info("Matching histogram of low dose with respect to zero dose...")
-        #hist_images = np.copy(images)
-        #raw_hist_images = np.copy(raw_input_images)
 
         hist_images[1] = preprocess_single_series.match_histogram(
             img=hist_images[1], ref_img=hist_images[0]
@@ -941,11 +847,6 @@ class SubtleBoostJobType(BaseJobType):
         hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
 
         raw_hist_images[1] = hist_match_fn(raw_hist_images)
-
-        # self._proc_lambdas.append({
-        #     'name': 'histogram_matching',
-        #     'fn': [idty_fn, hist_match_fn]
-        # })
 
         return hist_images, raw_hist_images
 
@@ -958,8 +859,6 @@ class SubtleBoostJobType(BaseJobType):
         :param noise_mask: Binary noise mask computed in an earlier step of pre-processing
         :return: Scaled images as numpy array
         """
-        #scale_images = np.copy(images)
-        #raw_scale_images = np.copy(raw_input_images)
 
         self._logger.info("Performing intensity scaling...")
         num_slices = scale_images.shape[1]
@@ -970,16 +869,10 @@ class SubtleBoostJobType(BaseJobType):
         )
 
         # use pixels inside the noise mask of zero dose
-        #print('shape of noise mask ', noise_mask.shape)
-        #print('shape of scale images ', scale_images.shape)
-        
         ref_mask = self.mask[0, idx_center,:,:]
-        print(ref_mask.shape)
         context_img_zero = scale_images[0, idx_center, :,:][ref_mask != 0].ravel()
         context_img_low = scale_images[1, idx_center, :,:][ref_mask != 0].ravel()
-        print(context_img_zero.shape)
         context_img = np.stack((context_img_zero, context_img_low), axis=0)
-        print('context_img shape', context_img.shape)
 
         scale_factor = preprocess_single_series.get_intensity_scale(
             img=context_img[1], ref_img=context_img[0], levels=np.linspace(.5, 1.5, 30)
@@ -996,13 +889,6 @@ class SubtleBoostJobType(BaseJobType):
         raw_scale_images[0] = match_scales_fn(0)(raw_scale_images)
         raw_scale_images[1] = match_scales_fn(1)(raw_scale_images)
 
-        # self._proc_lambdas.append({
-        #     'name': 'match_scales',
-        #     'fn': [match_scales_fn(0), match_scales_fn(1)]
-        # })
-
-        #raw_global_image = np.copy(raw_scale_images)
-        #pdb.set_trace()
         context_img = context_img.transpose(1, 0)
         scale_images = scale_images.transpose(1, 0, 2, 3)
 
@@ -1038,12 +924,10 @@ class SubtleBoostJobType(BaseJobType):
 
         raw_scale_images = global_scale_fn(raw_scale_images)
         self.global_scale = self.global_scale[0,:][0][0][0]
-        #raw_scale_images[1] = global_scale_fn(1)(raw_scale_images)
 
         return scale_images.transpose(1, 0, 2, 3), raw_scale_images
 
     def _undo_global_scale_fn(self,img, param):
-        print('global scale', self.global_scale)
         return img*self.global_scale
 
     #@processify
@@ -1059,12 +943,10 @@ class SubtleBoostJobType(BaseJobType):
         undo_methods = []
         orig_shape = input_data.shape
         model_input = self.model._model_config['input_shape']#model._model_obj.inputs[0]
-        #print('shape',model._model_obj.inputs[0])
         model_shape = (int(model_input[1]), int(model_input[2]))
         input_shape = (input_data.shape[-2], input_data.shape[-1])
 
         pixel_spacing = np.round(np.array(self._pixel_spacing[0])[::-1], decimals=2)
-        print('pixel sp', pixel_spacing)
 
         if not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
             self._logger.info('Resampling to isotropic resolution...')
@@ -1072,15 +954,10 @@ class SubtleBoostJobType(BaseJobType):
             resize_factor = (pixel_spacing / self._proc_config.model_resolution)
             new_shape = np.round(input_data[0].shape * resize_factor)
             real_resize_factor = new_shape / input_data[0].shape
-            #print('resizing factor', resize_factor)
             from contextlib import closing
             with closing(multiprocessing.Pool(maxtasksperchild=1)) as pool:
                 results = pool.map(partial(zoom_interp, zoom =real_resize_factor), [input_data[0], input_data[1]])
-            #zero_resample = zoom_interp(input_data[0], real_resize_factor)
-            #low_resample = zoom_interp(input_data[1], real_resize_factor)
-
-            input_data = np.array(results)#np.array([zero_resample, low_resample])
-            #pool.terminate()
+            input_data = np.array(results)
             undo_factor = 1.0 / real_resize_factor
             undo_methods.append({
                 'fn': 'undo_resample',
@@ -1183,8 +1060,6 @@ class SubtleBoostJobType(BaseJobType):
         mask = None
         
         data_sitk = sitk.GetImageFromArray(img_npy)
-
-        #print('size mask npy',data_sitk.GetSize())
         
         data_sitk.CopyInformation(dcm_ref)
         
@@ -1192,25 +1067,17 @@ class SubtleBoostJobType(BaseJobType):
 
         return mask
 
-    #@staticmethod
-    #@processify
     def _brain_mask(self,ims_proc):
-        #ims_proc = np.copy(ims)
         mask = None
-        #self.hdbet = HDBetInMemory()
-
-        #print('Extracting brain regions using deepbrain...')
-        device = "cuda"#int(0)
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         ## Temporarily using DL based method for extraction
         torch.manual_seed(0)
-        print('hd bet path', self.model_dir)
         hdbet = HDBetInMemory(mode = 'fast', model_path = self.model_dir, do_tta = False)
 
         mask_zero = (SubtleBoostJobType._mask_npy(ims_proc[0,:, ...], self._itk_data['zero_dose'], hdbet))
 
         mask_low = (SubtleBoostJobType._mask_npy(ims_proc[1,:,  ...], self._itk_data['low_dose'], hdbet))
-        #mask_full = _mask_npy(ims[:, 2, ...], self._itk_data['full_dose'], device)
-
+        
         mask = np.array([mask_zero, mask_low]).transpose(0,1, 2, 3)
 
         return mask
@@ -1239,22 +1106,6 @@ class SubtleBoostJobType(BaseJobType):
 
             self._output_data[frame_seq_name] = input_data
 
-        # for frame_seq_name, pixel_data in dict_pixel_data.items():
-        #     # get 3D volume
-        #     if len(pixel_data.shape) == 4:
-        #         pixel_data = pixel_data[..., 0]
-
-        #     #pixel_data = np.clip(pixel_data, 0, pixel_data.max())
-        #     #pixel_data = self._undo_global_scale_fn(pixel_data)
-
-        #     if self._proc_config.perform_dicom_scaling:
-        #         pixel_data = self._undo_dicom_scale_fn(pixel_data)
-
-        #     self._logger.info("Pixel range after undoing global scale %s %s %s", pixel_data.min(),\
-        #     pixel_data.max(), pixel_data.mean())
-
-            # write post processing here
-            
 
     def _undo_reshape(self, pixel_data: np.ndarray) -> np.ndarray:
         """
@@ -1272,7 +1123,6 @@ class SubtleBoostJobType(BaseJobType):
 
             if method_dict['fn'] == 'undo_zero_pad':
                 self._logger.info('Applying method %s on pixel_data', method_dict['fn'] )
-                print(data.shape, method_dict['arg'].shape)
                 data = SubtleBoostJobType._center_crop(data, method_dict['arg'])
             elif method_dict['fn'] == 'undo_resample':
                 data = zoom_interp(data, method_dict['arg'])
@@ -1283,23 +1133,17 @@ class SubtleBoostJobType(BaseJobType):
     
     @staticmethod
     def _reorient_output(Y_pred, slice_results, Y_run_sum, params):
-        #Y_pred = Y_pred.reshape(-1, 1,params['reshape'][1], params['reshape'][2])
-        print(f'before slice axis {params["slice_axis"]} {Y_pred.shape}')
         if params['slice_axis'] == 0:
             pass
-            #Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
         elif params['slice_axis'] == 2:
             Y_pred = np.transpose(Y_pred, (1,0,2))#(1, 2, 0, 3))
         elif params['slice_axis'] == 3:
             Y_pred = np.transpose(Y_pred, (1,2,0))#(1, 2, 3, 0))
-        
-        print(f'transpose slice axis {params["slice_axis"]} {Y_pred.shape}')
 
         if params['num_rotations'] > 1 and params['angle'] > 0:
             Y_pred = rotate(
                 Y_pred, -params['angle'], reshape=False, axes=(0, 1)
             )
-        print(f'post rotation shape {Y_pred.shape}')
         Y_pred = sp.util.resize(Y_pred, (1,1, params['reshape'][0], params['reshape'][1], params['reshape'][2]))
 
         Y_pred = np.clip(Y_pred, 0, Y_pred.max())
@@ -1314,9 +1158,6 @@ class SubtleBoostJobType(BaseJobType):
 
     @staticmethod
     def pool_model(Y_pred,params,prevmpq,prevmultipq, mpq):
-        print('pooling')
-        print(params['size'],len(Y_pred), Y_pred.shape)
-        #Y_red = np.copy(np.array(Y_pred))
         slice_results, Y_run_sum = None, None
         if prevmpq is not None:
             val = prevmpq.get()
@@ -1328,7 +1169,6 @@ class SubtleBoostJobType(BaseJobType):
         mpq.put([slice_results, Y_run_sum])
 
     @staticmethod
-    #@processify
     def _process_mpr(params: Dict, model) -> np.ndarray:
         """
         Processes single instance of an MPR inference, with the given params dict
@@ -1344,34 +1184,17 @@ class SubtleBoostJobType(BaseJobType):
          - 'slice_axis': Slice axis of orientation for the input volume
          :return: Prediction from the specified model with the given MPR parameters
         """
-        # pylint: disable=global-variable-undefined
-        #global gpu_pool
-        #gpu_id = gpu_pool.get(block=True)
-
         try:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = "0"#gpu_id
 
-            #set_keras_memory(allow_growth=True)
-
             reshape = params['reshape_for_mpr_rotate']
 
-            #input_data = np.copy(params['data'])
             zero_padded = False
 
             model_input_shape = (
                 1, params['data'].shape[2], params['data'].shape[3], 2 * params['slices_per_input']
             )
-            
-            
-            # if params['angle'] > 0.0 and params['num_rotations'] > 1:
-            #     data_rot = rotate(input_data, params['angle'], reshape=params['reshape_for_mpr_rotate'], axes=(1, 2))
-            # else:
-            #     data_rot = np.copy(input_data)
-
-            #data_rot = np.copy(input_data)
-
-            print('data rot expected shape',params['data'].shape)
 
             inf_loader = InferenceLoader(
                 input_data=params['data'], slices_per_input=params['slices_per_input'],
@@ -1379,68 +1202,25 @@ class SubtleBoostJobType(BaseJobType):
                 data_order='stack',
                 resize=( params['reshape'][1], params['reshape'][2]))
                 
-            #model._model_config['batch_size']
-            #pdb.set_trace()
             in_load = DataLoader(inf_loader,batch_size = 8,shuffle=False,num_workers=params['num_workers'])
             num_batches = inf_loader.__len__()
             del params['data']
 
-            #print('num_batches',num_batches)
-            #X = inf_loader.__getitem__(0)
-            #print('inf_loader_shape', X.shape)
-
-            Y_pred = []#np.zeros((num_batches,params['reshape'][1], params['reshape'][2]))
-
-            # for idx in (np.arange(0, num_batches)):
-            #     X = inf_loader.__getitem__(idx)
-            #     #X = torch.from_numpy(X.astype(np.float32)).to('cuda')
-            #     #print(model._model_obj)
-            #     print('required input shape', X.shape)
-            #     #print('new input shape', X.shape)
-            #     Y = model._predict_from_torch_model(X)#.detach().cpu().numpy()#net(X).detach().cpu().numpy()
-            #     #print('required output shape', Y.shape)
-            #     Y_pred.append(Y[:])
+            Y_pred = []
             
             for i_batch, sample_batched in enumerate(in_load):
-                #print(i_batch, sample_batched.size())
                 sample_batched = sample_batched.to('cuda')
-                Y = model._model_obj(sample_batched).detach().cpu().numpy() #
-                #Y = Y.data.float().cpu().numpy()
-                #if len(Y.shape) > 3:
-                #Y = Y.reshape(-1, params['reshape'][1], params['reshape'][2])
+                Y = model._model_obj(sample_batched).detach().cpu().numpy() 
                 Y = np.squeeze(Y)
                 
                 Y_pred.extend(Y[:,:,:])
-                #Y_pred[i_batch*1:(i_batch+1)*1, :,:] = Y
-            print('required output shape', Y.shape)
-
-            #Y_pred = np.array(Y_pred).reshape(-1, input_data.shape[2], input_data.shape[3])
-            Y_pred = np.array(Y_pred)#.reshape((num_batches,1,params['reshape'][1], params['reshape'][2]))
-            print('Y_pred shape ', Y_pred.shape)
-            print('num slices', inf_loader.num_slices)
+            
+            Y_pred = np.array(Y_pred)
             Y_pred = Y_pred[:inf_loader.num_slices, ...] # get rid of slice excess
-            # if params['slice_axis'] == 0:
-            #     #pass
-            # #elif params['slice_axis'] == 2:
-            #     Y_pred = np.transpose(Y_pred, (1, 0, 2, 3))
-            # elif params['slice_axis'] == 2:
-            #     Y_pred = np.transpose(Y_pred, (1, 2, 0, 3))
-            # elif params['slice_axis'] == 3:
-            #     Y_pred = np.transpose(Y_pred, (1, 2, 3, 0))
-
-            # if params['num_rotations'] > 1 and params['angle'] > 0:
-            #     Y_pred = rotate(
-            #         Y_pred, -params['angle'], reshape=False, axes=(1, 2)
-            #     )
-
-            # Y_pred = sp.util.resize(Y_pred, (1,1, params['reshape'][0], params['reshape'][1], params['reshape'][2]))
-
             
             return Y_pred
         except Exception as e:
             raise Exception('Error in process_mpr', e)
-        #finally:
-        #    gpu_pool.put(gpu_id)
 
     def _update_common_metadata(self, ds: pydicom.Dataset, series_uid: str,
                                 nrow: int = None, ncol: int = None, uid_pool: set = None):
@@ -1518,7 +1298,6 @@ class SubtleBoostJobType(BaseJobType):
         os.makedirs(out_dicom_dir)
 
         i_instance = 1
-        #pdb.set_trace()
         for iframe, frame_seq_name in enumerate(dict_template_ds.keys()):
             # remove unused dimension(s)
             pixel_data = np.squeeze(dict_pixel_data[frame_seq_name])

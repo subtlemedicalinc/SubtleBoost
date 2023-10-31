@@ -332,6 +332,9 @@ node {
     stage("Download Denoising Module") {
         echo 'fetching denoising module...'
         def zip_file = "SubtleMR_2.4.0.subtleapp"
+        if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
+            APP_BUCKET = "com-subtlemedical-stage-app-artifacts"
+        }
         s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
         sh "sudo unzip -o ${zip_file} -d dist/"
         docker.image("subtle/post_test_python3.10:latest").inside("--user 0"){

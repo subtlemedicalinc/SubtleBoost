@@ -24,8 +24,6 @@ tf.disable_v2_behavior()
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print('SCRIPT DIT', SCRIPT_DIR)
-
 class SubtleBoostApp(SubtleApp):
     """The SubtleBoost App class"""
 
@@ -137,11 +135,11 @@ class SubtleBoostApp(SubtleApp):
                 self._save_model_ver(model_id)
 
                 model_dir = os.path.join(SCRIPT_DIR, "models", model_id)
-                #print('directory of model ', model_dir)
+
                 if not os.path.isdir(model_dir):
                     raise FileNotFoundError("Model Directory {} does not exist".format(model_dir))
 
-                #pdb.set_trace()
+
                 # create the task's job object and execute it
                 job_obj = subtle_boost_jobs.SubtleBoostJobType(
                     task=task,

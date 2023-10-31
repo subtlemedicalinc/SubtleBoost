@@ -63,11 +63,6 @@ class PostBuildTest(MainPostBuild):
 
         super(PostBuildTest, cls).setUp(self, self.path_data,self.build_dir)
 
-        print('path data', self.path_data)
-
-        #self.tmp_folder = tempfile.mkdtemp(dir=self.path_data)
-        #self.output_folder = os.path.join(self.tmp_folder, "output")
-
         # input and output data
         # list of tuple (data_folder, roi_csv)
         self.list_input = [os.path.join(self.path_data, "Boost_test")]
@@ -877,18 +872,10 @@ class PostBuildTest(MainPostBuild):
             config_keys =yaml.safe_load(file)
         
         config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({'STEP1' : {'op' : 'MASK'} , 'STEP2' : {'op' : 'SKULLSTRIP'}, 'STEP3' : {'op' : 'REGISTER'},'STEP4' : {'op' : 'HIST'}, 'STEP5' : {'op' : 'SCALETAG'}, 'STEP6' : {'op' : 'SCALEGLOBAL'}, 'STEP7' : {'op' : 'CLIP'} }))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
-        # config_keys['jobs'][0]['exec_config'].update(pipeline_preproc = ({}))
 
         config_keys['jobs'][0]['exec_config'].update(pipeline_postproc = ({'STEP1' : {'op' : 'RESCALEGLOBAL'} ,'STEP2' : {'op' : 'RESCALEDICOM'}}))
-        #config_keys['jobs'][0]['exec_config'].update(pipeline_postproc = ({}))
         
         
-        print(config_keys)
         with open(self.config_copy, 'w') as file:
             yaml.dump(config_keys, file)
 
