@@ -427,7 +427,7 @@ class SubtleBoostJobType(BaseJobType):
 
             _, n_slices, height, width = self._resampling_size
             flag_largecase = False
-            if n_slices> 300:
+            if n_slices> 400:
                 flag_largecase = True
 
             param_obj = {
