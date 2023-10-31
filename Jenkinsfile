@@ -334,8 +334,11 @@ node {
         def zip_file = "SubtleMR_2.4.0.subtleapp"
         if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
             APP_BUCKET = "com-subtlemedical-stage-app-artifacts"
+            AWS_REGION = "us-west-2"
         }
-        s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
+        withAWS(region: AWS_REGION){
+            s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
+        }
         sh "sudo unzip -o ${zip_file} -d dist/"
         docker.image("subtle/post_test_python3.10:latest").inside("--user 0"){
         
