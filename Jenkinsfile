@@ -68,29 +68,6 @@ node {
         }
     }
 
-    stage("Download Denoising Module") {
-        echo 'fetching denoising module...'
-        def zip_file = "SubtleMR_2.4.0.subtleapp"
-        if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
-            APP_BUCKET = "com-subtlemedical-stage-app-artifacts"
-            AWS_REGION = "us-west-2"
-        }
-        withAWS(region: AWS_REGION){
-            s3Download(file:"${zip_file}", bucket:APP_BUCKET, path:"packages/3000/${zip_file}", force:true)
-        }
-        sh "sudo unzip -o ${zip_file} -d ./"
-        docker.image("subtle/post_test_python3.10:latest").inside("--user 0"){
-        
-            sh '''
-
-            python3.10 -m pip install PyYAML>=5.1
-
-            python3.10 $WORKSPACE/app/update_config.py $WORKSPACE/
-
-            '''
-    }
-    }
-
     stage("Download Models") {
         sh 'echo downloading models from ${APP_BUCKET}'
         sh "rm -rf default_models"
