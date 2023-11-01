@@ -11,24 +11,24 @@
         "GPU": {
             "enabled": true,
             "vcpus": 8,
-            "memory": 32000
+            "memory": 27000
         },
         "CPU": {
             "enabled": true,
             "vcpus": 8,
-            "memory": 32000
+            "memory": 27000
         }
     },
     "cloud": {
         "GPU": {
             "enabled": true,
             "vcpus": 8,
-            "memory": 32000
+            "memory": 27000
         },
         "CPU": {
             "enabled": true,
             "vcpus": 8,
-            "memory": 32000
+            "memory": 27000
         }
     },
     "defaultModels": [
