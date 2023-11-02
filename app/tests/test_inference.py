@@ -424,6 +424,38 @@ class ProcessingTest(unittest.TestCase):
         self.job_obj.global_scale = 774
         self.job_obj._postprocess_data(dict_pixel_data)
 
+    @pytest.mark.inference
+    def test_save_data(self):
+        '''
+        Saving the processed data, and test the expected number of dicoms saved the postprocessed output slices
+        '''
+
+        dest_folder = "/tmp/subtle/SubtleBOOST_test_save_data/"
+
+        if os.path.isdir(dest_folder):
+            shutil.rmtree(dest_folder)
+
+
+        self.job_obj._save_data(self._output_data, self.job_obj._input_datasets[1], dest_folder)
+
+
+        self.assertTrue(
+            os.path.isdir(dest_folder), "Destination folder not created"
+        )
+        # one series should be saved
+        self.assertEqual(
+            len(os.listdir(dest_folder)), 1, "Error when saving series"
+        )
+
+        l_files = []
+        for _, _, files in os.walk(dest_folder):
+            l_files += files
+
+        self.assertEqual(len(l_files), self.nslices_zero,
+                         "Wrong number of files saved", )
+
+        shutil.rmtree(dest_folder)
+
 
 if __name__ == "__main__":
     unittest.main()
