@@ -436,7 +436,7 @@ class ProcessingTest(unittest.TestCase):
             shutil.rmtree(dest_folder)
 
 
-        self.job_obj._save_data(self._output_data, self.job_obj._input_datasets[1], dest_folder)
+        self.job_obj._save_data(self.job_obj._output_data, self.job_obj._input_datasets[1], dest_folder)
 
 
         self.assertTrue(
