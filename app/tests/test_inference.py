@@ -442,7 +442,7 @@ class ProcessingTest(unittest.TestCase):
         if os.path.isdir(dest_folder):
             shutil.rmtree(dest_folder)
 
-        self.job_obj._save_data(self.dict_pixel_data, self.job_obj._input_datasets[1],
+        self.job_obj._save_data(dict_pixel_data, self.job_obj._input_datasets[1],
                                 dest_folder)
         
         self.assertTrue(
