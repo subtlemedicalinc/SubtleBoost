@@ -435,12 +435,14 @@ class ProcessingTest(unittest.TestCase):
 
         # set the list of input datasets = used as dicom reference
         self.expected_output_data = np.array(np.load(os.path.join(self.path_data, "pred_output.npy"), allow_pickle = True)).astype(np.float32)
+        dict_pixel_data = {}
+        dict_pixel_data['single_frame'] = self.expected_output_data
         dest_folder = "/tmp/subtle/SubtleBoost_test_save_data/"
         
         if os.path.isdir(dest_folder):
             shutil.rmtree(dest_folder)
 
-        self.job_obj._save_data(self.expected_output_data, self.job_obj._input_datasets[1],
+        self.job_obj._save_data(self.dict_pixel_data, self.job_obj._input_datasets[1],
                                 dest_folder)
         
         self.assertTrue(
