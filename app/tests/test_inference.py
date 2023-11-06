@@ -434,7 +434,7 @@ class ProcessingTest(unittest.TestCase):
         '''
 
         # set the list of input datasets = used as dicom reference
-        
+        self.expected_output_data = np.array(np.load(os.path.join(self.path_data, "pred_output.npy"), allow_pickle = True)).astype(np.float32)
         dest_folder = "/tmp/subtle/SubtleBoost_test_save_data/"
         
         if os.path.isdir(dest_folder):
