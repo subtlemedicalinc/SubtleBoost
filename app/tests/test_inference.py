@@ -434,7 +434,6 @@ class ProcessingTest(unittest.TestCase):
         '''
 
         # set the list of input datasets = used as dicom reference
-        self.set_list_datasets()
         
         dest_folder = "/tmp/subtle/SubtleBoost_test_save_data/"
         
