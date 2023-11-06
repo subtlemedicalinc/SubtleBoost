@@ -981,8 +981,11 @@ class SubtleBoostJobType(BaseJobType):
                 'fn': 'undo_zero_pad',
                 'arg': np.zeros(curr_shape[1:])
             })
-
             self._logger.info('Input data shape after zero padding %s', input_data.shape)
+        if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
+            input_data = sp.util.resize(input_data, (input_data.shape[0], input_data.shape[1],model_shape[0], model_shape[1]))
+
+            self._logger.info('Input data shape after resizing %s', input_data.shape)
 
         return input_data, undo_methods
 
