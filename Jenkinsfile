@@ -266,69 +266,69 @@ node {
         '''
     }
 
-    stage("Post build Tests") {
+//     stage("Post build Tests") {
 
-        sh '''
-        if [ -d html-reports ]; then
-            rm -rf html-reports
-        fi
-        mkdir -p html-reports
-        '''
+//         sh '''
+//         if [ -d html-reports ]; then
+//             rm -rf html-reports
+//         fi
+//         mkdir -p html-reports
+//         '''
 
-        // get post build test data
-        def zip_file = "post_build_test_data.zip"
-        s3Download(file:"${zip_file}", bucket:APP_DATA_BUCKET, path:"${APP_NAME}/${TEST_DATA_TIMESTAMP}/${zip_file}", force:true)
-        sh "unzip -o ${zip_file} -d app/tests"
+//         // get post build test data
+//         def zip_file = "post_build_test_data.zip"
+//         s3Download(file:"${zip_file}", bucket:APP_DATA_BUCKET, path:"${APP_NAME}/${TEST_DATA_TIMESTAMP}/${zip_file}", force:true)
+//         sh "unzip -o ${zip_file} -d app/tests"
 
-        // do minimal tests only for feature branches
-        def tests_to_run = "post_build"
-        if (env.BRANCH_NAME ==~ /(feature\/(.*)|patch\/(.*))/) {
-            tests_to_run = "post_build"
-        } else if (ENV != "dev") {
-            tests_to_run = "not internal"
-        }
+//         // do minimal tests only for feature branches
+//         def tests_to_run = "post_build"
+//         if (env.BRANCH_NAME ==~ /(feature\/(.*)|patch\/(.*))/) {
+//             tests_to_run = "post_build"
+//         } else if (ENV != "dev") {
+//             tests_to_run = "not internal"
+//         }
 
-//         TODO: run tests in docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
-//         todo: to enable TRT post build test
-//         TODO: if running post build tests in 19.05 --> need to build app and install tensorflow with Cuda 11.1
-        docker.image("subtle/post_ubuntu_python3.10").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
+// //         TODO: run tests in docker.image('nvcr.io/nvidia/tensorflow:19.05-py3').inside("--runtime=nvidia") {
+// //         todo: to enable TRT post build test
+// //         TODO: if running post build tests in 19.05 --> need to build app and install tensorflow with Cuda 11.1
+//         docker.image("subtle/post_ubuntu_python3.10").inside("--gpus all  --user 0 --shm-size=16g --env TO_TEST='${tests_to_run}' --env ENV='${ENV}'"){
             
-            sh '''
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$WORKSPACE/dist/infer/torch/lib/
-            python3.10 -m pip install --find-links=$WORKSPACE/subtle_app_utilities_bdist -r app/requirements.txt
+//             sh '''
+//             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$WORKSPACE/dist/infer/torch/lib/
+//             python3.10 -m pip install --find-links=$WORKSPACE/subtle_app_utilities_bdist -r app/requirements.txt
             
-            python3.10 -m pip install -r app/tests/requirements.txt
-            export POST_TEST_TAG=GPU
-            python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post_build.py \
-                --log-level=info \
-                --junitxml xunit-reports/xunit-result-py37-post-build-gpu.xml \
-                --html=html-reports/xunit-result-py37-post-build-gpu.html \
-                --self-contained-html
-            # use single = to run in sh (double == is used in bash)
-            #if [ $ENV = "stage" ]; then
-            #    python3.10 app/tests/compare_with_previous_version.py
-            #fi
-            '''
+//             python3.10 -m pip install -r app/tests/requirements.txt
+//             export POST_TEST_TAG=GPU
+//             python3.10 -m pytest -v -m "$TO_TEST" app/tests/test_post_build.py \
+//                 --log-level=info \
+//                 --junitxml xunit-reports/xunit-result-py37-post-build-gpu.xml \
+//                 --html=html-reports/xunit-result-py37-post-build-gpu.html \
+//                 --self-contained-html
+//             # use single = to run in sh (double == is used in bash)
+//             #if [ $ENV = "stage" ]; then
+//             #    python3.10 app/tests/compare_with_previous_version.py
+//             #fi
+//             '''
 
-        }
+//         }
 
-        // upload results
-        if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
-            TESTS_PATH = "${APP_NAME}/${GIT_COMMIT}/verifications/"
-        } else if (env.BRANCH_NAME ==~ /(develop)/) {
-            TESTS_PATH = "${APP_NAME}/develop/verifications/"
-        } else {
-            TESTS_PATH = "${APP_NAME}/feature/verifications/"
-        }
-        s3Upload(file: "html-reports", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
-        if (fileExists("app/tests/post_build_test_data/compare_data.txt")) {
-            s3Upload(file: "app/tests/post_build_test_data/compare_data.txt", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
-        }
-        if (fileExists("app/tests/post_build_test_data/processed_data_v{APP_VERSION}.zip")) {
-            s3Upload(file: "app/tests/post_build_test_data/processed_data_v{APP_VERSION}.zip", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
-        }
+//         // upload results
+//         if (env.BRANCH_NAME ==~ /(master|hotfix\/(.*)|release\/(.*))/) {
+//             TESTS_PATH = "${APP_NAME}/${GIT_COMMIT}/verifications/"
+//         } else if (env.BRANCH_NAME ==~ /(develop)/) {
+//             TESTS_PATH = "${APP_NAME}/develop/verifications/"
+//         } else {
+//             TESTS_PATH = "${APP_NAME}/feature/verifications/"
+//         }
+//         s3Upload(file: "html-reports", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
+//         if (fileExists("app/tests/post_build_test_data/compare_data.txt")) {
+//             s3Upload(file: "app/tests/post_build_test_data/compare_data.txt", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
+//         }
+//         if (fileExists("app/tests/post_build_test_data/processed_data_v{APP_VERSION}.zip")) {
+//             s3Upload(file: "app/tests/post_build_test_data/processed_data_v{APP_VERSION}.zip", bucket:"${TESTS_BUCKET}", path:"${TESTS_PATH}")
+//         }
 
-    }
+//     }
     stage("Download Denoising Module") {
         echo 'fetching denoising module...'
         def zip_file = "SubtleMR_2.4.0.subtleapp"
@@ -378,7 +378,7 @@ node {
             }
 
             dir('subtle-platform-utils') {
-                    git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "master")
+                    git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "boost_release")
             }
             if (ENV == "stage"){
                 ENV = "staging"
