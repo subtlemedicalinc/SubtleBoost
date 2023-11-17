@@ -137,7 +137,23 @@ jobs:
       pipeline_postproc:
         STEP1:
           op: "RESCALEGLOBAL"
-
+  - job_name: "boost_hitachi"
+    series_required:
+      - "Bpre_hitachi"
+      - "Bpost_hitachi"
+    slice_location_tolerance: 0.1
+    fov_tolerance: "none"
+    iop_tolerance: "none"
+    exec_config:
+      series_number_offset: 100
+      series_desc_prefix: ""
+      series_desc_suffix: " BOOST"
+      model_id: "202310021105336-unified"
+      slices_per_input: 7
+      num_channel_output: 1
+      num_rotations: 3
+      inference_mpr: True
+      reshape_for_mpr_rotate: True
 
 series:
   - name: "Bpre_ge"
@@ -184,6 +200,22 @@ series:
     reg_match: "Bpost"
     reg_exclude: ""
     manufacturer_match: "siemens"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "Bpost_hitachi"
+    reg_match: "Bpost"
+    reg_exclude: ""
+    manufacturer_match: "hitachi"
+    slice_range: [1, 400]
+    frame_range: [1, 1]
+    modality: "MR"
+    equidistance_tolerance: "none"
+  - name: "Bpre_hitachi"
+    reg_match: "Bpre"
+    reg_exclude: ""
+    manufacturer_match: "hitachi"
     slice_range: [1, 400]
     frame_range: [1, 1]
     modality: "MR"
