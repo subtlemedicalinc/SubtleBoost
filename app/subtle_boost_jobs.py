@@ -1362,8 +1362,8 @@ class SubtleBoostJobType(BaseJobType):
                 # save new pixel data to dataset
                 else:
                     slice_pixel_data = pixel_data[i_slice]
-                    slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
                     slice_pixel_data[slice_pixel_data < 0] = 0
+                    slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
                     self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
 
                     out_dataset.PixelData = slice_pixel_data.tostring()
