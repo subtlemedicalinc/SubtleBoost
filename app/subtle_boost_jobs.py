@@ -362,8 +362,8 @@ class SubtleBoostJobType(BaseJobType):
         print('acquisition type', self._inputs['zd'].acquisition_type)
         #pdb.set_trace()
         if self._inputs['zd'].acquisition_type == '2D':
-            print(self._proc_config)
-            print(self._proc_config.inference_mpr)
+            #print(self._proc_config)
+            #print(self._proc_config.inference_mpr)
             self._proc_config = self._proc_config._replace(inference_mpr = False)
             self._proc_config = self._proc_config._replace(reshape_for_mpr_rotate = False)
             self._proc_config = self._proc_config._replace(num_rotations = 1)
@@ -372,7 +372,7 @@ class SubtleBoostJobType(BaseJobType):
                                                   'STEP2' : {'op' : 'REGISTER', 'param' : {"transform_type": "affine", "use_mask_reg": False, "reg_n_levels": 4}}, 
                                                   'STEP3':  {'op' : 'HIST', 'param' : {}},
                                                   'STEP4' : {'op' : 'SCALEGLOBAL', 'param' : {"joint_normalize" : True, "num_scale_context_slices" : 3, "scale_ref_zero_img": False}}})
-            print(self._proc_config)
+            #print(self._proc_config)
     
     def _preprocess(self) -> Dict:
         """
