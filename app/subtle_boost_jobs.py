@@ -451,6 +451,7 @@ class SubtleBoostJobType(BaseJobType):
                 'model_dir': self.model_dir,
                 'decrypt_key_hex': self.decrypt_key_hex,
                 'exec_config': self.task.job_definition.exec_config,
+                'inference_mpr': self._proc_config.inference_mpr,
                 'slices_per_input': self._proc_config.slices_per_input,
                 'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
                 'num_rotations': self.task.job_definition.exec_config['num_rotations'],
@@ -463,13 +464,13 @@ class SubtleBoostJobType(BaseJobType):
                 param_obj['num_workers'] = 4    
                 param_obj['batch_size'] = 1
 
-            if param_obj['exec_config']['inference_mpr']:
+            if param_obj['inference_mpr']:
                 slice_axes = [0, 2, 3]
             else:
                 slice_axes = [0]
 
-            if param_obj['exec_config']['inference_mpr'] and param_obj['exec_config']['num_rotations'] > 1:
-                angles = np.linspace(0, 90, param_obj['exec_config']['num_rotations'], endpoint=False)
+            if param_obj['inference_mpr'] and param_obj['num_rotations'] > 1:
+                angles = np.linspace(0, 90, param_obj['num_rotations'], endpoint=False)
             else:
                 angles = [0]
             predictions = []
@@ -484,7 +485,9 @@ class SubtleBoostJobType(BaseJobType):
 
             next_data = np.copy(pixel_data)
             curr_angle = 0
-            queue = deque([30,60])
+            queue = []
+            if len(angles) > 1:
+                queue = deque(angles[1:])
             p1 = None
             mpq = multiprocessing.Queue()
             slice_results = None
@@ -494,6 +497,7 @@ class SubtleBoostJobType(BaseJobType):
             while next_data is not None:
                 if len(queue) > 0 and not flag_largecase:
                     new_angle = queue.popleft()
+                    print('Reaching rotation')
                     p1 = multiprocessing.Process(target = rotate_func, args=(pixel_data, new_angle, mpq))
                     p1.start()
 
@@ -509,29 +513,35 @@ class SubtleBoostJobType(BaseJobType):
                     pobj['reshape'] = [pixel_data.shape[1], pixel_data.shape[2], pixel_data.shape[3]]
                     mpr_params = copy.deepcopy(pobj)
                     pobj['data'] = copy.deepcopy(next_data)
+                    print('Reaching process mpr', slice_axis)
                     Y_pred = np.array(SubtleBoostJobType._process_mpr(pobj, self.model))
                     
                     if flag_largecase:
                         slice_results, Y_run_sum=  SubtleBoostJobType._reorient_output(Y_pred,slice_results, Y_run_sum, mpr_params)
                     else:
+                        print('reaching multiprocess')
                         mpqs.append(multiprocessing.Queue())
                         multiprocess_q.append(multiprocessing.Process(target = SubtleBoostJobType.pool_model, args=(Y_pred,mpr_params,mpqs[-2],multiprocess_q[-1], mpqs[-1])))
                         multiprocess_q[-1].start()
                 if queue and flag_largecase:
+                    print('first if')
                     new_angle = queue.popleft()
                     next_data = rotate_func(pixel_data, new_angle, None)
                     curr_angle = new_angle
                 elif p1 is not None and not flag_largecase:
+                    print('second if')
                     next_data = mpq.get()
                     p1.join()
                     p1.close()
                     curr_angle = new_angle 
                     p1 = None
                 else:
+                    print('else state')
                     next_data = None 
                     curr_angle = None
 
             if not flag_largecase:
+                print('get val')
                 slice_results , Y_run_sum = mpqs[-1].get()
                 multiprocess_q[-1].join()
 
