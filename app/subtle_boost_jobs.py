@@ -545,11 +545,16 @@ class SubtleBoostJobType(BaseJobType):
                 slice_results , Y_run_sum = mpqs[-1].get()
                 multiprocess_q[-1].join()
 
-            slice_results = np.divide(
+            if num_rotations > 1:
+                slice_results = np.divide(
                         np.sum(slice_results, axis=(0, 1), keepdims=False),
                         Y_run_sum,
                         where=Y_run_sum > 0
                     )
+            else:
+                print('else squeeze')
+                slice_results = slice_results.squeeze()
+
             del self.model 
             del next_data
             del Y_pred
@@ -896,6 +901,8 @@ class SubtleBoostJobType(BaseJobType):
             num_slices//2 - param["num_scale_context_slices"]//2,
             num_slices//2 + param["num_scale_context_slices"]//2
         )
+
+        idx_center = np.clip(idx_center, 0, num_slices-1)
 
         # use pixels inside the noise mask of zero dose
         ref_mask = self.mask[0, idx_center,:,:]
