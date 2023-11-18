@@ -455,6 +455,7 @@ class SubtleBoostJobType(BaseJobType):
 
             if flag_largecase:
                 param_obj['num_workers'] = 1
+                param_obj['batch_size'] = 1
             else:
                 param_obj['num_workers'] = 4    
                 param_obj['batch_size'] = 1
