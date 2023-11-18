@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "schema": "1.0.0",
-    "app_utilities_version": "develop",
+    "app_utilities_version": "feature/boost_segment",
     "description": "Subtle App Manifest File",
     "appName": "SubtleBOOST",
     "appDescription": "SubtleBoost app to process MRI data with dose reduction models on the Subtle Platform",
