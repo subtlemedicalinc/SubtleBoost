@@ -359,11 +359,7 @@ class SubtleBoostJobType(BaseJobType):
         return dict_input_data
     
     def _check_acquisition_type(self):
-        print('acquisition type', self._inputs['zd'].acquisition_type)
-        #pdb.set_trace()
         if self._inputs['zd'].acquisition_type == '2D':
-            #print(self._proc_config)
-            #print(self._proc_config.inference_mpr)
             self._proc_config = self._proc_config._replace(inference_mpr = False)
             self._proc_config = self._proc_config._replace(reshape_for_mpr_rotate = False)
             self._proc_config = self._proc_config._replace(num_rotations = 1)
@@ -372,7 +368,6 @@ class SubtleBoostJobType(BaseJobType):
                                                   'STEP2' : {'op' : 'REGISTER', 'param' : {"transform_type": "affine", "use_mask_reg": False, "reg_n_levels": 4}}, 
                                                   'STEP3':  {'op' : 'HIST', 'param' : {}},
                                                   'STEP4' : {'op' : 'SCALEGLOBAL', 'param' : {"joint_normalize" : True, "num_scale_context_slices" : 3, "scale_ref_zero_img": False}}})
-            #print(self._proc_config)
     
     def _preprocess(self) -> Dict:
         """
@@ -497,7 +492,6 @@ class SubtleBoostJobType(BaseJobType):
             while next_data is not None:
                 if len(queue) > 0 and not flag_largecase:
                     new_angle = queue.popleft()
-                    print('Reaching rotation')
                     p1 = multiprocessing.Process(target = rotate_func, args=(pixel_data, new_angle, mpq))
                     p1.start()
 
@@ -513,35 +507,29 @@ class SubtleBoostJobType(BaseJobType):
                     pobj['reshape'] = [pixel_data.shape[1], pixel_data.shape[2], pixel_data.shape[3]]
                     mpr_params = copy.deepcopy(pobj)
                     pobj['data'] = copy.deepcopy(next_data)
-                    print('Reaching process mpr', slice_axis)
                     Y_pred = np.array(SubtleBoostJobType._process_mpr(pobj, self.model))
                     
                     if flag_largecase:
                         slice_results, Y_run_sum=  SubtleBoostJobType._reorient_output(Y_pred,slice_results, Y_run_sum, mpr_params)
                     else:
-                        print('reaching multiprocess')
                         mpqs.append(multiprocessing.Queue())
                         multiprocess_q.append(multiprocessing.Process(target = SubtleBoostJobType.pool_model, args=(Y_pred,mpr_params,mpqs[-2],multiprocess_q[-1], mpqs[-1])))
                         multiprocess_q[-1].start()
                 if queue and flag_largecase:
-                    print('first if')
                     new_angle = queue.popleft()
                     next_data = rotate_func(pixel_data, new_angle, None)
                     curr_angle = new_angle
                 elif p1 is not None and not flag_largecase:
-                    print('second if')
                     next_data = mpq.get()
                     p1.join()
                     p1.close()
                     curr_angle = new_angle 
                     p1 = None
                 else:
-                    print('else state')
                     next_data = None 
                     curr_angle = None
 
             if not flag_largecase:
-                print('get val')
                 slice_results , Y_run_sum = mpqs[-1].get()
                 multiprocess_q[-1].join()
 
@@ -552,7 +540,6 @@ class SubtleBoostJobType(BaseJobType):
                         where=Y_run_sum > 0
                     )
             else:
-                print('else squeeze')
                 slice_results = slice_results.squeeze()
 
             del self.model 
@@ -1341,6 +1328,15 @@ class SubtleBoostJobType(BaseJobType):
             # remove unused dimension(s)
             pixel_data = np.squeeze(dict_pixel_data[frame_seq_name])
 
+            bits_stored = self._inputs["ld"].bits_stored
+            if self._inputs["ld"].pixel_representation != 0:
+                t_min, t_max = (-(1 << (bits_stored - 1)), (1 << (bits_stored - 1)) - 1)
+            else:
+                t_min, t_max = 0, (1 << bits_stored) - 1
+
+            pixel_data[pixel_data < t_min] = t_min
+            pixel_data[pixel_data > t_max] = t_max
+
             # edit pixel data if not_for_clinical_use
             if self._proc_config.not_for_clinical_use:
                 pixel_data = pydicom_utils.imprint_volume(pixel_data)
@@ -1379,8 +1375,9 @@ class SubtleBoostJobType(BaseJobType):
                 # save new pixel data to dataset
                 else:
                     slice_pixel_data = pixel_data[i_slice]
-                    slice_pixel_data[slice_pixel_data < 0] = 0
+                    #slice_pixel_data[slice_pixel_data < 0] = 0
                     slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
+                    np.save(f'/home/SubtleBoost/Hitachi_0001/modelout{i_slice}.npy', slice_pixel_data)
                     self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
 
                     out_dataset.PixelData = slice_pixel_data.tostring()
