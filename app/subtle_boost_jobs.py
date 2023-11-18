@@ -1377,7 +1377,6 @@ class SubtleBoostJobType(BaseJobType):
                     slice_pixel_data = pixel_data[i_slice]
                     #slice_pixel_data[slice_pixel_data < 0] = 0
                     slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
-                    np.save(f'/home/SubtleBoost/Hitachi_0001/modelout{i_slice}.npy', slice_pixel_data)
                     self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
 
                     out_dataset.PixelData = slice_pixel_data.tostring()
