@@ -363,7 +363,7 @@ class SubtleBoostJobType(BaseJobType):
             self._proc_config = self._proc_config._replace(inference_mpr = False)
             self._proc_config = self._proc_config._replace(reshape_for_mpr_rotate = False)
             self._proc_config = self._proc_config._replace(num_rotations = 1)
-            self._proc_config = self._proc_config._replace(model_resolution = None)
+            #self._proc_config = self._proc_config._replace(model_resolution = None)
             self._proc_config = self._proc_config._replace(pipeline_preproc = {'STEP1' : {'op': 'MASK', 'param' : {"noise_mask_area" : False, "noise_mask_threshold": 0.1, "noise_mask_selem" : False}}, 
                                                   'STEP2' : {'op' : 'REGISTER', 'param' : {"transform_type": "affine", "use_mask_reg": False, "reg_n_levels": 4}}, 
                                                   'STEP3':  {'op' : 'HIST', 'param' : {}},
