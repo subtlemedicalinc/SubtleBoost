@@ -345,7 +345,6 @@ class SubtleBoostJobType(BaseJobType):
                 # get the function to run for this step
                 func = self.function_keys[step_dict['op']][0]
                 # run function
-                raw_input_images = np.copy(input_data)
                 if step_dict['op'] == "MASK":
                     input_data, mask = func(input_data, step_dict['param'])
                     raw_input_images = np.copy(input_data)
