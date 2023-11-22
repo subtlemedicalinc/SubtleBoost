@@ -378,7 +378,7 @@ node {
             }
 
             dir('subtle-platform-utils') {
-                    git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "master")
+                    git(url: 'https://github.com/subtlemedicalinc/subtle-platform-utils.git', credentialsId: GIT_CREDS_ID, branch: "boost")
             }
             if (ENV == "stage"){
                 ENV = "staging"

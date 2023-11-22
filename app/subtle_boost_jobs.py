@@ -345,7 +345,6 @@ class SubtleBoostJobType(BaseJobType):
                 # get the function to run for this step
                 func = self.function_keys[step_dict['op']][0]
                 # run function
-                
                 if step_dict['op'] == "MASK":
                     input_data, mask = func(input_data, step_dict['param'])
                     raw_input_images = np.copy(input_data)
@@ -357,7 +356,17 @@ class SubtleBoostJobType(BaseJobType):
             dict_input_data[frame_seq_name] = raw_input_images
 
         return dict_input_data
-
+    
+    def _check_acquisition_type(self):
+        if self._inputs['zd'].acquisition_type == '2D':
+            self._proc_config = self._proc_config._replace(inference_mpr = False)
+            self._proc_config = self._proc_config._replace(reshape_for_mpr_rotate = False)
+            self._proc_config = self._proc_config._replace(num_rotations = 1)
+            #self._proc_config = self._proc_config._replace(model_resolution = None)
+            self._proc_config = self._proc_config._replace(pipeline_preproc = {'STEP1' : {'op': 'MASK', 'param' : {"noise_mask_area" : False, "noise_mask_threshold": 0.1, "noise_mask_selem" : False}}, 
+                                                  'STEP2' : {'op' : 'REGISTER', 'param' : {"transform_type": "affine", "use_mask_reg": False, "reg_n_levels": 4}}, 
+                                                  'STEP3':  {'op' : 'HIST', 'param' : {}},
+                                                  'STEP4' : {'op' : 'SCALEGLOBAL', 'param' : {"joint_normalize" : True, "num_scale_context_slices" : 3, "scale_ref_zero_img": False}}})
     
     def _preprocess(self) -> Dict:
         """
@@ -368,6 +377,8 @@ class SubtleBoostJobType(BaseJobType):
 
         """
         self._get_input_series()
+
+        self._check_acquisition_type()
 
         self._get_pixel_spacing()
 
@@ -434,23 +445,27 @@ class SubtleBoostJobType(BaseJobType):
                 'model_dir': self.model_dir,
                 'decrypt_key_hex': self.decrypt_key_hex,
                 'exec_config': self.task.job_definition.exec_config,
+                'inference_mpr': self._proc_config.inference_mpr,
                 'slices_per_input': self._proc_config.slices_per_input,
                 'reshape_for_mpr_rotate': self._proc_config.reshape_for_mpr_rotate,
                 'num_rotations': self.task.job_definition.exec_config['num_rotations'],
+                'batch_size' : 8
             }
 
             if flag_largecase:
                 param_obj['num_workers'] = 1
+                param_obj['batch_size'] = 1
             else:
                 param_obj['num_workers'] = 4    
+                param_obj['batch_size'] = 1
 
-            if param_obj['exec_config']['inference_mpr']:
+            if param_obj['inference_mpr']:
                 slice_axes = [0, 2, 3]
             else:
                 slice_axes = [0]
 
-            if param_obj['exec_config']['inference_mpr'] and param_obj['exec_config']['num_rotations'] > 1:
-                angles = np.linspace(0, 90, param_obj['exec_config']['num_rotations'], endpoint=False)
+            if param_obj['inference_mpr'] and param_obj['num_rotations'] > 1:
+                angles = np.linspace(0, 90, param_obj['num_rotations'], endpoint=False)
             else:
                 angles = [0]
             predictions = []
@@ -465,7 +480,9 @@ class SubtleBoostJobType(BaseJobType):
 
             next_data = np.copy(pixel_data)
             curr_angle = 0
-            queue = deque([30,60])
+            queue = []
+            if len(angles) > 1:
+                queue = deque(angles[1:])
             p1 = None
             mpq = multiprocessing.Queue()
             slice_results = None
@@ -516,11 +533,15 @@ class SubtleBoostJobType(BaseJobType):
                 slice_results , Y_run_sum = mpqs[-1].get()
                 multiprocess_q[-1].join()
 
-            slice_results = np.divide(
+            if num_rotations > 1:
+                slice_results = np.divide(
                         np.sum(slice_results, axis=(0, 1), keepdims=False),
                         Y_run_sum,
                         where=Y_run_sum > 0
                     )
+            else:
+                slice_results = slice_results.squeeze()
+
             del self.model 
             del next_data
             del Y_pred
@@ -692,12 +713,14 @@ class SubtleBoostJobType(BaseJobType):
             self._dicom_scale_coeff = [{
                 'rescale_slope': float(header_zero.RescaleSlope),
                 'rescale_intercept': float(header_zero.RescaleIntercept),
-                'scale_slope': float(header_zero[0x2005, 0x100e].value)
+                'scale_slope': float(pydicom_utils.get_tag(header_zero, [0x2005, 0x100e], 1))
             }, {
                 'rescale_slope': float(header_low.RescaleSlope),
                 'rescale_intercept': float(header_low.RescaleIntercept),
-                'scale_slope': float(header_low[0x2005, 0x100e].value)
+                'scale_slope': float(pydicom_utils.get_tag(header_low, [0x2005, 0x100e], 1))#float(header_low[0x2005, 0x100e].value)
             }]
+
+            print(self._dicom_scale_coeff)
 
     @staticmethod
     def _scale_slope_intercept(
@@ -840,11 +863,11 @@ class SubtleBoostJobType(BaseJobType):
         self._logger.info("Matching histogram of low dose with respect to zero dose...")
 
         hist_images[1] = preprocess_single_series.match_histogram(
-            img=hist_images[1], ref_img=hist_images[0]
+            img=hist_images[1], ref_img=hist_images[0], levels = 1024, points=50, mean_intensity=True
         )
 
         idty_fn = lambda ims: ims[0]
-        hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0])
+        hist_match_fn = lambda ims: preprocess_single_series.match_histogram(ims[1], ims[0], levels = 1024, points=50, mean_intensity=True )
 
         raw_hist_images[1] = hist_match_fn(raw_hist_images)
 
@@ -867,6 +890,8 @@ class SubtleBoostJobType(BaseJobType):
             num_slices//2 - param["num_scale_context_slices"]//2,
             num_slices//2 + param["num_scale_context_slices"]//2
         )
+
+        idx_center = np.clip(idx_center, 0, num_slices-1)
 
         # use pixels inside the noise mask of zero dose
         ref_mask = self.mask[0, idx_center,:,:]
@@ -948,7 +973,7 @@ class SubtleBoostJobType(BaseJobType):
 
         pixel_spacing = np.round(np.array(self._pixel_spacing[0])[::-1], decimals=2)
 
-        if not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
+        if self._proc_config.model_resolution and not np.array_equal(pixel_spacing, self._proc_config.model_resolution):
             self._logger.info('Resampling to isotropic resolution...')
 
             resize_factor = (pixel_spacing / self._proc_config.model_resolution)
@@ -981,8 +1006,11 @@ class SubtleBoostJobType(BaseJobType):
                 'fn': 'undo_zero_pad',
                 'arg': np.zeros(curr_shape[1:])
             })
-
             self._logger.info('Input data shape after zero padding %s', input_data.shape)
+        if (input_data.shape[-2], input_data.shape[-1]) != model_shape:
+            input_data = sp.util.resize(input_data, (input_data.shape[0], input_data.shape[1],model_shape[0], model_shape[1]))
+
+            self._logger.info('Input data shape after resizing %s', input_data.shape)
 
         return input_data, undo_methods
 
@@ -1198,7 +1226,7 @@ class SubtleBoostJobType(BaseJobType):
 
             inf_loader = InferenceLoader(
                 input_data=params['data'], slices_per_input=params['slices_per_input'],
-                batch_size=1, slice_axis=params['slice_axis'],
+                batch_size=params['batch_size'], slice_axis=params['slice_axis'],
                 data_order='stack',
                 resize=( params['reshape'][1], params['reshape'][2]))
                 
@@ -1212,7 +1240,7 @@ class SubtleBoostJobType(BaseJobType):
                 sample_batched = sample_batched.to('cuda')
                 Y = model._model_obj(sample_batched).detach().cpu().numpy() 
                 Y = np.squeeze(Y)
-                
+                Y = np.reshape(Y, (-1, params['reshape'][1], params['reshape'][2]))
                 Y_pred.extend(Y[:,:,:])
             
             Y_pred = np.array(Y_pred)
@@ -1302,6 +1330,15 @@ class SubtleBoostJobType(BaseJobType):
             # remove unused dimension(s)
             pixel_data = np.squeeze(dict_pixel_data[frame_seq_name])
 
+            bits_stored = self._inputs["ld"].bits_stored
+            if self._inputs["ld"].pixel_representation != 0:
+                t_min, t_max = (-(1 << (bits_stored - 1)), (1 << (bits_stored - 1)) - 1)
+            else:
+                t_min, t_max = 0, (1 << bits_stored) - 1
+
+            pixel_data[pixel_data < t_min] = t_min
+            pixel_data[pixel_data > t_max] = t_max
+
             # edit pixel data if not_for_clinical_use
             if self._proc_config.not_for_clinical_use:
                 pixel_data = pydicom_utils.imprint_volume(pixel_data)
@@ -1340,8 +1377,8 @@ class SubtleBoostJobType(BaseJobType):
                 # save new pixel data to dataset
                 else:
                     slice_pixel_data = pixel_data[i_slice]
+                    #slice_pixel_data[slice_pixel_data < 0] = 0
                     slice_pixel_data = np.copy(slice_pixel_data).astype(out_dataset.pixel_array.dtype)
-                    slice_pixel_data[slice_pixel_data < 0] = 0
                     self._update_common_metadata(out_dataset,series_uid, nrow, ncol, uid_pool)
 
                     out_dataset.PixelData = slice_pixel_data.tostring()
