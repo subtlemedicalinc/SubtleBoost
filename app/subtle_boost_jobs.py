@@ -713,12 +713,14 @@ class SubtleBoostJobType(BaseJobType):
             self._dicom_scale_coeff = [{
                 'rescale_slope': float(header_zero.RescaleSlope),
                 'rescale_intercept': float(header_zero.RescaleIntercept),
-                'scale_slope': float(header_zero[0x2005, 0x100e].value)
+                'scale_slope': float(pydicom_utils.get_tag(header_zero, [0x2005, 0x100e], 1))
             }, {
                 'rescale_slope': float(header_low.RescaleSlope),
                 'rescale_intercept': float(header_low.RescaleIntercept),
-                'scale_slope': float(header_low[0x2005, 0x100e].value)
+                'scale_slope': float(pydicom_utils.get_tag(header_low, [0x2005, 0x100e], 1))#float(header_low[0x2005, 0x100e].value)
             }]
+
+            print(self._dicom_scale_coeff)
 
     @staticmethod
     def _scale_slope_intercept(
