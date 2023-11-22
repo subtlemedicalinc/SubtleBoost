@@ -12,7 +12,7 @@
             "enabled": true,
             "vcpus": 8,
             "memory": 30000
-        },
+
         "CPU": {
             "enabled": true,
             "vcpus": 8,
