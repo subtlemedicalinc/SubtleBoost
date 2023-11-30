@@ -60,7 +60,7 @@ jobs:
     series_required:
       - "Bpre_siemens"
       - "Bpost_siemens"
-    slice_location_tolerance: 0.1
+    slice_location_tolerance: "none"
     fov_tolerance: "none"
     iop_tolerance: "none"
     exec_config:
@@ -100,7 +100,7 @@ jobs:
     series_required:
       - "Bpre_philips"
       - "Bpost_philips"
-    slice_location_tolerance: 0.1
+    slice_location_tolerance: "none"
     fov_tolerance: "none"
     iop_tolerance: "none"
     exec_config:
@@ -141,7 +141,7 @@ jobs:
     series_required:
       - "Bpre_hitachi"
       - "Bpost_hitachi"
-    slice_location_tolerance: 0.1
+    slice_location_tolerance: "none"
     fov_tolerance: "none"
     iop_tolerance: "none"
     exec_config:
